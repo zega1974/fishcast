@@ -76,6 +76,217 @@ body {
   color: #000000 !important;
 }
 
+.fishcast-marker {
+  overflow: visible !important;
+  border: 0 !important;
+  background: transparent !important;
+  margin: 0 !important;
+  will-change: transform;
+}
+
+.fishcast-marker::before,
+.fishcast-marker::after {
+  position: absolute;
+  inset: 14%;
+  content: "";
+  border-radius: 999px;
+  pointer-events: none;
+  transform: translateZ(0);
+}
+
+.fishcast-marker::before {
+  opacity: 0.42;
+  filter: blur(7px);
+  animation: fishcast-marker-pulse 3.4s ease-in-out infinite;
+}
+
+.fishcast-marker::after {
+  inset: 24%;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  opacity: 0.32;
+  animation: fishcast-marker-ring 3.4s ease-in-out infinite;
+}
+
+.fishcast-marker--spot::before {
+  background: radial-gradient(circle, rgba(34, 211, 238, 0.72), rgba(16, 185, 129, 0.26) 46%, transparent 72%);
+}
+
+.fishcast-marker--capture::before {
+  background: radial-gradient(circle, rgba(74, 222, 128, 0.76), rgba(34, 197, 94, 0.28) 46%, transparent 72%);
+}
+
+.fishcast-marker--place::before {
+  background: radial-gradient(circle, rgba(34, 211, 238, 0.78), rgba(14, 165, 233, 0.28) 46%, transparent 72%);
+}
+
+.fishcast-marker__core {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform: translateZ(0);
+  animation: fishcast-marker-breathe 3.4s ease-in-out infinite;
+  will-change: transform, filter;
+}
+
+.fishcast-marker__core img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}
+
+.fishcast-marker__badge {
+  position: absolute;
+  top: 4%;
+  right: 2%;
+  z-index: 3;
+  display: flex;
+  min-width: 22px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  background: linear-gradient(135deg, #ffffff, #67e8f9 48%, #34d399);
+  color: #020617;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.32), 0 0 16px rgba(34, 211, 238, 0.34);
+  transform: translateZ(0);
+}
+
+.fishcast-marker--spot .fishcast-marker__core {
+  filter: drop-shadow(0 0 5px rgba(34, 211, 238, 0.36)) drop-shadow(0 5px 9px rgba(2, 6, 23, 0.28));
+}
+
+.fishcast-marker--capture .fishcast-marker__core {
+  filter: drop-shadow(0 0 5px rgba(34, 197, 94, 0.42)) drop-shadow(0 5px 9px rgba(2, 6, 23, 0.28));
+}
+
+.fishcast-marker--place .fishcast-marker__core {
+  filter: drop-shadow(0 0 6px rgba(34, 211, 238, 0.46)) drop-shadow(0 5px 9px rgba(2, 6, 23, 0.28));
+}
+
+.map-mode-icon {
+  position: relative;
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: inset 0 1px 4px rgba(255, 255, 255, 0.18), 0 0 10px rgba(34, 211, 238, 0.08);
+}
+
+.map-mode-icon--active {
+  border-color: rgba(15, 23, 42, 0.3);
+  box-shadow: inset 0 1px 5px rgba(255, 255, 255, 0.42), 0 0 12px rgba(255, 255, 255, 0.36);
+}
+
+.map-mode-icon--map {
+  background:
+    linear-gradient(135deg, rgba(16, 185, 129, 0.88), rgba(103, 232, 249, 0.72)),
+    repeating-linear-gradient(45deg, transparent 0 5px, rgba(255, 255, 255, 0.28) 5px 6px);
+}
+
+.map-mode-icon--satellite {
+  background:
+    radial-gradient(circle at 34% 34%, rgba(250, 204, 21, 0.74), transparent 16%),
+    radial-gradient(circle at 64% 62%, rgba(34, 197, 94, 0.8), transparent 24%),
+    linear-gradient(135deg, #064e3b, #0f172a 58%, #0369a1);
+}
+
+.map-mode-icon--nautical {
+  background:
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.58) 0 1px, transparent 1px 5px),
+    linear-gradient(135deg, #67e8f9, #0284c7 54%, #0f172a);
+}
+
+.map-mode-icon--night {
+  background:
+    radial-gradient(circle at 68% 28%, rgba(226, 232, 240, 0.92), transparent 18%),
+    radial-gradient(circle at 30% 62%, rgba(34, 211, 238, 0.38), transparent 18%),
+    linear-gradient(135deg, #020617, #111827 58%, #0e7490);
+}
+
+.fishcast-marker--zoom-mid::before {
+  opacity: 0.5;
+  filter: blur(8px);
+}
+
+.fishcast-marker--zoom-mid .fishcast-marker__core {
+  animation-duration: 3.05s;
+}
+
+.fishcast-marker--zoom-high::before {
+  inset: 11%;
+  opacity: 0.62;
+  filter: blur(10px);
+}
+
+.fishcast-marker--zoom-high::after {
+  inset: 20%;
+  opacity: 0.38;
+  animation-duration: 2.8s;
+}
+
+.fishcast-marker--zoom-high .fishcast-marker__core {
+  animation-duration: 2.8s;
+}
+
+.fishcast-marker:hover .fishcast-marker__core {
+  transform: scale(1.06) translateZ(0);
+  animation-play-state: paused;
+}
+
+.fishcast-marker:hover::before {
+  opacity: 0.9;
+}
+
+@keyframes fishcast-marker-breathe {
+  0%,
+  100% {
+    transform: scale(1) translateZ(0);
+  }
+  50% {
+    transform: scale(1.035) translateZ(0);
+  }
+}
+
+@keyframes fishcast-marker-pulse {
+  0%,
+  100% {
+    transform: scale(0.88) translateZ(0);
+  }
+  50% {
+    transform: scale(1.08) translateZ(0);
+  }
+}
+
+@keyframes fishcast-marker-ring {
+  0%,
+  100% {
+    transform: scale(0.92) translateZ(0);
+  }
+  50% {
+    transform: scale(1.07) translateZ(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fishcast-marker::before,
+  .fishcast-marker::after,
+  .fishcast-marker__core {
+    animation: none;
+  }
+}
+
 .capture-popup .leaflet-popup-content-wrapper {
   overflow: hidden;
   border-radius: 28px;
@@ -92,4 +303,10 @@ body {
 .capture-popup .leaflet-popup-tip {
   background: #03110d;
   box-shadow: 0 0 24px rgba(34, 197, 94, 0.28);
+}
+.capture-popup .leaflet-popup-close-button {
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
 }
