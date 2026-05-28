@@ -40,8 +40,9 @@ body {
 }
 
 .data-popup .leaflet-popup-content-wrapper {
-  border-radius: 28px;
-  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.38), 0 0 38px rgba(34, 197, 94, 0.18);
+  border-radius: 12px;
+  background: rgba(2, 10, 20, 0.96);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.58), 0 0 34px rgba(34, 211, 238, 0.14);
 }
 
 .data-popup .leaflet-popup-content {
@@ -112,7 +113,7 @@ body {
 }
 
 .fishcast-marker--capture::before {
-  background: radial-gradient(circle, rgba(74, 222, 128, 0.76), rgba(34, 197, 94, 0.28) 46%, transparent 72%);
+  background: radial-gradient(circle, rgba(185, 28, 28, 0.78), rgba(127, 29, 29, 0.34) 46%, transparent 72%);
 }
 
 .fishcast-marker--place::before {
@@ -165,7 +166,7 @@ body {
 }
 
 .fishcast-marker--capture .fishcast-marker__core {
-  filter: drop-shadow(0 0 5px rgba(34, 197, 94, 0.42)) drop-shadow(0 5px 9px rgba(2, 6, 23, 0.28));
+  filter: drop-shadow(0 0 6px rgba(127, 29, 29, 0.58)) drop-shadow(0 5px 9px rgba(2, 6, 23, 0.28));
 }
 
 .fishcast-marker--place .fishcast-marker__core {
@@ -285,28 +286,4 @@ body {
   .fishcast-marker__core {
     animation: none;
   }
-}
-
-.capture-popup .leaflet-popup-content-wrapper {
-  overflow: hidden;
-  border-radius: 28px;
-  background: transparent;
-  box-shadow: none;
-  padding: 0;
-}
-
-.capture-popup .leaflet-popup-content {
-  margin: 0;
-  width: auto !important;
-}
-
-.capture-popup .leaflet-popup-tip {
-  background: #03110d;
-  box-shadow: 0 0 24px rgba(34, 197, 94, 0.28);
-}
-.capture-popup .leaflet-popup-close-button {
-  opacity: 0 !important;
-  width: 0 !important;
-  height: 0 !important;
-  overflow: hidden !important;
 }
