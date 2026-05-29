@@ -13,7 +13,7 @@ import {
 import L from "leaflet";
 
 import { useEffect, useRef, useState } from "react";
-import CenterCrosshair from "@/components/CenterCrosshair";
+
 import { fishingSpots, type SpotConditions, type FishingSpot } from "@/data/fishingSpots";
 
 type CaptureVisibility = "public" | "private" | "secret";
