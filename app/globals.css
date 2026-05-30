@@ -81,7 +81,6 @@ body {
   overflow: visible !important;
   border: 0 !important;
   background: transparent !important;
-  margin: 0 !important;
   will-change: transform;
 }
 
@@ -172,6 +171,25 @@ body {
 
 .fishcast-marker--place .fishcast-marker__core {
   filter: drop-shadow(0 0 6px rgba(34, 211, 238, 0.46)) drop-shadow(0 5px 9px rgba(2, 6, 23, 0.28));
+}
+
+/* Keep premium marker images stable during map zoom. */
+.fishcast-marker::before,
+.fishcast-marker::after {
+  display: none;
+  animation: none !important;
+  filter: none !important;
+}
+
+.fishcast-marker .fishcast-marker__core {
+  animation: none !important;
+  filter: none !important;
+  transform: translateZ(0) !important;
+  will-change: auto;
+}
+
+.fishcast-marker:hover .fishcast-marker__core {
+  transform: translateZ(0) !important;
 }
 
 .map-mode-icon {

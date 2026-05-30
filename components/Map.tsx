@@ -127,33 +127,17 @@ const panelButtonDanger =
 const infoLabelClass =
   "text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-200/80";
 
-function getIconSize(zoom: number) {
-  if (zoom >= 15) return 72;
-  if (zoom >= 13) return 62;
-  if (zoom >= 11) return 52;
-  if (zoom >= 9) return 42;
-  if (zoom >= 7) return 32;
-
-  return 24;
-}
-
-function getMarkerZoomClass(zoom: number) {
-  if (zoom >= 13) return "fishcast-marker--zoom-high";
-  if (zoom >= 10) return "fishcast-marker--zoom-mid";
-  return "fishcast-marker--zoom-low";
-}
+const MARKER_ICON_SIZE = 52;
 
 function createPremiumMarkerIcon({
   iconUrl,
   kind,
   size,
-  zoom,
   badge,
 }: {
   iconUrl: string;
   kind: "spot" | "capture" | "place";
   size: number;
-  zoom: number;
   badge?: number;
 }) {
   const badgeHtml = badge
@@ -165,35 +149,32 @@ function createPremiumMarkerIcon({
     iconSize: [size, size],
     iconAnchor: [size / 2, size],
     popupAnchor: [0, -size],
-    className: `fishcast-marker fishcast-marker--${kind} ${getMarkerZoomClass(zoom)}`,
+    className: `fishcast-marker fishcast-marker--${kind}`,
   });
 }
 
-function createSpotIcon(size: number, zoom: number) {
+function createSpotIcon(size: number) {
   return createPremiumMarkerIcon({
     iconUrl: "/icons/spot-marker.png",
     kind: "spot",
     size,
-    zoom,
   });
 }
 
-function createCaptureIcon(size: number, zoom: number, captureCount?: number) {
+function createCaptureIcon(size: number, captureCount?: number) {
   return createPremiumMarkerIcon({
     iconUrl: "/icons/capture-marker.png",
     kind: "capture",
     size,
-    zoom,
     badge: captureCount,
   });
 }
 
-function createPersonalPlaceIcon(size: number, zoom: number, captureCount: number) {
+function createPersonalPlaceIcon(size: number, captureCount: number) {
   return createPremiumMarkerIcon({
     iconUrl: "/icons/meus-lugares-marker.png",
     kind: "place",
     size,
-    zoom,
     badge: captureCount,
   });
 }
@@ -936,7 +917,7 @@ export default function Map() {
   const [storageFeedback, setStorageFeedback] = useState<string | null>(null);
   const [capturePhotoMigrationDone, setCapturePhotoMigrationDone] = useState(false);
 
-  const iconSize = getIconSize(zoom);
+  const iconSize = MARKER_ICON_SIZE;
   const popupPriorityOpen =
     Boolean(selectedLocation) ||
     Boolean(selectedCapture) ||
@@ -2767,7 +2748,7 @@ export default function Map() {
             <Marker
               key="pending-capture"
               position={[pendingCapture.lat, pendingCapture.lng]}
-              icon={createCaptureIcon(iconSize, zoom, 1)}
+              icon={createCaptureIcon(iconSize, 1)}
               interactive={false}
             />
           )}
@@ -2776,7 +2757,7 @@ export default function Map() {
             <Marker
               key="pending-place"
               position={[pendingPlace.lat, pendingPlace.lng]}
-              icon={createPersonalPlaceIcon(iconSize, zoom, 0)}
+              icon={createPersonalPlaceIcon(iconSize, 0)}
               interactive={false}
             />
           )}
@@ -2785,7 +2766,7 @@ export default function Map() {
           <Marker
             key={`spot-${spot.id}`}
             position={[spot.lat, spot.lng]}
-            icon={createSpotIcon(iconSize, zoom)}
+            icon={createSpotIcon(iconSize)}
             eventHandlers={{
               click: (event) => {
                 L.DomEvent.stopPropagation(event.originalEvent);
@@ -2816,7 +2797,7 @@ export default function Map() {
           <Marker
             key={`personal-place-${place.id}`}
             position={[place.lat, place.lng]}
-            icon={createPersonalPlaceIcon(iconSize, zoom, getCapturesForPlace(place.id).length)}
+            icon={createPersonalPlaceIcon(iconSize, getCapturesForPlace(place.id).length)}
             eventHandlers={{
               click: (event) => {
                 L.DomEvent.stopPropagation(event.originalEvent);
@@ -2850,7 +2831,7 @@ export default function Map() {
           <Marker
             key={`capture-${capture.id}`}
             position={[capture.lat, capture.lng]}
-            icon={createCaptureIcon(iconSize, zoom, getCapturesForCaptureSpot(capture).length)}
+            icon={createCaptureIcon(iconSize, getCapturesForCaptureSpot(capture).length)}
             eventHandlers={{
               click: (event) => {
                 L.DomEvent.stopPropagation(event.originalEvent);
