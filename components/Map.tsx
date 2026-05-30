@@ -16,7 +16,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { fishingSpots, type SpotConditions, type FishingSpot } from "@/data/fishingSpots";
 
-type CaptureVisibility = "public" | "private" | "secret";
+type CaptureShareMode = "complete" | "secret";
 type MapMode = "map" | "satellite" | "nautical" | "night";
 type PlaceVisibility = "private";
 
@@ -31,8 +31,12 @@ type Capture = {
   bait: string;
   comment: string;
   photo: string;
-  visibility: CaptureVisibility;
   capturedAt: string;
+};
+
+type StoredCapture = Omit<Capture, "photo"> & {
+  photo?: string;
+  photoId?: string;
 };
 
 type PersonalPlace = {
@@ -58,7 +62,6 @@ type CaptureFormData = {
   bait: string;
   comment: string;
   photo: string;
-  visibility: CaptureVisibility;
   capturedDate: string;
   capturedTime: string;
 };
@@ -85,10 +88,16 @@ type FishCastScore = {
 
 const MAP_MIN_ZOOM = 6;
 const MAP_INITIAL_ZOOM = 6;
-const MAP_MAX_ZOOM = 19;
+const OSM_MAX_NATIVE_ZOOM = 18;
+const SATELLITE_MAX_NATIVE_ZOOM = 18;
+const NIGHT_MAX_NATIVE_ZOOM = 18;
+const MAP_MAX_ZOOM = 18;
 const PERSONAL_PLACE_CAPTURE_RADIUS_METERS = 250;
 const CAPTURES_STORAGE_KEY = "fishcastpr.captures";
 const PERSONAL_PLACES_STORAGE_KEY = "fishcastpr.personalPlaces";
+const CAPTURE_PHOTOS_DB_NAME = "fishcastpr.capturePhotos";
+const CAPTURE_PHOTOS_STORE_NAME = "photos";
+const CAPTURE_PHOTOS_DB_VERSION = 1;
 const TRANSPARENT_TILE =
   "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 const NAUTICAL_BATHYMETRY_WMS_URL = "https://www.opendem.info/geoserver/opendem/wms";
@@ -96,7 +105,7 @@ const NAUTICAL_BATHYMETRY_ATTRIBUTION =
   "Bathymetry &copy; OpenDEM, GEBCO 2021, OpenStreetMap contributors";
 const NAUTICAL_DEPTH_SURFACE_LAYER = "opendem:gebco_2021";
 const NAUTICAL_DEPTH_CONTOURS_LAYER = "opendem:gebco_2021_contours";
-const NAUTICAL_MAX_ZOOM = 19;
+const NAUTICAL_MAX_ZOOM = 18;
 const NAUTICAL_SEAMARK_MAX_NATIVE_ZOOM = 18;
 
 
@@ -154,8 +163,8 @@ function createPremiumMarkerIcon({
   return L.divIcon({
     html: `<span class="fishcast-marker__core"><img src="${iconUrl}" alt="" draggable="false" /></span>${badgeHtml}`,
     iconSize: [size, size],
-    iconAnchor: [size / 2, size * 0.92],
-    popupAnchor: [0, -size * 0.92],
+    iconAnchor: [size / 2, size],
+    popupAnchor: [0, -size],
     className: `fishcast-marker fishcast-marker--${kind} ${getMarkerZoomClass(zoom)}`,
   });
 }
@@ -169,12 +178,13 @@ function createSpotIcon(size: number, zoom: number) {
   });
 }
 
-function createCaptureIcon(size: number, zoom: number) {
+function createCaptureIcon(size: number, zoom: number, captureCount?: number) {
   return createPremiumMarkerIcon({
     iconUrl: "/icons/capture-marker.png",
     kind: "capture",
     size,
     zoom,
+    badge: captureCount,
   });
 }
 
@@ -401,6 +411,20 @@ function MapFocusController({ target }: { target: FocusTarget | null }) {
   return null;
 }
 
+function MapMaxZoomController({ maxZoom }: { maxZoom: number }) {
+  const map = useMap();
+
+  useEffect(() => {
+    map.setMaxZoom(maxZoom);
+
+    if (map.getZoom() > maxZoom) {
+      map.setZoom(maxZoom);
+    }
+  }, [map, maxZoom]);
+
+  return null;
+}
+
 function InfoRow({
   icon,
   label,
@@ -527,7 +551,6 @@ function createEmptyFormData(): CaptureFormData {
     bait: "",
     comment: "",
     photo: "",
-    visibility: "public",
     capturedDate: getCurrentDateInputValue(),
     capturedTime: getCurrentTimeInputValue(),
   };
@@ -545,7 +568,7 @@ function isCapture(value: unknown): value is Capture {
     return false;
   }
 
-  const capture = value as Partial<Capture>;
+  const capture = value as Partial<Capture> & { photoId?: unknown };
 
   return (
     typeof capture.id === "number" &&
@@ -557,10 +580,8 @@ function isCapture(value: unknown): value is Capture {
     typeof capture.bait === "string" &&
     typeof capture.comment === "string" &&
     (typeof capture.photo === "string" || typeof capture.photo === "undefined") &&
-    typeof capture.capturedAt === "string" &&
-    (capture.visibility === "public" ||
-      capture.visibility === "private" ||
-      capture.visibility === "secret")
+    (typeof capture.photoId === "string" || typeof capture.photoId === "undefined") &&
+    typeof capture.capturedAt === "string"
   );
 }
 
@@ -582,6 +603,246 @@ function isPersonalPlace(value: unknown): value is PersonalPlace {
   );
 }
 
+function serializeCaptureForLocalStorage(capture: Capture, photoId?: string): StoredCapture {
+  return {
+    id: capture.id,
+    lat: capture.lat,
+    lng: capture.lng,
+    placeId: capture.placeId,
+    species: capture.species,
+    weight: capture.weight,
+    size: capture.size,
+    bait: capture.bait,
+    comment: capture.comment,
+    photoId,
+    capturedAt: capture.capturedAt,
+  };
+}
+
+function serializeCapturesForLocalStorage(captures: Capture[]): StoredCapture[] {
+  return captures.map((capture) =>
+    serializeCaptureForLocalStorage(capture, capture.photo ? String(capture.id) : undefined)
+  );
+}
+
+function isQuotaExceededError(error: unknown) {
+  return (
+    error instanceof DOMException &&
+    (error.name === "QuotaExceededError" ||
+      error.name === "NS_ERROR_DOM_QUOTA_REACHED" ||
+      error.code === 22 ||
+      error.code === 1014)
+  );
+}
+
+function persistLightweightCaptures(captures: Capture[]) {
+  const serializedCaptures = JSON.stringify(serializeCapturesForLocalStorage(captures));
+
+  try {
+    window.localStorage.setItem(CAPTURES_STORAGE_KEY, serializedCaptures);
+    return true;
+  } catch (error) {
+    if (!isQuotaExceededError(error)) {
+      throw error;
+    }
+  }
+
+  console.warn("QuotaExceededError ao salvar metadados leves das capturas. Nenhum dado foi apagado.");
+  return false;
+}
+
+function isCapturePhotoDataUrl(photo: string) {
+  return photo.startsWith("data:image/");
+}
+
+function openCapturePhotosDb() {
+  return new Promise<IDBDatabase>((resolve, reject) => {
+    if (typeof window === "undefined" || !window.indexedDB) {
+      reject(new Error("IndexedDB indisponivel"));
+      return;
+    }
+
+    const request = window.indexedDB.open(CAPTURE_PHOTOS_DB_NAME, CAPTURE_PHOTOS_DB_VERSION);
+
+    request.onupgradeneeded = () => {
+      const db = request.result;
+
+      if (!db.objectStoreNames.contains(CAPTURE_PHOTOS_STORE_NAME)) {
+        db.createObjectStore(CAPTURE_PHOTOS_STORE_NAME);
+      }
+    };
+
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error("Falha ao abrir IndexedDB"));
+  });
+}
+
+async function readCapturePhoto(captureId: number) {
+  try {
+    const db = await openCapturePhotosDb();
+
+    return await new Promise<string>((resolve, reject) => {
+      const transaction = db.transaction(CAPTURE_PHOTOS_STORE_NAME, "readonly");
+      const store = transaction.objectStore(CAPTURE_PHOTOS_STORE_NAME);
+      const request = store.get(String(captureId));
+
+      request.onsuccess = () => resolve(typeof request.result === "string" ? request.result : "");
+      request.onerror = () => reject(request.error || new Error("Falha ao ler foto"));
+      transaction.oncomplete = () => db.close();
+      transaction.onerror = () => db.close();
+    });
+  } catch {
+    return "";
+  }
+}
+
+async function saveCapturePhoto(captureId: number, photo: string) {
+  if (!isCapturePhotoDataUrl(photo)) {
+    return true;
+  }
+
+  try {
+    const db = await openCapturePhotosDb();
+
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction(CAPTURE_PHOTOS_STORE_NAME, "readwrite");
+      const store = transaction.objectStore(CAPTURE_PHOTOS_STORE_NAME);
+
+      store.put(photo, String(captureId));
+      transaction.oncomplete = () => {
+        db.close();
+        resolve();
+      };
+      transaction.onerror = () => {
+        db.close();
+        reject(transaction.error || new Error("Falha ao salvar foto"));
+      };
+    });
+    return true;
+  } catch (error) {
+    console.warn("Nao foi possivel salvar a foto da captura no IndexedDB.", error);
+    return false;
+  }
+}
+
+async function deleteCapturePhoto(captureId: number) {
+  try {
+    const db = await openCapturePhotosDb();
+
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction(CAPTURE_PHOTOS_STORE_NAME, "readwrite");
+      const store = transaction.objectStore(CAPTURE_PHOTOS_STORE_NAME);
+
+      store.delete(String(captureId));
+      transaction.oncomplete = () => {
+        db.close();
+        resolve();
+      };
+      transaction.onerror = () => {
+        db.close();
+        reject(transaction.error || new Error("Falha ao apagar foto"));
+      };
+    });
+  } catch {
+    // Foto ausente ou IndexedDB indisponivel nao deve bloquear a captura.
+  }
+}
+
+async function syncCapturePhotos(captures: Capture[]) {
+  const results = await Promise.all(
+    captures.map((capture) =>
+      capture.photo ? saveCapturePhoto(capture.id, capture.photo) : Promise.resolve(true)
+    )
+  );
+
+  return results.every(Boolean);
+}
+
+async function migrateLegacyCapturePhotosInLocalStorage() {
+  const result = {
+    migratedPhotos: 0,
+    remainingBase64PhotosInLocalStorage: 0,
+    changed: false,
+  };
+
+  if (typeof window === "undefined") {
+    return result;
+  }
+
+  try {
+    const savedCaptures = window.localStorage.getItem(CAPTURES_STORAGE_KEY);
+
+    if (!savedCaptures) {
+      console.info("[FishCast] Migração de fotos: nenhuma captura no localStorage.", result);
+      return result;
+    }
+
+    const parsedCaptures: unknown = JSON.parse(savedCaptures);
+
+    if (!Array.isArray(parsedCaptures)) {
+      console.info("[FishCast] Migração de fotos: formato inesperado em fishcastpr.captures.", result);
+      return result;
+    }
+
+    const migratedCaptures = await Promise.all(
+      parsedCaptures.map(async (item) => {
+        if (!isCapture(item)) {
+          return item;
+        }
+
+        const legacyPhoto = typeof item.photo === "string" && isCapturePhotoDataUrl(item.photo)
+          ? item.photo
+          : "";
+
+        if (!legacyPhoto) {
+          const captureWithPhotoId = item as Capture & { photoId?: unknown };
+          const currentPhotoId = typeof captureWithPhotoId.photoId === "string"
+            ? captureWithPhotoId.photoId
+            : undefined;
+
+          return serializeCaptureForLocalStorage(item, currentPhotoId);
+        }
+
+        const saved = await saveCapturePhoto(item.id, legacyPhoto);
+        const storedPhoto = saved ? await readCapturePhoto(item.id) : "";
+        const confirmed = storedPhoto === legacyPhoto;
+
+        if (!confirmed) {
+          return item;
+        }
+
+        result.migratedPhotos += 1;
+        result.changed = true;
+
+        return serializeCaptureForLocalStorage(item, String(item.id));
+      })
+    );
+
+    result.remainingBase64PhotosInLocalStorage += migratedCaptures.filter(
+      (item) =>
+        item &&
+        typeof item === "object" &&
+        "photo" in item &&
+        typeof (item as { photo?: unknown }).photo === "string" &&
+        isCapturePhotoDataUrl((item as { photo: string }).photo)
+    ).length;
+
+    if (result.changed) {
+      window.localStorage.setItem(CAPTURES_STORAGE_KEY, JSON.stringify(migratedCaptures));
+    }
+
+    console.info("[FishCast] Migração de fotos concluída.", {
+      fotosMigradas: result.migratedPhotos,
+      fotosAindaNoLocalStorage: result.remainingBase64PhotosInLocalStorage,
+    });
+
+    return result;
+  } catch (error) {
+    console.warn("[FishCast] Migração de fotos falhou sem limpar dados.", error, result);
+    return result;
+  }
+}
+
 function readStoredCaptures() {
   if (typeof window === "undefined") {
     return [];
@@ -598,12 +859,21 @@ function readStoredCaptures() {
 
     return Array.isArray(parsedCaptures)
       ? parsedCaptures.filter(isCapture).map((capture) => ({
-          ...capture,
+          id: capture.id,
+          lat: capture.lat,
+          lng: capture.lng,
+          placeId: capture.placeId,
+          species: capture.species,
+          weight: capture.weight,
+          size: capture.size,
+          bait: capture.bait,
+          comment: capture.comment,
           photo: capture.photo || "",
+          capturedAt: capture.capturedAt,
         }))
       : [];
-  } catch {
-    window.localStorage.removeItem(CAPTURES_STORAGE_KEY);
+  } catch (error) {
+    console.warn("Nao foi possivel ler capturas do localStorage. Nenhum dado foi apagado.", error);
     return [];
   }
 }
@@ -619,8 +889,8 @@ function readStoredPersonalPlaces() {
     const parsedPlaces: unknown = JSON.parse(savedPlaces);
 
     return Array.isArray(parsedPlaces) ? parsedPlaces.filter(isPersonalPlace) : [];
-  } catch {
-    window.localStorage.removeItem(PERSONAL_PLACES_STORAGE_KEY);
+  } catch (error) {
+    console.warn("Nao foi possivel ler Meus Lugares do localStorage. Nenhum dado foi apagado.", error);
     return [];
   }
 }
@@ -632,7 +902,11 @@ export default function Map() {
   const [mapMode, setMapMode] = useState<MapMode>("map");
   const [zoom, setZoom] = useState(MAP_INITIAL_ZOOM);
   const center = paranaCenter;
-  const [pendingCapture, setPendingCapture] = useState<{ lat: number; lng: number } | null>(null);
+  const [pendingCapture, setPendingCapture] = useState<{
+    lat: number;
+    lng: number;
+    placeId?: number | null;
+  } | null>(null);
   const [focusTarget, setFocusTarget] = useState<FocusTarget | null>(null);
   const ignoreNextMapClickRef = useRef(false);
   const [spotPopupOpen, setSpotPopupOpen] = useState(false);
@@ -644,6 +918,7 @@ export default function Map() {
     captures: Capture[];
   } | null>(null);
   const [shareFeedback, setShareFeedback] = useState<{ captureId: number; message: string } | null>(null);
+  const [shareOptionsCaptureId, setShareOptionsCaptureId] = useState<number | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<{
     name: string;
     lat: number;
@@ -658,6 +933,8 @@ export default function Map() {
   const [pendingPlace, setPendingPlace] = useState<{ lat: number; lng: number } | null>(null);
   const [captures, setCaptures] = useState<Capture[]>(readStoredCaptures);
   const [personalPlaces, setPersonalPlaces] = useState<PersonalPlace[]>(readStoredPersonalPlaces);
+  const [storageFeedback, setStorageFeedback] = useState<string | null>(null);
+  const [capturePhotoMigrationDone, setCapturePhotoMigrationDone] = useState(false);
 
   const iconSize = getIconSize(zoom);
   const popupPriorityOpen =
@@ -668,19 +945,138 @@ export default function Map() {
     capturePopupOpen;
 
   useEffect(() => {
-    window.localStorage.setItem(CAPTURES_STORAGE_KEY, JSON.stringify(captures));
-  }, [captures]);
+    let active = true;
+
+    async function migrateLegacyPhotos() {
+      const result = await migrateLegacyCapturePhotosInLocalStorage();
+
+      if (!active) {
+        return;
+      }
+
+      if (result.changed) {
+        setCaptures(readStoredCaptures());
+      }
+
+      if (result.remainingBase64PhotosInLocalStorage > 0) {
+        setStorageFeedback("Algumas fotos antigas nao puderam ser migradas agora. Nenhuma captura foi apagada.");
+      }
+
+      setCapturePhotoMigrationDone(true);
+    }
+
+    void migrateLegacyPhotos();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
-    window.localStorage.setItem(PERSONAL_PLACES_STORAGE_KEY, JSON.stringify(personalPlaces));
+    let active = true;
+
+    async function persistCaptures() {
+      if (!capturePhotoMigrationDone) {
+        return;
+      }
+
+      const photosSynced = await syncCapturePhotos(captures);
+
+      if (!active) {
+        return;
+      }
+
+      if (!photosSynced && captures.some((capture) => isCapturePhotoDataUrl(capture.photo))) {
+        console.warn("Capturas com fotos em memoria nao foram confirmadas no IndexedDB; localStorage nao foi regravado.");
+        setStorageFeedback("Algumas fotos nao foram confirmadas no armazenamento. Nada foi apagado.");
+        return;
+      }
+
+      try {
+        const metadataSaved = persistLightweightCaptures(captures);
+
+        if (!metadataSaved) {
+          setStorageFeedback("Nao foi possivel salvar as capturas agora. As fotos nao foram colocadas no localStorage.");
+        }
+      } catch (error) {
+        console.warn("Nao foi possivel salvar metadados das capturas no localStorage.", error);
+        setStorageFeedback("Nao foi possivel salvar as capturas agora. O app continua funcionando.");
+      }
+
+      if (!photosSynced) {
+        console.warn("Algumas fotos de capturas nao foram persistidas no IndexedDB.");
+        setStorageFeedback("A captura foi salva, mas a foto nao pode ser armazenada neste navegador.");
+      }
+    }
+
+    void persistCaptures();
+
+    return () => {
+      active = false;
+    };
+  }, [captures, capturePhotoMigrationDone]);
+
+  useEffect(() => {
+    if (!capturePhotoMigrationDone) {
+      return;
+    }
+
+    let active = true;
+
+    async function loadIndexedDbPhotos() {
+      const capturesWithPhotos = await Promise.all(
+        captures.map(async (capture) => {
+          if (capture.photo) {
+            return capture;
+          }
+
+          const photo = await readCapturePhoto(capture.id);
+
+          return photo ? { ...capture, photo } : capture;
+        })
+      );
+
+      if (!active) {
+        return;
+      }
+
+      const hasLoadedPhoto = capturesWithPhotos.some(
+        (capture, index) => capture.photo !== captures[index]?.photo
+      );
+
+      if (hasLoadedPhoto) {
+        setCaptures(capturesWithPhotos);
+      }
+    }
+
+    void loadIndexedDbPhotos();
+
+    return () => {
+      active = false;
+    };
+    // Carrega fotos do IndexedDB apenas na montagem; alteracoes novas ja estao no estado.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [capturePhotoMigrationDone]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(PERSONAL_PLACES_STORAGE_KEY, JSON.stringify(personalPlaces));
+    } catch (error) {
+      console.warn("Nao foi possivel salvar Meus Lugares no localStorage.", error);
+    }
   }, [personalPlaces]);
 
-  function getApproximateLocation(lat: number, lng: number) {
-    const offset = 0.015; // aproximadamente alguns quilômetros
-    const randomLat = lat + (Math.random() - 0.5) * offset;
-    const randomLng = lng + (Math.random() - 0.5) * offset;
-    return { lat: randomLat, lng: randomLng };
-  }
+  useEffect(() => {
+    if (!storageFeedback) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setStorageFeedback(null);
+    }, 4200);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [storageFeedback]);
 
   function safeText(value: unknown, fallback = "Dados indisponíveis") {
     if (typeof value !== "string") {
@@ -858,6 +1254,7 @@ export default function Map() {
 
   function handleMapClick(lat: number, lng: number) {
     setSelectedCapture(null);
+    setShareOptionsCaptureId(null);
     setSelectedLocation({
       name: "Ponto selecionado",
       lat,
@@ -878,12 +1275,6 @@ export default function Map() {
 
   function getCaptureTitle(capture: Capture, index: number) {
     return capture.species || `Captura #${index + 1}`;
-  }
-
-  function getVisibilityLabel(visibility: string) {
-    if (visibility === "private") return "Privada";
-    if (visibility === "secret") return "Secreta";
-    return "Pública";
   }
 
   function getBestWeight() {
@@ -919,7 +1310,7 @@ export default function Map() {
   }
 
   function getCaptureSpotKey(capture: Capture) {
-    return `${capture.lat.toFixed(6)},${capture.lng.toFixed(6)}`;
+    return `${capture.lat},${capture.lng}`;
   }
 
   function getCapturesForCaptureSpot(capture: Capture) {
@@ -949,70 +1340,18 @@ export default function Map() {
     });
   }
 
-  function getCaptureLocationText(capture: Capture) {
+  function getCaptureLocationText(capture: Capture, shareMode: CaptureShareMode) {
     const place = capture.placeId
       ? personalPlaces.find((personalPlace) => personalPlace.id === capture.placeId)
       : null;
 
-    if (capture.visibility === "secret") {
-      return place ? `${place.name} (local protegido)` : "Local protegido";
+    if (shareMode === "secret") {
+      return place ? `Região aproximada de ${place.name}` : "Região aproximada do ponto de captura";
     }
 
     const coordinates = `${capture.lat.toFixed(6)}, ${capture.lng.toFixed(6)}`;
 
     return place ? `${place.name} - ${coordinates}` : coordinates;
-  }
-
-  function getCaptureLocationUrl(capture: Capture) {
-    if (capture.visibility === "secret") {
-      return "";
-    }
-
-    const lat = capture.lat.toFixed(6);
-    const lng = capture.lng.toFixed(6);
-
-    return `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=16/${lat}/${lng}`;
-  }
-
-  function getCaptureShareText(capture: Capture) {
-    const lines = [
-      `FishCastPR - ${capture.species || "Captura registrada"}`,
-      `Local: ${getCaptureLocationText(capture)}`,
-    ];
-
-    const measures = [capture.weight ? `${capture.weight} kg` : "", capture.size ? `${capture.size} cm` : ""]
-      .filter(Boolean)
-      .join(" / ");
-
-    if (measures) {
-      lines.push(`Peso/tamanho: ${measures}`);
-    }
-
-    if (capture.capturedAt) {
-      lines.push(`Data: ${formatCaptureDate(capture.capturedAt)}`);
-    }
-
-    const locationUrl = getCaptureLocationUrl(capture);
-
-    if (locationUrl) {
-      lines.push(`Localização: ${locationUrl}`);
-    }
-
-    return lines.join("\n");
-  }
-
-  async function getCapturePhotoFile(capture: Capture) {
-    if (!capture.photo.startsWith("data:image/")) {
-      return null;
-    }
-
-    const response = await fetch(capture.photo);
-    const blob = await response.blob();
-    const extension = blob.type.split("/")[1] || "png";
-
-    return new File([blob], `fishcastpr-captura-${capture.id}.${extension}`, {
-      type: blob.type || "image/png",
-    });
   }
 
   function showShareFeedback(captureId: number, message: string) {
@@ -1023,37 +1362,319 @@ export default function Map() {
     }, 1800);
   }
 
-  async function shareCapture(capture: Capture) {
-    const text = getCaptureShareText(capture);
-    const title = capture.species || "Captura FishCastPR";
-    const shareData: ShareData = { title, text };
+  function drawRoundedRect(
+    context: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    radius: number
+  ) {
+    const cornerRadius = Math.min(radius, width / 2, height / 2);
 
-    try {
-      if (navigator.share) {
-        const photoFile = await getCapturePhotoFile(capture);
+    context.beginPath();
+    context.moveTo(x + cornerRadius, y);
+    context.arcTo(x + width, y, x + width, y + height, cornerRadius);
+    context.arcTo(x + width, y + height, x, y + height, cornerRadius);
+    context.arcTo(x, y + height, x, y, cornerRadius);
+    context.arcTo(x, y, x + width, y, cornerRadius);
+    context.closePath();
+  }
 
-        if (photoFile && navigator.canShare?.({ files: [photoFile] })) {
-          await navigator.share({ ...shareData, files: [photoFile] });
-        } else {
-          await navigator.share(shareData);
-        }
+  function drawWrappedText(
+    context: CanvasRenderingContext2D,
+    text: string,
+    x: number,
+    y: number,
+    maxWidth: number,
+    lineHeight: number,
+    maxLines = 4
+  ) {
+    const words = text.split(/\s+/).filter(Boolean);
+    const lines: string[] = [];
+    let line = "";
 
-        showShareFeedback(capture.id, "Compartilhado!");
+    for (const word of words) {
+      const nextLine = line ? `${line} ${word}` : word;
+
+      if (context.measureText(nextLine).width <= maxWidth) {
+        line = nextLine;
+        continue;
+      }
+
+      if (line) {
+        lines.push(line);
+      }
+
+      line = word;
+
+      if (lines.length === maxLines) {
+        break;
+      }
+    }
+
+    if (line && lines.length < maxLines) {
+      lines.push(line);
+    }
+
+    lines.forEach((wrappedLine, index) => {
+      context.fillText(wrappedLine, x, y + index * lineHeight);
+    });
+
+    return lines.length * lineHeight;
+  }
+
+  function drawShareField(
+    context: CanvasRenderingContext2D,
+    label: string,
+    value: string,
+    x: number,
+    y: number,
+    width: number
+  ) {
+    context.fillStyle = "rgba(167, 243, 208, 0.72)";
+    context.font = "700 22px Arial, sans-serif";
+    context.fillText(label.toUpperCase(), x, y);
+
+    context.fillStyle = "#ffffff";
+    context.font = "800 34px Arial, sans-serif";
+    return drawWrappedText(context, value || "--", x, y + 44, width, 40, 2) + 56;
+  }
+
+  function loadCaptureImage(src: string) {
+    return new Promise<HTMLImageElement | null>((resolve) => {
+      if (!src) {
+        resolve(null);
         return;
       }
 
-      await navigator.clipboard.writeText(text);
-      showShareFeedback(capture.id, "Copiado!");
+      const image = new Image();
+
+      image.onload = () => resolve(image);
+      image.onerror = () => resolve(null);
+      image.src = src;
+    });
+  }
+
+  function canvasToPngBlob(canvas: HTMLCanvasElement) {
+    return new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (blob) {
+          resolve(blob);
+          return;
+        }
+
+        reject(new Error("Não foi possível gerar a imagem"));
+      }, "image/png", 0.95);
+    });
+  }
+
+  async function createCaptureShareImage(capture: Capture, shareMode: CaptureShareMode) {
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+
+    if (!context) {
+      throw new Error("Canvas indisponível");
+    }
+
+    const width = 1080;
+    const padding = 64;
+    const image = await loadCaptureImage(capture.photo);
+    const maxPhotoWidth = width - padding * 2;
+    const imageRatio = image ? image.width / image.height : 16 / 9;
+    const portraitPhoto = Boolean(image && imageRatio < 0.9);
+    const photoFrameY = 150;
+    const photoFrameHeight = portraitPhoto ? 760 : 520;
+    const photoFrameWidth = portraitPhoto
+      ? Math.min(maxPhotoWidth, photoFrameHeight * imageRatio)
+      : maxPhotoWidth;
+    const photoFrameX = padding + (maxPhotoWidth - photoFrameWidth) / 2;
+    const badgeY = portraitPhoto ? photoFrameY + photoFrameHeight + 26 : 696;
+    const titleY = portraitPhoto ? badgeY + 124 : 820;
+    const fieldsStartY = portraitPhoto ? titleY + 90 : 910;
+    const estimatedFieldHeight = 96;
+    const estimatedLeftEndY = fieldsStartY + estimatedFieldHeight * 3;
+    const estimatedRightEndY = fieldsStartY + estimatedFieldHeight * 2 + (shareMode === "secret" ? 82 : 0);
+    const observationsY = portraitPhoto
+      ? Math.max(estimatedLeftEndY, estimatedRightEndY) + 32
+      : 1188;
+    const height = portraitPhoto ? observationsY + 162 : 1350;
+
+    canvas.width = width;
+    canvas.height = height;
+
+    const background = context.createLinearGradient(0, 0, width, height);
+    background.addColorStop(0, "#03110d");
+    background.addColorStop(0.46, "#041923");
+    background.addColorStop(1, "#020617");
+    context.fillStyle = background;
+    context.fillRect(0, 0, width, height);
+
+    context.fillStyle = "rgba(34, 197, 94, 0.16)";
+    context.beginPath();
+    context.arc(900, 170, 260, 0, Math.PI * 2);
+    context.fill();
+
+    context.fillStyle = "#ecfeff";
+    context.font = "900 42px Arial, sans-serif";
+    context.fillText("FishCastPR", padding, 78);
+    context.fillStyle = "rgba(207, 250, 254, 0.72)";
+    context.font = "700 22px Arial, sans-serif";
+    context.fillText("Diário de captura", padding, 116);
+
+    context.save();
+    drawRoundedRect(context, photoFrameX, photoFrameY, photoFrameWidth, photoFrameHeight, 24);
+    context.clip();
+    context.fillStyle = "#020617";
+    context.fillRect(photoFrameX, photoFrameY, photoFrameWidth, photoFrameHeight);
+
+    if (image) {
+      const scale = Math.min(photoFrameWidth / image.width, photoFrameHeight / image.height);
+      const drawWidth = image.width * scale;
+      const drawHeight = image.height * scale;
+      const drawX = photoFrameX + (photoFrameWidth - drawWidth) / 2;
+      const drawY = photoFrameY + (photoFrameHeight - drawHeight) / 2;
+
+      context.drawImage(image, drawX, drawY, drawWidth, drawHeight);
+    } else {
+      const placeholder = context.createLinearGradient(photoFrameX, photoFrameY, photoFrameX + photoFrameWidth, photoFrameY + photoFrameHeight);
+      placeholder.addColorStop(0, "#064e3b");
+      placeholder.addColorStop(0.55, "#052e2f");
+      placeholder.addColorStop(1, "#020617");
+      context.fillStyle = placeholder;
+      context.fillRect(photoFrameX, photoFrameY, photoFrameWidth, photoFrameHeight);
+      context.fillStyle = "rgba(255, 255, 255, 0.82)";
+      context.font = "900 46px Arial, sans-serif";
+      context.fillText("Captura FishCastPR", photoFrameX + 48, 420);
+    }
+
+    context.restore();
+
+    context.strokeStyle = "rgba(255, 255, 255, 0.16)";
+    context.lineWidth = 3;
+    drawRoundedRect(context, photoFrameX, photoFrameY, photoFrameWidth, photoFrameHeight, 24);
+    context.stroke();
+
+    const badgeText = shareMode === "secret"
+      ? "🔒 Compartilhamento secreto"
+      : "✓ Compartilhamento completo";
+    context.fillStyle = shareMode === "secret" ? "#f87171" : "#34d399";
+    context.font = "800 28px Arial, sans-serif";
+    context.fillText(badgeText, padding, badgeY + 34);
+
+    context.fillStyle = "#ffffff";
+    context.font = "900 62px Arial, sans-serif";
+    drawWrappedText(context, capture.species || "Espécie não informada", padding, titleY, width - padding * 2, 68, 2);
+
+    const columnGap = 28;
+    const columnWidth = (width - padding * 2 - columnGap) / 2;
+    let leftY = fieldsStartY;
+    let rightY = fieldsStartY;
+
+    leftY += drawShareField(context, "Peso", capture.weight ? `${capture.weight} kg` : "--", padding, leftY, columnWidth);
+    leftY += drawShareField(context, "Tamanho", capture.size ? `${capture.size} cm` : "--", padding, leftY, columnWidth);
+    drawShareField(context, "Isca", capture.bait || "--", padding, leftY, columnWidth);
+
+    rightY += drawShareField(context, "Data/hora", formatCaptureDate(capture.capturedAt), padding + columnWidth + columnGap, rightY, columnWidth);
+    rightY += drawShareField(context, shareMode === "secret" ? "Localização" : "Coordenadas", getCaptureLocationText(capture, shareMode), padding + columnWidth + columnGap, rightY, columnWidth);
+
+    if (shareMode === "secret") {
+      context.fillStyle = "rgba(6, 182, 212, 0.16)";
+      drawRoundedRect(context, padding + columnWidth + columnGap, rightY - 6, columnWidth, 68, 12);
+      context.fill();
+      context.fillStyle = "#cffafe";
+      context.font = "900 25px Arial, sans-serif";
+      context.fillText("Coordenadas exatas ocultas", padding + columnWidth + columnGap + 20, rightY + 38);
+    }
+
+    context.fillStyle = "rgba(255, 255, 255, 0.1)";
+    drawRoundedRect(context, padding, observationsY, width - padding * 2, 98, 14);
+    context.fill();
+    context.fillStyle = "rgba(167, 243, 208, 0.72)";
+    context.font = "700 20px Arial, sans-serif";
+    context.fillText("OBSERVAÇÕES", padding + 24, observationsY + 36);
+    context.fillStyle = "#ffffff";
+    context.font = "700 27px Arial, sans-serif";
+    drawWrappedText(context, capture.comment || "Sem observações adicionadas.", padding + 24, observationsY + 74, width - padding * 2 - 48, 32, 2);
+
+    const blob = await canvasToPngBlob(canvas);
+
+    return new File([blob], `fishcastpr-captura-${capture.id}-${shareMode}.png`, {
+      type: "image/png",
+    });
+  }
+
+  function downloadShareImage(file: File) {
+    const url = URL.createObjectURL(file);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = file.name;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  async function copyShareImage(file: File) {
+    if (!navigator.clipboard || typeof ClipboardItem === "undefined") {
+      return false;
+    }
+
+    await navigator.clipboard.write([
+      new ClipboardItem({
+        [file.type]: file,
+      }),
+    ]);
+    return true;
+  }
+
+  async function shareCapture(capture: Capture, shareMode: CaptureShareMode) {
+    const imageFile = await createCaptureShareImage(capture, shareMode);
+    const title = capture.species || "Captura FishCastPR";
+    const shareData: ShareData = {
+      title,
+      files: [imageFile],
+    };
+
+    try {
+      if (navigator.share && navigator.canShare?.(shareData)) {
+        await navigator.share(shareData);
+
+        showShareFeedback(capture.id, "Compartilhado!");
+        setShareOptionsCaptureId(null);
+        return;
+      }
+
+      const copied = await copyShareImage(imageFile).catch(() => false);
+
+      if (copied) {
+        showShareFeedback(capture.id, "Imagem copiada!");
+      } else {
+        downloadShareImage(imageFile);
+        showShareFeedback(capture.id, "Imagem baixada!");
+      }
+
+      setShareOptionsCaptureId(null);
     } catch (error) {
       if ((error as DOMException).name === "AbortError") {
         return;
       }
 
       try {
-        await navigator.clipboard.writeText(text);
-        showShareFeedback(capture.id, "Copiado!");
+        const copied = await copyShareImage(imageFile).catch(() => false);
+
+        if (copied) {
+          showShareFeedback(capture.id, "Imagem copiada!");
+        } else {
+          downloadShareImage(imageFile);
+          showShareFeedback(capture.id, "Imagem baixada!");
+        }
+
+        setShareOptionsCaptureId(null);
       } catch {
-        showShareFeedback(capture.id, "Não foi possível compartilhar");
+        downloadShareImage(imageFile);
+        showShareFeedback(capture.id, "Imagem baixada!");
       }
     }
   }
@@ -1061,25 +1682,28 @@ export default function Map() {
   function saveCapture() {
     if (!pendingCapture) return;
 
-    const location = formData.visibility === "secret"
-      ? getApproximateLocation(pendingCapture.lat, pendingCapture.lng)
-      : pendingCapture;
-    const nearestPlace = getNearestPersonalPlace(pendingCapture.lat, pendingCapture.lng);
+    const nearestPlace =
+      typeof pendingCapture.placeId === "undefined"
+        ? getNearestPersonalPlace(pendingCapture.lat, pendingCapture.lng)
+        : null;
+    const capturePlaceId =
+      typeof pendingCapture.placeId === "undefined"
+        ? nearestPlace?.id
+        : pendingCapture.placeId || undefined;
 
     setCaptures((prev) => [
       ...prev,
       {
         id: Date.now(),
-        lat: location.lat,
-        lng: location.lng,
-        placeId: nearestPlace?.id,
+        lat: pendingCapture.lat,
+        lng: pendingCapture.lng,
+        placeId: capturePlaceId,
         species: formData.species,
         weight: formData.weight,
         size: formData.size,
         bait: formData.bait,
         comment: formData.comment,
         photo: formData.photo,
-        visibility: formData.visibility,
         capturedAt: new Date(`${formData.capturedDate || getCurrentDateInputValue()}T${formData.capturedTime || getCurrentTimeInputValue()}`).toISOString(),
       },
     ]);
@@ -1100,7 +1724,7 @@ export default function Map() {
   }
 
   function addCaptureAtPersonalPlace(place: PersonalPlace) {
-    setPendingCapture({ lat: place.lat, lng: place.lng });
+    setPendingCapture({ lat: place.lat, lng: place.lng, placeId: place.id });
     setSelectedLocation(null);
     setSelectedCapture(null);
     setCaptureMode(false);
@@ -1144,7 +1768,9 @@ export default function Map() {
 
   function deleteCapture(id: number) {
     setCaptures((prev) => prev.filter((capture) => capture.id !== id));
+    void deleteCapturePhoto(id);
     setCapturePopupOpen(false);
+    setShareOptionsCaptureId(null);
     setSelectedCapture((current) => (current?.id === id ? null : current));
   }
 
@@ -1171,7 +1797,16 @@ export default function Map() {
     setSelectedLocation(null);
     setSelectedCapture(null);
     setSelectedCaptureSpot(null);
+    setShareOptionsCaptureId(null);
     setCapturesPanelOpen(false);
+  }
+
+  function openCaptureDetails(capture: Capture) {
+    setSelectedLocation(null);
+    setSelectedCaptureSpot(null);
+    setCapturesPanelOpen(false);
+    setShareOptionsCaptureId(null);
+    setSelectedCapture(capture);
   }
 
   function openCaptureMarker(capture: Capture) {
@@ -1181,24 +1816,32 @@ export default function Map() {
     setCapturesPanelOpen(false);
     setCapturePopupOpen(false);
     setSpotPopupOpen(false);
+    setShareOptionsCaptureId(null);
 
-    if (spotCaptures.length > 1) {
-      setSelectedCapture(null);
-      setSelectedCaptureSpot({
-        lat: capture.lat,
-        lng: capture.lng,
-        captures: spotCaptures,
-      });
+    if (spotCaptures.length === 1) {
+      setSelectedCaptureSpot(null);
+      setSelectedCapture(spotCaptures[0]);
       return;
     }
 
-    setSelectedCaptureSpot(null);
-    setSelectedCapture(capture);
+    setSelectedCapture(null);
+    setSelectedCaptureSpot({
+      lat: capture.lat,
+      lng: capture.lng,
+      captures: spotCaptures,
+    });
   }
 
   return (
     <div className="relative w-full h-full">
-      
+      {storageFeedback && (
+        <div
+          className="map-control-overlay fixed left-1/2 top-4 z-[9000] w-[calc(100vw-32px)] max-w-[420px] -translate-x-1/2 rounded-sm border border-amber-300/30 bg-amber-950/95 px-4 py-3 text-sm font-bold leading-snug text-amber-50 shadow-[0_18px_60px_rgba(0,0,0,0.45)]"
+          role="status"
+        >
+          {storageFeedback}
+        </div>
+      )}
 
       <div
         className={`map-control-overlay absolute bottom-4 right-4 z-[2000] flex flex-col items-end gap-0 transition sm:bottom-6 sm:right-6 ${
@@ -1242,6 +1885,7 @@ export default function Map() {
             setSelectedLocation(null);
             setSelectedCapture(null);
             setSelectedCaptureSpot(null);
+            setShareOptionsCaptureId(null);
           }}
           ariaLabel="Ver minhas capturas"
           title="Ver minhas capturas"
@@ -1298,9 +1942,9 @@ export default function Map() {
                 <p className="mt-1 text-lg font-black">{getBestWeight()}</p>
               </div>
               <div className="rounded-sm border border-emerald-300/15 bg-black/25 p-3.5">
-                <p className={infoLabelClass}>Secretas</p>
+                <p className={infoLabelClass}>No mapa</p>
                 <p className="mt-1 text-lg font-black">
-                  {captures.filter((capture) => capture.visibility === "secret").length}
+                  {getCaptureSpotMarkers().length}
                 </p>
               </div>
             </div>
@@ -1356,7 +2000,7 @@ export default function Map() {
                             </p>
                           </div>
                           <span className="shrink-0 rounded-sm border border-emerald-300/20 bg-emerald-300/10 px-2 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-emerald-100">
-                            {getVisibilityLabel(capture.visibility)}
+                            Minha
                           </span>
                         </div>
 
@@ -1379,6 +2023,9 @@ export default function Map() {
             <div className="mb-5 border-b border-white/10 pb-4 text-center">
               <p className={infoLabelClass}>Adicionar captura</p>
               <h2 className="mt-1 text-xl font-black text-white">Detalhes da captura</h2>
+              <p className="mt-2 text-xs font-bold leading-relaxed text-cyan-100/70">
+                Ponto exato selecionado: {pendingCapture.lat.toFixed(8)}, {pendingCapture.lng.toFixed(8)}
+              </p>
             </div>
             
             <div className="space-y-4">
@@ -1451,27 +2098,6 @@ export default function Map() {
               </div>
 
               <div>
-                <label className="text-cyan-400 text-sm font-bold">Visibilidade</label>
-                <select
-                  value={formData.visibility}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      visibility: e.target.value as CaptureVisibility,
-                    })
-                  }
-                  className="w-full rounded-sm border border-cyan-500/20 bg-slate-900/50 px-3 py-2 text-white focus:border-cyan-400 focus:outline-none"
-                >
-                  <option value="public">Pública - todos veem</option>
-                  <option value="private">Privada - só você vê</option>
-                  <option value="secret">Secreta - local aproximado</option>
-                </select>
-                <p className="text-zinc-500 text-xs mt-1">
-                  Se escolher secreta, o local será armazenado de forma aproximada.
-                </p>
-              </div>
-
-              <div>
                 <label className="text-cyan-400 text-sm font-bold">Foto</label>
                 <input
                   type="file"
@@ -1518,7 +2144,7 @@ export default function Map() {
                   onClick={saveCapture}
                   className={panelButtonSuccess}
                 >
-                  Salvar Captura
+                  Confirmar captura aqui
                 </button>
                 <button
                   onClick={cancelCapture}
@@ -1536,6 +2162,9 @@ export default function Map() {
         <div className="fixed inset-0 z-[3000] flex items-start justify-center bg-black/80 p-4 pt-[96px]">
           <div className="w-[calc(100vw-32px)] max-w-[420px] rounded-sm border border-cyan-400/25 bg-[#020a14] p-5 shadow-[0_24px_80px_rgba(34,211,238,0.15)]">
             <h2 className="mb-1 text-center text-xl font-black text-white">Meu lugar</h2>
+            <p className="mb-2 text-center text-xs font-bold leading-relaxed text-cyan-100/65">
+              Ponto exato selecionado: {pendingPlace.lat.toFixed(8)}, {pendingPlace.lng.toFixed(8)}
+            </p>
             <p className="mb-5 text-center text-xs font-bold uppercase tracking-[0.14em] text-cyan-200/70">
               Privado por padrão
             </p>
@@ -1571,7 +2200,7 @@ export default function Map() {
                   onClick={savePersonalPlace}
                   className={panelButtonPrimary}
                 >
-                  Salvar lugar
+                  Confirmar aqui
                 </button>
                 <button
                   onClick={cancelPersonalPlace}
@@ -1691,7 +2320,7 @@ export default function Map() {
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              focusCaptureMarker(capture);
+                              openCaptureDetails(capture);
                             }}
                             className="flex gap-3 rounded-sm border border-white/10 bg-white/[0.055] p-3 shadow-sm"
                             role="button"
@@ -1700,7 +2329,7 @@ export default function Map() {
                               if (e.key === "Enter" || e.key === " ") {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                focusCaptureMarker(capture);
+                                openCaptureDetails(capture);
                               }
                             }}
                           >
@@ -1763,7 +2392,10 @@ export default function Map() {
                   </p>
                 </div>
                 <button
-                  onClick={() => setSelectedCaptureSpot(null)}
+                  onClick={() => {
+                    setSelectedCaptureSpot(null);
+                    setShareOptionsCaptureId(null);
+                  }}
                   className="flex h-10 w-10 items-center justify-center rounded-sm border border-white/10 bg-white/[0.06] text-lg font-black text-zinc-200 transition hover:bg-white/[0.12]"
                   aria-label="Fechar spot de captura"
                 >
@@ -1778,6 +2410,7 @@ export default function Map() {
                   setPendingCapture({
                     lat: selectedCaptureSpot.lat,
                     lng: selectedCaptureSpot.lng,
+                    placeId: null,
                   });
                   setSelectedCaptureSpot(null);
                   setCaptureMode(false);
@@ -1798,8 +2431,7 @@ export default function Map() {
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        setSelectedCaptureSpot(null);
-                        setSelectedCapture(capture);
+                        openCaptureDetails(capture);
                       }}
                       className="flex cursor-pointer gap-3 rounded-sm border border-white/10 bg-white/[0.06] p-3 transition hover:border-red-300/25 hover:bg-white/[0.09]"
                       role="button"
@@ -1808,8 +2440,7 @@ export default function Map() {
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
                           e.stopPropagation();
-                          setSelectedCaptureSpot(null);
-                          setSelectedCapture(capture);
+                          openCaptureDetails(capture);
                         }
                       }}
                     >
@@ -1836,7 +2467,7 @@ export default function Map() {
                             </p>
                           </div>
                           <span className="shrink-0 rounded-sm border border-red-300/20 bg-red-500/10 px-2 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-red-100">
-                            {getVisibilityLabel(capture.visibility)}
+                            Minha
                           </span>
                         </div>
 
@@ -1854,85 +2485,95 @@ export default function Map() {
       )}
 
       {selectedCapture && (
-        <div className="map-control-overlay fixed left-1/2 top-[96px] z-[7000] w-[calc(100vw-32px)] max-w-[420px] -translate-x-1/2 sm:top-[104px]">
-          <div className="max-h-[calc(100vh-120px)] overflow-hidden rounded-sm border border-emerald-300/18 bg-[#020a14]/96 text-white shadow-[0_24px_70px_rgba(0,0,0,0.62),0_0_34px_rgba(34,197,94,0.18)] backdrop-blur-xl">
+        <div className="map-control-overlay fixed bottom-2 left-1/2 top-[64px] z-[7000] w-[calc(100vw-32px)] max-w-[420px] -translate-x-1/2 sm:bottom-4 sm:top-[104px]">
+          <div className="flex h-full flex-col overflow-hidden rounded-sm border border-emerald-300/18 bg-[#020a14]/96 text-white shadow-[0_24px_70px_rgba(0,0,0,0.62),0_0_34px_rgba(34,197,94,0.18)] backdrop-blur-xl">
             <button
-              onClick={() => setSelectedCapture(null)}
-              className="absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-sm border border-white/15 bg-black/65 text-xl font-black text-white backdrop-blur-md transition hover:bg-black/80"
+              onClick={() => {
+                setSelectedCapture(null);
+                setShareOptionsCaptureId(null);
+              }}
+              className="absolute right-2 top-2 z-10 flex h-9 w-9 items-center justify-center rounded-sm border border-white/15 bg-black/65 text-xl font-black text-white backdrop-blur-md transition hover:bg-black/80 sm:right-3 sm:top-3 sm:h-10 sm:w-10"
               aria-label="Fechar captura"
             >
               ×
             </button>
 
-            <div className="space-y-2.5 p-4">
-              <div className="overflow-hidden rounded-sm border border-white/10 bg-black">
+            <div className="flex h-full min-h-0 flex-col gap-2 p-3 sm:gap-2.5 sm:p-4">
+              <div className="min-h-0 flex-1 space-y-2 overflow-hidden sm:space-y-2.5">
+              <div
+                className={`flex items-center justify-center overflow-hidden rounded-sm border border-white/10 bg-[#020617] ${
+                  shareOptionsCaptureId === selectedCapture.id
+                    ? "h-[clamp(92px,16vh,150px)] sm:h-[clamp(160px,26vh,260px)]"
+                    : "h-[clamp(130px,24vh,240px)] sm:h-[clamp(180px,32vh,320px)]"
+                }`}
+              >
                 {selectedCapture.photo ? (
                   <img
                     src={selectedCapture.photo}
                     alt="Foto da captura"
-                    className="max-h-[260px] min-h-[140px] w-full bg-[#020617] object-contain"
+                    className="h-full w-full object-contain"
                   />
                 ) : (
-                  <div className="h-[clamp(140px,28vh,260px)] w-full bg-[radial-gradient(circle_at_50%_25%,rgba(34,197,94,0.36),transparent_42%),linear-gradient(135deg,#052e1c,#020617_58%,#000)]" />
+                  <div className="h-full w-full bg-[radial-gradient(circle_at_50%_25%,rgba(34,197,94,0.36),transparent_42%),linear-gradient(135deg,#052e1c,#020617_58%,#000)]" />
                 )}
               </div>
 
-              <div className="border-b border-white/10 pb-2.5 pr-10">
+              <div className="border-b border-white/10 pb-2 pr-10">
                 <span className="inline-flex rounded-sm border border-emerald-300/25 bg-emerald-300/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-emerald-200">
-                  {getVisibilityLabel(selectedCapture.visibility)}
+                  Minha captura
                 </span>
-                <p className="mt-2 text-[11px] font-bold uppercase tracking-[0.22em] text-emerald-200/85">
+                <p className="mt-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-200/85 sm:text-[11px]">
                   Captura #{captures.findIndex((capture) => capture.id === selectedCapture.id) + 1}
                 </p>
-                <h2 className="mt-1 line-clamp-1 text-xl font-black leading-tight text-white sm:text-2xl">
+                <h2 className="mt-0.5 line-clamp-1 text-lg font-black leading-tight text-white sm:mt-1 sm:text-2xl">
                   {selectedCapture.species || "Espécie não informada"}
                 </h2>
               </div>
 
               <div className="grid grid-cols-3 gap-2">
-                <div className="min-h-16 rounded-sm border border-emerald-300/15 bg-black/25 p-2.5">
+                <div className="min-h-12 rounded-sm border border-emerald-300/15 bg-black/25 p-2 sm:min-h-16 sm:p-2.5">
                   <p className={infoLabelClass}>Peso</p>
-                  <p className="mt-1 truncate text-sm font-black text-white">{selectedCapture.weight ? `${selectedCapture.weight} kg` : "--"}</p>
+                  <p className="mt-0.5 truncate text-xs font-black text-white sm:mt-1 sm:text-sm">{selectedCapture.weight ? `${selectedCapture.weight} kg` : "--"}</p>
                 </div>
-                <div className="min-h-16 rounded-sm border border-emerald-300/15 bg-black/25 p-2.5">
+                <div className="min-h-12 rounded-sm border border-emerald-300/15 bg-black/25 p-2 sm:min-h-16 sm:p-2.5">
                   <p className={infoLabelClass}>Tamanho</p>
-                  <p className="mt-1 truncate text-sm font-black text-white">{selectedCapture.size ? `${selectedCapture.size} cm` : "--"}</p>
+                  <p className="mt-0.5 truncate text-xs font-black text-white sm:mt-1 sm:text-sm">{selectedCapture.size ? `${selectedCapture.size} cm` : "--"}</p>
                 </div>
-                <div className="min-h-16 rounded-sm border border-emerald-300/15 bg-black/25 p-2.5">
+                <div className="min-h-12 rounded-sm border border-emerald-300/15 bg-black/25 p-2 sm:min-h-16 sm:p-2.5">
                   <p className={infoLabelClass}>Isca</p>
-                  <p className="mt-1 truncate text-sm font-black text-white">{selectedCapture.bait || "--"}</p>
+                  <p className="mt-0.5 truncate text-xs font-black text-white sm:mt-1 sm:text-sm">{selectedCapture.bait || "--"}</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <div className="min-h-16 rounded-sm border border-emerald-300/15 bg-black/25 p-2.5">
+                <div className="min-h-12 rounded-sm border border-emerald-300/15 bg-black/25 p-2 sm:min-h-16 sm:p-2.5">
                   <p className={infoLabelClass}>Data/hora</p>
-                  <p className="mt-1 text-sm font-black leading-snug text-white">{formatCaptureDate(selectedCapture.capturedAt)}</p>
+                  <p className="mt-0.5 text-xs font-black leading-snug text-white sm:mt-1 sm:text-sm">{formatCaptureDate(selectedCapture.capturedAt)}</p>
                 </div>
-                <div className="min-h-16 rounded-sm border border-emerald-300/15 bg-black/25 p-2.5">
-                  <p className={infoLabelClass}>
-                    {selectedCapture.visibility === "secret" ? "Local" : "Coordenadas"}
-                  </p>
-                  <p className="mt-1 break-words text-sm font-black leading-snug text-white">
-                    {selectedCapture.visibility === "secret"
-                      ? "Local aproximado. Coordenadas ocultas para proteger seu ponto."
-                      : `${selectedCapture.lat.toFixed(6)}, ${selectedCapture.lng.toFixed(6)}`}
+                <div className="min-h-12 rounded-sm border border-emerald-300/15 bg-black/25 p-2 sm:min-h-16 sm:p-2.5">
+                  <p className={infoLabelClass}>Coordenadas</p>
+                  <p className="mt-0.5 break-words text-xs font-black leading-snug text-white sm:mt-1 sm:text-sm">
+                    {selectedCapture.lat.toFixed(6)}, {selectedCapture.lng.toFixed(6)}
                   </p>
                 </div>
               </div>
 
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-400">Observações</p>
-                <p className="mt-1 min-h-14 overflow-hidden rounded-sm border border-emerald-300/15 bg-black/25 p-2.5 text-sm leading-snug text-zinc-200">
+                <p className="mt-1 min-h-10 overflow-hidden rounded-sm border border-emerald-300/15 bg-black/25 p-2 text-xs leading-snug text-zinc-200 sm:min-h-14 sm:p-2.5 sm:text-sm">
                   {selectedCapture.comment || "Sem observações adicionadas."}
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 pt-1">
+              </div>
+
+              <div className="grid shrink-0 grid-cols-1 gap-2 sm:grid-cols-2">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    void shareCapture(selectedCapture);
+                    setShareOptionsCaptureId((current) =>
+                      current === selectedCapture.id ? null : selectedCapture.id
+                    );
                   }}
                   className={panelButtonPrimary}
                 >
@@ -1955,6 +2596,28 @@ export default function Map() {
                   Apagar captura
                 </button>
               </div>
+              {shareOptionsCaptureId === selectedCapture.id && (
+                <div className="grid min-w-0 shrink-0 grid-cols-1 gap-2 sm:grid-cols-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void shareCapture(selectedCapture, "complete");
+                    }}
+                    className={`${panelButtonSuccess} whitespace-normal break-words leading-tight`}
+                  >
+                    Compartilhar completo
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void shareCapture(selectedCapture, "secret");
+                    }}
+                    className={`${panelButtonPrimary} whitespace-normal break-words leading-tight`}
+                  >
+                    Compartilhar secreto
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1974,6 +2637,8 @@ export default function Map() {
           {mapMode === "map" && (
             <TileLayer
               attribution="&copy; OpenStreetMap contributors"
+              maxNativeZoom={OSM_MAX_NATIVE_ZOOM}
+              maxZoom={MAP_MAX_ZOOM}
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
           )}
@@ -1981,6 +2646,8 @@ export default function Map() {
           {mapMode === "satellite" && (
             <TileLayer
               attribution="Tiles &copy; Esri"
+              maxNativeZoom={SATELLITE_MAX_NATIVE_ZOOM}
+              maxZoom={MAP_MAX_ZOOM}
               url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
             />
           )}
@@ -1989,6 +2656,7 @@ export default function Map() {
             <>
               <TileLayer
                 attribution="&copy; OpenStreetMap contributors"
+                maxNativeZoom={OSM_MAX_NATIVE_ZOOM}
                 maxZoom={NAUTICAL_MAX_ZOOM}
                 zIndex={100}
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -2046,6 +2714,8 @@ export default function Map() {
           {mapMode === "night" && (
             <TileLayer
               attribution="&copy; OpenStreetMap contributors &copy; CARTO"
+              maxNativeZoom={NIGHT_MAX_NATIVE_ZOOM}
+              maxZoom={MAP_MAX_ZOOM}
               url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
             />
           )}
@@ -2065,6 +2735,7 @@ export default function Map() {
           <ZoomButtons hidden={popupPriorityOpen} />
           <CenterButton center={paranaCenter} hidden={popupPriorityOpen} />
           <MapFocusController target={focusTarget} />
+          <MapMaxZoomController maxZoom={MAP_MAX_ZOOM} />
 
           <MapEvents
             captureMode={captureMode}
@@ -2080,15 +2751,35 @@ export default function Map() {
               setSelectedCaptureSpot(null);
               setSelectedLocation(null);
               setSelectedCapture(null);
+              setShareOptionsCaptureId(null);
             }}
             onOtherPopupClose={() => {
               setSpotPopupOpen(false);
               setCapturePopupOpen(false);
               setSelectedCaptureSpot(null);
+              setShareOptionsCaptureId(null);
             }}
             spotPopupOpen={spotPopupOpen}
             ignoreNextMapClickRef={ignoreNextMapClickRef}
           />
+
+          {pendingCapture && (
+            <Marker
+              key="pending-capture"
+              position={[pendingCapture.lat, pendingCapture.lng]}
+              icon={createCaptureIcon(iconSize, zoom, 1)}
+              interactive={false}
+            />
+          )}
+
+          {pendingPlace && (
+            <Marker
+              key="pending-place"
+              position={[pendingPlace.lat, pendingPlace.lng]}
+              icon={createPersonalPlaceIcon(iconSize, zoom, 0)}
+              interactive={false}
+            />
+          )}
 
           {fishingSpots.map((spot) => (
           <Marker
@@ -2103,6 +2794,7 @@ export default function Map() {
                 setCapturePopupOpen(false);
                 setSelectedCapture(null);
                 setSelectedCaptureSpot(null);
+                setShareOptionsCaptureId(null);
               setSelectedLocation((current) => {
   if (current?.name === spot.name) {
     return null;
@@ -2133,6 +2825,7 @@ export default function Map() {
                 setCapturePopupOpen(false);
                 setSelectedCapture(null);
                 setSelectedCaptureSpot(null);
+                setShareOptionsCaptureId(null);
                 setSelectedLocation((current) => {
                   if (current?.personalPlaceId === place.id) {
                     return null;
@@ -2157,7 +2850,7 @@ export default function Map() {
           <Marker
             key={`capture-${capture.id}`}
             position={[capture.lat, capture.lng]}
-            icon={createCaptureIcon(iconSize, zoom)}
+            icon={createCaptureIcon(iconSize, zoom, getCapturesForCaptureSpot(capture).length)}
             eventHandlers={{
               click: (event) => {
                 L.DomEvent.stopPropagation(event.originalEvent);
