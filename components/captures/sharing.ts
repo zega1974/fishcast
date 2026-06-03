@@ -149,11 +149,15 @@ async function createCaptureShareImage({
   const fieldsStartY = portraitPhoto ? titleY + 90 : 910;
   const estimatedFieldHeight = 96;
   const estimatedLeftEndY = fieldsStartY + estimatedFieldHeight * 3;
-  const estimatedRightEndY = fieldsStartY + estimatedFieldHeight * 2 + (shareMode === "secret" ? 82 : 0);
+  const estimatedRightFieldCount = shareMode === "secret" ? 2 : 3;
+  const estimatedRightEndY =
+    fieldsStartY + estimatedFieldHeight * estimatedRightFieldCount + (shareMode === "secret" ? 82 : 0);
   const observationsY = portraitPhoto
     ? Math.max(estimatedLeftEndY, estimatedRightEndY) + 32
-    : 1188;
-  const height = portraitPhoto ? observationsY + 162 : 1350;
+    : shareMode === "secret"
+      ? 1188
+      : Math.max(1188, estimatedLeftEndY, estimatedRightEndY) + 32;
+  const height = portraitPhoto || shareMode !== "secret" ? observationsY + 162 : 1350;
 
   canvas.width = width;
   canvas.height = height;
@@ -172,7 +176,7 @@ async function createCaptureShareImage({
 
   context.fillStyle = "#ecfeff";
   context.font = "900 42px Arial, sans-serif";
-  context.fillText("FishCastPR", padding, 78);
+  context.fillText("VouPescar", padding, 78);
   context.fillStyle = "rgba(207, 250, 254, 0.72)";
   context.font = "700 22px Arial, sans-serif";
   context.fillText("Di\u00e1rio de captura", padding, 116);
@@ -200,7 +204,7 @@ async function createCaptureShareImage({
     context.fillRect(photoFrameX, photoFrameY, photoFrameWidth, photoFrameHeight);
     context.fillStyle = "rgba(255, 255, 255, 0.82)";
     context.font = "900 46px Arial, sans-serif";
-    context.fillText("Captura FishCastPR", photoFrameX + 48, 420);
+    context.fillText("Captura VouPescar", photoFrameX + 48, 420);
   }
 
   context.restore();
@@ -231,7 +235,15 @@ async function createCaptureShareImage({
   drawShareField(context, "Isca", capture.bait || "--", padding, leftY, columnWidth);
 
   rightY += drawShareField(context, "Data/hora", formatCaptureDate(capture.capturedAt), padding + columnWidth + columnGap, rightY, columnWidth);
-  rightY += drawShareField(context, shareMode === "secret" ? "Localiza\u00e7\u00e3o" : "Coordenadas", getCaptureLocationText(capture, shareMode), padding + columnWidth + columnGap, rightY, columnWidth);
+
+  if (shareMode === "secret") {
+    rightY += drawShareField(context, "Localiza\u00e7\u00e3o", getCaptureLocationText(capture, shareMode), padding + columnWidth + columnGap, rightY, columnWidth);
+  } else {
+    const [locationName, coordinates] = getCaptureLocationText(capture, shareMode).split("\n");
+
+    rightY += drawShareField(context, "Local", locationName, padding + columnWidth + columnGap, rightY, columnWidth);
+    rightY += drawShareField(context, "Coordenadas", coordinates || "--", padding + columnWidth + columnGap, rightY, columnWidth);
+  }
 
   if (shareMode === "secret") {
     context.fillStyle = "rgba(6, 182, 212, 0.16)";
@@ -298,7 +310,7 @@ export async function shareCapture({
     formatCaptureDate,
     getCaptureLocationText,
   });
-  const title = capture.species || "Captura FishCastPR";
+  const title = capture.species || "Captura VouPescar";
   const shareData: ShareData = {
     title,
     files: [imageFile],

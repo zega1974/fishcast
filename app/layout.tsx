@@ -2,8 +2,14 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "FishCastPR",
-  description: "Mapa inteligente de pesca do Paraná",
+  applicationName: "VouPescar",
+  title: "VouPescar",
+  description: "Seu lugar, sua pescaria",
+  icons: {
+    icon: "/icons/logonovo.png",
+    shortcut: "/icons/logonovo.png",
+    apple: "/icons/logonovo.png",
+  },
 };
 
 export default function RootLayout({
