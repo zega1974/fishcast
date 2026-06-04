@@ -92,14 +92,6 @@ const mapModes: { id: MapMode; label: string; iconClassName: string }[] = [
   { id: "night", label: "Noturno", iconClassName: "map-mode-icon--night" },
 ];
 
-const panelButtonBase =
-  "flex min-h-16 w-full items-center justify-center rounded-none px-5 py-4 text-center text-base font-black transition";
-const panelButtonPrimary =
-  `${panelButtonBase} border border-cyan-300/25 bg-cyan-400/15 text-cyan-100 hover:bg-cyan-400/25`;
-const panelButtonSuccess =
-  `${panelButtonBase} border border-emerald-300/25 bg-emerald-400/15 text-emerald-100 hover:bg-emerald-400/25`;
-const panelButtonDanger =
-  `${panelButtonBase} border border-red-300/20 bg-red-500/15 text-red-100 hover:bg-red-500/25`;
 const infoLabelClass =
   "text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-200/80";
 
@@ -272,6 +264,7 @@ function MapEvents({
   onLocationClick,
   onZoomChange,
   popupPriorityOpen,
+  mapDismissBlocked,
   interactionPanelOpen,
   onDismissActivePopup,
   onDismissInteractionPanel,
@@ -286,6 +279,7 @@ function MapEvents({
   onLocationClick: (lat: number, lng: number) => void;
   onZoomChange: (zoom: number) => void;
   popupPriorityOpen: boolean;
+  mapDismissBlocked: boolean;
   interactionPanelOpen: boolean;
   onDismissActivePopup: () => void;
   onDismissInteractionPanel: () => void;
@@ -329,6 +323,10 @@ function MapEvents({
 
       if (spotPopupOpen) {
         map.closePopup();
+      }
+
+      if (mapDismissBlocked) {
+        return;
       }
 
       if (popupPriorityOpen) {
@@ -758,7 +756,7 @@ function VouPescarScoreGauge({
         <p className="text-[10px] font-black uppercase tracking-[0.18em] sm:text-[11px]">VOUPESCAR SCORE</p>
       </div>
 
-      <div className={`${compactMobile ? "grid-cols-[96px_1fr] gap-2 sm:grid-cols-[170px_1fr] sm:gap-4" : "grid-cols-[130px_1fr] gap-3 sm:grid-cols-[170px_1fr] sm:gap-4"} grid items-center`}>
+      <div className={`${compactMobile ? "grid-cols-[112px_1fr] gap-3 sm:grid-cols-[170px_1fr] sm:gap-4" : "grid-cols-[140px_1fr] gap-3 sm:grid-cols-[170px_1fr] sm:gap-4"} grid items-center`}>
         <svg
           viewBox="0 0 240 168"
           className="h-auto w-full drop-shadow-[0_10px_20px_rgba(132,204,22,0.14)]"
@@ -788,8 +786,24 @@ function VouPescarScoreGauge({
           </text>
         </svg>
         <div className={`${compactMobile ? "pl-2" : "pl-3"} min-w-0 border-l border-white/10`}>
-          <p className={`${compactMobile ? "text-base sm:text-2xl" : "text-lg sm:text-2xl"} font-black leading-none text-white`}>{score}</p>
-          <p className={`${compactMobile ? "mt-0.5 text-xs sm:mt-1 sm:text-base" : "mt-1 text-sm sm:text-base"} font-black text-lime-200`}>{condition}</p>
+          <p className="text-[9px] font-black uppercase tracking-[0.16em] text-lime-200/80 sm:text-[10px]">
+            Condição
+          </p>
+          <p className={`${compactMobile ? "mt-1 text-sm sm:text-lg" : "mt-1 text-base sm:text-lg"} font-black leading-tight text-white`}>{condition}</p>
+          <div className="mt-2 grid grid-cols-2 gap-1">
+            {["Fraco", "Regular", "Bom", "Excelente"].map((label) => (
+              <span
+                key={label}
+                className={`rounded-sm border px-1.5 py-1 text-center text-[8px] font-black uppercase tracking-[0.06em] sm:text-[9px] ${
+                  label === condition
+                    ? "border-lime-300/50 bg-lime-300/18 text-lime-100"
+                    : "border-white/10 bg-black/18 text-zinc-400"
+                }`}
+              >
+                {label}
+              </span>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -866,6 +880,13 @@ export default function Map() {
     Boolean(selectedCaptureSpot) ||
     spotPopupOpen ||
     capturePopupOpen;
+  const interactiveWindowOpen =
+    Boolean(pendingCapture) ||
+    Boolean(pendingPlace) ||
+    capturesPanelOpen ||
+    Boolean(selectedCapture) ||
+    Boolean(selectedCaptureSpot) ||
+    Boolean(selectedLocation?.personalPlaceId);
 
   useEffect(() => {
     let active = true;
@@ -1491,9 +1512,12 @@ export default function Map() {
   function saveCapture() {
     if (!pendingCapture) return;
 
+    const newCaptureId = new Date().getTime();
+    const newCaptureLat = pendingCapture.lat;
+    const newCaptureLng = pendingCapture.lng;
     const nearestPlace =
       typeof pendingCapture.placeId === "undefined"
-        ? getNearestPersonalPlace(pendingCapture.lat, pendingCapture.lng)
+        ? getNearestPersonalPlace(newCaptureLat, newCaptureLng)
         : null;
     const capturePlaceId =
       typeof pendingCapture.placeId === "undefined"
@@ -1503,9 +1527,9 @@ export default function Map() {
     setCaptures((prev) => [
       ...prev,
       {
-        id: Date.now(),
-        lat: pendingCapture.lat,
-        lng: pendingCapture.lng,
+        id: newCaptureId,
+        lat: newCaptureLat,
+        lng: newCaptureLng,
         placeId: capturePlaceId,
         species: formData.species,
         weight: formData.weight,
@@ -1520,6 +1544,7 @@ export default function Map() {
     setFormData(createEmptyFormData());
     setCaptureMode(false);
     setPlaceMode(false);
+    setFocusTarget({ id: newCaptureId, lat: newCaptureLat, lng: newCaptureLng });
   }
 
   function cancelCapture() {
@@ -1550,13 +1575,16 @@ export default function Map() {
     if (!pendingPlace) return;
 
     const trimmedName = placeFormData.name.trim();
+    const newPlaceId = new Date().getTime();
+    const newPlaceLat = pendingPlace.lat;
+    const newPlaceLng = pendingPlace.lng;
 
     setPersonalPlaces((prev) => [
       ...prev,
       {
-        id: Date.now(),
-        lat: pendingPlace.lat,
-        lng: pendingPlace.lng,
+        id: newPlaceId,
+        lat: newPlaceLat,
+        lng: newPlaceLng,
         name: trimmedName || "Meu lugar",
         note: placeFormData.note.trim(),
         visibility: "private",
@@ -1567,6 +1595,7 @@ export default function Map() {
     setPlaceFormData(createEmptyPlaceFormData());
     setPlaceMode(false);
     setSelectedCapture(null);
+    setFocusTarget({ id: newPlaceId, lat: newPlaceLat, lng: newPlaceLng });
   }
 
   function cancelPersonalPlace() {
@@ -1698,7 +1727,7 @@ export default function Map() {
         />
 
         <MapActionButton
-          label="Meus Lugares"
+          label="Adicionar Lugar"
           iconSrc="/icons/meus-lugares.png"
           onClick={() => {
             setPlaceMode((prev) => !prev);
@@ -1706,8 +1735,8 @@ export default function Map() {
             setCapturesPanelOpen(false);
             setSelectedCaptureSpot(null);
           }}
-          ariaLabel={placeMode ? "Cancelar marcação de lugar" : "Adicionar meus lugares"}
-          title={placeMode ? "Cancelar lugar" : "Meus lugares"}
+          ariaLabel={placeMode ? "Cancelar marcação de lugar" : "Adicionar lugar"}
+          title={placeMode ? "Cancelar lugar" : "Adicionar lugar"}
         />
 
         <MapActionButton
@@ -1748,17 +1777,17 @@ export default function Map() {
 
       {capturesPanelOpen && (
         <aside
-          className="map-control-overlay absolute bottom-[270px] right-4 z-[2200] flex max-h-[min(58vh,620px)] w-[min(calc(100vw-24px),460px)] flex-col overflow-hidden rounded-md border border-cyan-300/18 bg-[#020a14]/97 text-white shadow-[0_28px_90px_rgba(0,0,0,0.62),0_0_42px_rgba(34,211,238,0.18)] backdrop-blur-xl sm:bottom-[292px] sm:right-6"
+          className="map-control-overlay fixed bottom-2 left-1/2 top-2 z-[2200] flex w-[calc(100vw-16px)] max-w-[900px] -translate-x-1/2 flex-col overflow-hidden rounded-md border border-cyan-300/18 bg-[#020a14]/97 text-white shadow-[0_28px_90px_rgba(0,0,0,0.62),0_0_42px_rgba(34,211,238,0.18)] backdrop-blur-xl sm:bottom-6 sm:top-6 sm:w-[calc(100vw-24px)]"
           onClick={stopPanelEvent}
           onPointerDown={stopPanelEvent}
         >
-          <div className="border-b border-white/10 p-4 sm:p-5">
+          <div className="shrink-0 border-b border-white/10 p-4 sm:p-5">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-[11px] font-black uppercase tracking-[0.22em] text-emerald-200">
-                  Diario local
+                  Diário local
                 </p>
-                <h2 className="mt-1 text-3xl font-black leading-none text-white">Minhas capturas</h2>
+                <h2 className="mt-1 text-3xl font-black leading-none text-white sm:text-5xl">Minhas capturas</h2>
               </div>
               <button
                 onClick={() => setCapturesPanelOpen(false)}
@@ -1769,27 +1798,27 @@ export default function Map() {
               </button>
             </div>
 
-            <div className="mt-4 grid grid-cols-3 gap-2 rounded-sm border border-yellow-300/20 bg-yellow-300/5 p-2">
-              <div className="rounded-sm border border-emerald-300/15 bg-black/25 p-2.5">
+            <div className="mt-4 grid grid-cols-3 gap-2 rounded-sm border border-yellow-300/20 bg-yellow-300/5 p-2 sm:gap-3 sm:p-3">
+              <div className="rounded-sm border border-emerald-300/15 bg-black/25 p-2.5 sm:p-4">
                 <p className={infoLabelClass}>Total</p>
-                <p className="mt-1 text-lg font-black">{captures.length}</p>
+                <p className="mt-1 text-2xl font-black sm:text-4xl">{captures.length}</p>
               </div>
-              <div className="rounded-sm border border-emerald-300/15 bg-black/25 p-2.5">
+              <div className="rounded-sm border border-emerald-300/15 bg-black/25 p-2.5 sm:p-4">
                 <p className={infoLabelClass}>Maior</p>
-                <p className="mt-1 text-lg font-black">{getBestWeight()}</p>
+                <p className="mt-1 text-xl font-black sm:text-3xl">{getBestWeight()}</p>
               </div>
-              <div className="rounded-sm border border-emerald-300/15 bg-black/25 p-2.5">
+              <div className="rounded-sm border border-emerald-300/15 bg-black/25 p-2.5 sm:p-4">
                 <p className={infoLabelClass}>Última captura</p>
-                <p className="mt-1 text-sm font-black leading-tight sm:text-lg">
+                <p className="mt-1 text-base font-black leading-tight sm:text-2xl">
                   {getLastSpotCaptureDate(captures)}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="min-h-0 max-h-[clamp(270px,38vh,340px)] overflow-y-auto p-3 sm:p-4">
+          <div className={`min-h-0 flex-1 p-3 sm:p-4 ${captures.length >= 4 ? "overflow-y-auto" : "overflow-visible"}`}>
             {captures.length === 0 ? (
-                <div className="rounded-md border border-dashed border-emerald-300/25 bg-emerald-300/[0.05] p-5 text-center">
+                <div className="flex h-full min-h-0 flex-col items-center justify-center rounded-md border border-dashed border-emerald-300/25 bg-emerald-300/[0.05] p-5 text-center">
                 <p className="text-sm font-bold text-emerald-100">Nenhuma captura salva ainda.</p>
                 <p className="mt-2 text-xs leading-relaxed text-zinc-400">
                   Use o botão de captura, toque no mapa e salve os detalhes do peixe.
@@ -1855,9 +1884,9 @@ export default function Map() {
       )}
 
       {pendingCapture && (
-        <div className="fixed inset-0 z-[3000] bg-black/80" onClick={cancelCapture}>
+        <div className="fixed inset-0 z-[3000] bg-black/80">
           <div
-            className="fixed left-1/2 top-1/2 flex max-h-[calc(100vh-24px)] w-[calc(100vw-24px)] max-w-[460px] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-md border border-cyan-300/18 bg-[#020a14]/97 text-white shadow-[0_24px_80px_rgba(0,0,0,0.62),0_0_34px_rgba(34,211,238,0.18)] backdrop-blur-xl"
+            className="fixed bottom-2 left-1/2 top-2 flex w-[calc(100vw-16px)] max-w-[640px] -translate-x-1/2 flex-col overflow-hidden rounded-md border border-cyan-300/18 bg-[#020a14]/97 text-white shadow-[0_24px_80px_rgba(0,0,0,0.62),0_0_34px_rgba(34,211,238,0.18)] backdrop-blur-xl sm:bottom-6 sm:top-6"
             onClick={stopPanelEvent}
             onPointerDown={stopPanelEvent}
           >
@@ -1868,13 +1897,15 @@ export default function Map() {
             >
               ×
             </button>
-            <div className="shrink-0 border-b border-white/10 p-4 sm:p-5">
-              <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-start gap-3">
+            <div className="shrink-0 border-b border-white/10 p-3 sm:p-5">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
               <div className="min-w-0">
                 <p className="text-[11px] font-black uppercase tracking-[0.22em] text-emerald-200">Adicionar captura</p>
                 <h2 className="mt-1 text-3xl font-black leading-none text-white">Detalhes da captura</h2>
               </div>
-              <CoordinatesBadge lat={pendingCapture.lat} lng={pendingCapture.lng} precision={8} />
+              <div className="hidden sm:block">
+                <CoordinatesBadge lat={pendingCapture.lat} lng={pendingCapture.lng} precision={8} />
+              </div>
               <button
                 onClick={cancelCapture}
                 className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-emerald-300/45 bg-black/70 text-2xl font-black text-white shadow-[0_0_18px_rgba(16,185,129,0.22)] backdrop-blur-md transition hover:bg-black/85 sm:h-12 sm:w-12"
@@ -1885,7 +1916,7 @@ export default function Map() {
               </div>
             </div>
             
-            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 sm:p-5">
+            <div className="grid min-h-0 flex-1 grid-rows-[auto_auto_auto_auto_auto_minmax(0,1fr)] gap-2 overflow-hidden p-3 sm:gap-4 sm:p-5">
               <div>
                   <label className="text-sm font-black uppercase tracking-[0.12em] text-emerald-200">Espécie</label>
                 <input
@@ -1893,7 +1924,7 @@ export default function Map() {
                   placeholder="Ex: Tilápia"
                   value={formData.species}
                   onChange={(e) => setFormData({ ...formData, species: e.target.value })}
-                  className="mt-1 min-h-12 w-full rounded-sm border border-cyan-300/18 bg-black/25 px-4 py-3 text-white placeholder-zinc-500 focus:border-cyan-300 focus:outline-none"
+                  className="mt-1 min-h-10 w-full rounded-sm border border-cyan-300/18 bg-black/25 px-3 py-2 text-white placeholder-zinc-500 focus:border-cyan-300 focus:outline-none sm:min-h-12 sm:px-4 sm:py-3"
                 />
               </div>
 
@@ -1906,7 +1937,7 @@ export default function Map() {
                     placeholder="2.5"
                     value={formData.weight}
                     onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
-                    className="mt-1 min-h-12 w-full rounded-sm border border-cyan-300/18 bg-black/25 px-4 py-3 text-white placeholder-zinc-500 focus:border-cyan-300 focus:outline-none"
+                    className="mt-1 min-h-10 w-full rounded-sm border border-cyan-300/18 bg-black/25 px-3 py-2 text-white placeholder-zinc-500 focus:border-cyan-300 focus:outline-none sm:min-h-12 sm:px-4 sm:py-3"
                   />
                 </div>
                 <div>
@@ -1917,7 +1948,7 @@ export default function Map() {
                     placeholder="30"
                     value={formData.size}
                     onChange={(e) => setFormData({ ...formData, size: e.target.value })}
-                    className="mt-1 min-h-12 w-full rounded-sm border border-cyan-300/18 bg-black/25 px-4 py-3 text-white placeholder-zinc-500 focus:border-cyan-300 focus:outline-none"
+                    className="mt-1 min-h-10 w-full rounded-sm border border-cyan-300/18 bg-black/25 px-3 py-2 text-white placeholder-zinc-500 focus:border-cyan-300 focus:outline-none sm:min-h-12 sm:px-4 sm:py-3"
                   />
                 </div>
               </div>
@@ -1929,7 +1960,7 @@ export default function Map() {
                   placeholder="Ex: Minhoca, Ração"
                   value={formData.bait}
                   onChange={(e) => setFormData({ ...formData, bait: e.target.value })}
-                  className="mt-1 min-h-12 w-full rounded-sm border border-cyan-300/18 bg-black/25 px-4 py-3 text-white placeholder-zinc-500 focus:border-cyan-300 focus:outline-none"
+                  className="mt-1 min-h-10 w-full rounded-sm border border-cyan-300/18 bg-black/25 px-3 py-2 text-white placeholder-zinc-500 focus:border-cyan-300 focus:outline-none sm:min-h-12 sm:px-4 sm:py-3"
                 />
               </div>
 
@@ -1940,7 +1971,7 @@ export default function Map() {
                     type="date"
                     value={formData.capturedDate}
                     onChange={(e) => setFormData({ ...formData, capturedDate: e.target.value })}
-                    className="mt-1 min-h-12 w-full rounded-sm border border-cyan-300/18 bg-black/25 px-4 py-3 text-white placeholder-zinc-500 focus:border-cyan-300 focus:outline-none"
+                    className="mt-1 min-h-10 w-full rounded-sm border border-cyan-300/18 bg-black/25 px-3 py-2 text-white placeholder-zinc-500 focus:border-cyan-300 focus:outline-none sm:min-h-12 sm:px-4 sm:py-3"
                   />
                 </div>
                 <div>
@@ -1949,7 +1980,7 @@ export default function Map() {
                     type="time"
                     value={formData.capturedTime}
                     onChange={(e) => setFormData({ ...formData, capturedTime: e.target.value })}
-                    className="mt-1 min-h-12 w-full rounded-sm border border-cyan-300/18 bg-black/25 px-4 py-3 text-white placeholder-zinc-500 focus:border-cyan-300 focus:outline-none"
+                    className="mt-1 min-h-10 w-full rounded-sm border border-cyan-300/18 bg-black/25 px-3 py-2 text-white placeholder-zinc-500 focus:border-cyan-300 focus:outline-none sm:min-h-12 sm:px-4 sm:py-3"
                   />
                 </div>
               </div>
@@ -1977,7 +2008,7 @@ export default function Map() {
 
                     reader.readAsDataURL(file);
                   }}
-                  className="mt-1 min-h-12 w-full rounded-sm border border-cyan-300/18 bg-black/25 px-4 py-3 text-white file:cursor-pointer file:rounded-sm file:border-0 file:bg-emerald-600 file:px-3 file:py-1.5 file:text-white hover:file:bg-emerald-700 focus:border-cyan-300 focus:outline-none"
+                  className="mt-1 min-h-10 w-full rounded-sm border border-cyan-300/18 bg-black/25 px-3 py-2 text-white file:cursor-pointer file:rounded-sm file:border-0 file:bg-emerald-600 file:px-3 file:py-1 file:text-white hover:file:bg-emerald-700 focus:border-cyan-300 focus:outline-none sm:min-h-12 sm:px-4 sm:py-3 sm:file:py-1.5"
                 />
                 {formData.photo && (
                   <p className="mt-1 text-xs font-bold text-emerald-300">
@@ -1992,7 +2023,7 @@ export default function Map() {
                   placeholder="Notas sobre a captura..."
                   value={formData.comment}
                   onChange={(e) => setFormData({ ...formData, comment: e.target.value })}
-                  className="mt-1 h-32 w-full resize-none rounded-sm border border-cyan-300/18 bg-black/25 px-4 py-3 text-white placeholder-zinc-500 focus:border-cyan-300 focus:outline-none sm:h-36"
+                  className="mt-1 h-full min-h-0 w-full resize-none rounded-sm border border-cyan-300/18 bg-black/25 px-3 py-2 text-white placeholder-zinc-500 focus:border-cyan-300 focus:outline-none sm:px-4 sm:py-3"
                 />
               </div>
 
@@ -2011,16 +2042,16 @@ export default function Map() {
                 </button>
               </div>
             </div>
-            <div className="grid shrink-0 grid-cols-2 gap-3 border-t border-white/10 bg-[#020a14]/98 p-3 sm:p-4">
+            <div className="grid shrink-0 grid-cols-1 gap-3 border-t border-white/10 bg-[#020a14]/98 p-4 pb-[calc(16px+env(safe-area-inset-bottom))] sm:grid-cols-2 sm:p-4">
               <button
                 onClick={saveCapture}
-                className="inline-flex min-h-[68px] w-full items-center justify-center rounded-md border border-emerald-300/60 bg-emerald-500/24 px-4 py-4 text-center text-base font-black text-emerald-50 shadow-[0_0_24px_rgba(16,185,129,0.16),inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:bg-emerald-500/32 sm:min-h-[72px]"
+                className="inline-flex min-h-[58px] w-full items-center justify-center rounded-md border border-emerald-300/60 bg-emerald-500/24 px-4 py-3 text-center text-base font-black text-emerald-50 shadow-[0_0_24px_rgba(16,185,129,0.16),inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:bg-emerald-500/32 sm:min-h-[72px] sm:py-4"
               >
                 Confirmar captura aqui
               </button>
               <button
                 onClick={cancelCapture}
-                className="inline-flex min-h-[68px] w-full items-center justify-center rounded-md border border-red-400/65 bg-red-500/22 px-4 py-4 text-center text-base font-black text-red-50 shadow-[0_0_24px_rgba(239,68,68,0.12),inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:bg-red-500/30 sm:min-h-[72px]"
+                className="inline-flex min-h-[58px] w-full items-center justify-center rounded-md border border-red-400/65 bg-red-500/22 px-4 py-3 text-center text-base font-black text-red-50 shadow-[0_0_24px_rgba(239,68,68,0.12),inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:bg-red-500/30 sm:min-h-[72px] sm:py-4"
               >
                 Cancelar
               </button>
@@ -2030,9 +2061,9 @@ export default function Map() {
       )}
 
       {pendingPlace && (
-        <div className="fixed inset-0 z-[3000] bg-black/80" onClick={cancelPersonalPlace}>
+        <div className="fixed inset-0 z-[3000] bg-black/80">
           <div
-            className="fixed left-1/2 top-1/2 flex max-h-[calc(100vh-24px)] w-[calc(100vw-24px)] max-w-[640px] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-md border border-cyan-300/18 bg-[#020a14]/97 text-white shadow-[0_24px_80px_rgba(0,0,0,0.62),0_0_34px_rgba(34,211,238,0.18)] backdrop-blur-xl"
+            className="fixed bottom-2 left-1/2 top-2 flex w-[calc(100vw-16px)] max-w-[640px] -translate-x-1/2 flex-col overflow-hidden rounded-md border border-cyan-300/18 bg-[#020a14]/97 text-white shadow-[0_24px_80px_rgba(0,0,0,0.62),0_0_34px_rgba(34,211,238,0.18)] backdrop-blur-xl sm:bottom-6 sm:top-6"
             onClick={stopPanelEvent}
             onPointerDown={stopPanelEvent}
           >
@@ -2043,13 +2074,15 @@ export default function Map() {
             >
               ×
             </button>
-            <div className="shrink-0 border-b border-white/10 p-4 sm:p-5">
-              <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-start gap-3">
+            <div className="shrink-0 border-b border-white/10 p-3 sm:p-5">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
               <div className="min-w-0">
                 <p className="text-[11px] font-black uppercase tracking-[0.22em] text-emerald-200">Meus Lugares</p>
                 <h2 className="mt-1 text-3xl font-black leading-none text-white">Meu lugar</h2>
               </div>
-              <CoordinatesBadge lat={pendingPlace.lat} lng={pendingPlace.lng} precision={8} />
+              <div className="hidden sm:block">
+                <CoordinatesBadge lat={pendingPlace.lat} lng={pendingPlace.lng} precision={8} />
+              </div>
               <button
                 onClick={cancelPersonalPlace}
                 className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-emerald-300/45 bg-black/70 text-2xl font-black text-white shadow-[0_0_18px_rgba(16,185,129,0.22)] backdrop-blur-md transition hover:bg-black/85 sm:h-12 sm:w-12"
@@ -2059,11 +2092,11 @@ export default function Map() {
               </button>
               </div>
             </div>
-            <p className="px-4 pt-4 text-center text-xs font-black uppercase tracking-[0.14em] text-cyan-200/70 sm:px-5">
+            <p className="shrink-0 px-4 pt-3 text-center text-xs font-black uppercase tracking-[0.14em] text-cyan-200/70 sm:px-5 sm:pt-4">
               Privado por padrão
             </p>
 
-            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 sm:p-5">
+            <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)_auto] gap-3 overflow-hidden p-3 sm:gap-4 sm:p-5">
               <div>
                 <label className="text-sm font-black uppercase tracking-[0.12em] text-emerald-200">Nome</label>
                 <input
@@ -2071,7 +2104,7 @@ export default function Map() {
                   placeholder="Ex: Canal bom de robalo"
                   value={placeFormData.name}
                   onChange={(e) => setPlaceFormData({ ...placeFormData, name: e.target.value })}
-                  className="mt-1 min-h-12 w-full rounded-sm border border-cyan-300/18 bg-black/25 px-4 py-3 text-white placeholder-zinc-500 focus:border-cyan-300 focus:outline-none"
+                  className="mt-1 min-h-10 w-full rounded-sm border border-cyan-300/18 bg-black/25 px-3 py-2 text-white placeholder-zinc-500 focus:border-cyan-300 focus:outline-none sm:min-h-12 sm:px-4 sm:py-3"
                 />
               </div>
 
@@ -2081,7 +2114,7 @@ export default function Map() {
                   placeholder="Notas opcionais sobre o lugar..."
                   value={placeFormData.note}
                   onChange={(e) => setPlaceFormData({ ...placeFormData, note: e.target.value })}
-                  className="mt-1 h-32 w-full resize-none rounded-sm border border-cyan-300/18 bg-black/25 px-4 py-3 text-white placeholder-zinc-500 focus:border-cyan-300 focus:outline-none sm:h-36"
+                  className="mt-1 h-full min-h-0 w-full resize-none rounded-sm border border-cyan-300/18 bg-black/25 px-3 py-2 text-white placeholder-zinc-500 focus:border-cyan-300 focus:outline-none sm:px-4 sm:py-3"
                 />
               </div>
 
@@ -2124,15 +2157,17 @@ export default function Map() {
 
       {selectedLocation && (
         <div
-          className={`map-control-overlay fixed left-1/2 z-[7000] w-[calc(100vw-16px)] max-w-[900px] -translate-x-1/2 sm:w-[calc(100vw-24px)] ${
-            selectedLocation.personalPlaceId
-              ? "top-2 sm:top-6"
-              : "top-1/2 -translate-y-1/2"
-          }`}
+          className="map-control-overlay fixed bottom-2 left-1/2 top-2 z-[7000] w-[calc(100vw-16px)] max-w-[900px] -translate-x-1/2 sm:bottom-6 sm:top-6 sm:w-[calc(100vw-24px)]"
         >
           {(() => {
             const fishCastScore = calculateFishCastScore(selectedLocation.conditions);
             const conditionRows = getSpotConditionRows(selectedLocation.conditions);
+            const selectedPersonalPlace = selectedLocation.personalPlaceId
+              ? personalPlaces.find((item) => item.id === selectedLocation.personalPlaceId)
+              : null;
+            const selectedPersonalPlaceCaptures = selectedLocation.personalPlaceId
+              ? getCapturesForPlace(selectedLocation.personalPlaceId)
+              : [];
 
             return (
               <div
@@ -2141,7 +2176,7 @@ export default function Map() {
                 } ${
                   selectedLocation.personalPlaceId
                     ? "h-[calc(100dvh-16px)] max-h-[calc(100dvh-16px)] sm:h-[calc(100vh-48px)] sm:max-h-[calc(100vh-48px)]"
-                    : "max-h-[calc(100vh-16px)] sm:max-h-[calc(100vh-48px)]"
+                    : "h-full max-h-full"
                 }`}
                 onClick={(event) => {
                   if (selectedLocation.personalPlaceId) {
@@ -2201,30 +2236,30 @@ export default function Map() {
                   compactMobile={Boolean(selectedLocation.personalPlaceId)}
                 />
 
-                <div className="mb-1.5 shrink-0 rounded-md border border-emerald-300/25 bg-[linear-gradient(135deg,rgba(6,78,59,0.34),rgba(2,6,23,0.44))] p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] sm:mb-4 sm:p-4">
+                <div className={`mb-1.5 rounded-md border border-emerald-300/25 bg-[linear-gradient(135deg,rgba(6,78,59,0.34),rgba(2,6,23,0.44))] p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] sm:mb-4 sm:p-4 ${!selectedLocation.personalPlaceId || selectedPersonalPlaceCaptures.length === 0 ? "flex min-h-0 flex-1 flex-col" : "shrink-0"}`}>
                   <h3 className="mb-1.5 flex items-center gap-2 border-b border-emerald-300/18 pb-1 text-[11px] font-black uppercase tracking-[0.12em] text-emerald-200 sm:mb-3 sm:pb-2 sm:text-base sm:tracking-[0.18em]">
                     <span>☁</span>
                     Condições atuais
                   </h3>
-                  <div className="grid grid-cols-3 gap-1 sm:grid-cols-2 sm:gap-2.5 lg:grid-cols-3">
+                  <div className={`grid grid-cols-3 gap-1 sm:grid-cols-2 sm:gap-2.5 lg:grid-cols-3 ${!selectedLocation.personalPlaceId || selectedPersonalPlaceCaptures.length === 0 ? "min-h-0 flex-1 auto-rows-fr" : ""}`}>
                     {conditionRows.map((condition) => (
                       <div
                         key={condition.label}
-                        className="grid grid-cols-[20px_1fr] items-center gap-1 rounded-sm border border-emerald-200/14 bg-black/28 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:grid-cols-[46px_1fr] sm:gap-3 sm:p-3"
+                        className="grid grid-cols-[24px_1fr] items-center gap-1.5 rounded-sm border border-emerald-200/14 bg-black/28 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:grid-cols-[52px_1fr] sm:gap-3 sm:p-4"
                       >
-                        <div className="flex h-5 w-5 items-center justify-center rounded-full border border-cyan-300/30 bg-cyan-300/10 text-xs sm:h-11 sm:w-11 sm:text-2xl">
+                        <div className="flex h-6 w-6 items-center justify-center rounded-full border border-cyan-300/30 bg-cyan-300/10 text-sm sm:h-12 sm:w-12 sm:text-3xl">
                           {condition.icon}
                         </div>
                         <div className="min-w-0">
-                          <p className="truncate text-[7px] font-black uppercase tracking-[0.04em] text-emerald-200 sm:text-[11px] sm:tracking-[0.16em]">
+                          <p className="truncate text-[8px] font-black uppercase tracking-[0.06em] text-emerald-200 sm:text-xs sm:tracking-[0.16em]">
                             {condition.label}
                           </p>
-                          <p className="truncate text-[10px] font-black leading-tight text-white sm:mt-1 sm:text-base">{condition.value}</p>
+                          <p className="truncate text-base font-black leading-tight text-white sm:mt-1 sm:text-2xl">{condition.value}</p>
                           <p className="hidden sm:mt-1 sm:line-clamp-2 sm:block sm:text-xs sm:font-bold sm:leading-snug sm:text-zinc-300">
                             {condition.description}
                           </p>
                         </div>
-                        <span className="col-span-2 max-w-full justify-self-start truncate rounded-full bg-emerald-400/18 px-1.5 py-0.5 text-[7px] font-black uppercase tracking-[0.04em] text-lime-200 sm:px-3 sm:py-1 sm:text-[10px] sm:tracking-[0.08em]">
+                        <span className="col-span-2 max-w-full justify-self-start truncate rounded-full bg-emerald-400/18 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.04em] text-lime-200 sm:px-3 sm:py-1 sm:text-[10px] sm:tracking-[0.08em]">
                           {condition.badgeIcon} {condition.badge}
                         </span>
                       </div>
@@ -2233,8 +2268,8 @@ export default function Map() {
                 </div>
 
                 {selectedLocation.personalPlaceId && (() => {
-                  const place = personalPlaces.find((item) => item.id === selectedLocation.personalPlaceId);
-                  const placeCaptures = getCapturesForPlace(selectedLocation.personalPlaceId);
+                  const place = selectedPersonalPlace;
+                  const placeCaptures = selectedPersonalPlaceCaptures;
 
                   if (!place) {
                     return null;
@@ -2242,15 +2277,13 @@ export default function Map() {
 
                   return (
                     <div className="flex min-h-0 flex-1 flex-col gap-2 sm:gap-3">
-                      <div className={`min-h-0 overflow-hidden ${placeCaptures.length >= 3 ? "max-h-[clamp(220px,31vh,280px)]" : ""}`}>
-
-
+                      <div className={`min-h-0 ${placeCaptures.length >= 4 ? "max-h-[clamp(252px,31vh,288px)] overflow-hidden" : "overflow-visible"}`}>
                         {placeCaptures.length === 0 ? (
-                          <p className="mt-3 text-sm font-bold text-zinc-400">
+                          <p className="text-sm font-bold text-zinc-400">
                             Nenhuma captura vinculada ainda.
                           </p>
                         ) : (
-                          <div className="h-full space-y-2 overflow-y-auto pr-1">
+                          <div className={`space-y-2 pr-1 ${placeCaptures.length >= 4 ? "h-full overflow-y-auto" : "overflow-visible"}`}>
                             {[...placeCaptures].reverse().map((capture) => (
                               <article
                                 key={`place-capture-${capture.id}`}
@@ -2298,7 +2331,7 @@ export default function Map() {
                         )}
                       </div>
 
-                      <div className="grid shrink-0 grid-cols-2 gap-3 border-t border-white/10 bg-[#020a14]/98 pt-3 pb-[calc(18px+env(safe-area-inset-bottom))] sm:pb-0">
+                      <div className="mt-auto grid shrink-0 grid-cols-2 gap-3 border-t border-white/10 bg-[#020a14]/98 pt-3 pb-[calc(18px+env(safe-area-inset-bottom))] sm:pb-0">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -2355,7 +2388,7 @@ export default function Map() {
             const lastCapture = getLastSpotCaptureDate(selectedCaptureSpot.captures);
 
             return (
-              <div className="flex h-[calc(100dvh-16px)] max-h-[calc(100dvh-16px)] w-full flex-col overflow-hidden rounded-md border border-cyan-300/18 bg-[#020a14]/97 p-3 text-white shadow-[0_24px_70px_rgba(0,0,0,0.62),0_0_34px_rgba(34,211,238,0.18)] backdrop-blur-xl sm:h-auto sm:max-h-[calc(100vh-48px)] sm:p-5">
+              <div className="flex h-[calc(100dvh-16px)] max-h-[calc(100dvh-16px)] w-full flex-col overflow-hidden rounded-md border border-cyan-300/18 bg-[#020a14]/97 p-3 text-white shadow-[0_24px_70px_rgba(0,0,0,0.62),0_0_34px_rgba(34,211,238,0.18)] backdrop-blur-xl sm:h-[calc(100vh-48px)] sm:max-h-[calc(100vh-48px)] sm:p-5">
                 <div className="mb-1.5 shrink-0 border-b border-white/10 pb-1.5 sm:mb-5 sm:pb-4">
                     <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-start gap-3">
                     <div className="min-w-0">
@@ -2391,21 +2424,21 @@ export default function Map() {
                     {conditionRows.map((condition) => (
                       <div
                         key={condition.label}
-                        className="grid grid-cols-[20px_1fr] items-center gap-1 rounded-sm border border-emerald-200/14 bg-black/28 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:grid-cols-[46px_1fr] sm:gap-3 sm:p-3"
+                        className="grid grid-cols-[24px_1fr] items-center gap-1.5 rounded-sm border border-emerald-200/14 bg-black/28 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:grid-cols-[52px_1fr] sm:gap-3 sm:p-4"
                       >
-                        <div className="flex h-5 w-5 items-center justify-center rounded-full border border-cyan-300/30 bg-cyan-300/10 text-xs sm:h-11 sm:w-11 sm:text-2xl">
+                        <div className="flex h-6 w-6 items-center justify-center rounded-full border border-cyan-300/30 bg-cyan-300/10 text-sm sm:h-12 sm:w-12 sm:text-3xl">
                           {condition.icon}
                         </div>
                         <div className="min-w-0">
-                          <p className="truncate text-[7px] font-black uppercase tracking-[0.04em] text-emerald-200 sm:text-[11px] sm:tracking-[0.16em]">
+                          <p className="truncate text-[8px] font-black uppercase tracking-[0.06em] text-emerald-200 sm:text-xs sm:tracking-[0.16em]">
                             {condition.label}
                           </p>
-                          <p className="truncate text-[10px] font-black leading-tight text-white sm:mt-1 sm:text-base">{condition.value}</p>
+                          <p className="truncate text-base font-black leading-tight text-white sm:mt-1 sm:text-2xl">{condition.value}</p>
                           <p className="hidden sm:mt-1 sm:line-clamp-2 sm:block sm:text-xs sm:font-bold sm:leading-snug sm:text-zinc-300">
                             {condition.description}
                           </p>
                         </div>
-                        <span className="col-span-2 max-w-full justify-self-start truncate rounded-full bg-emerald-400/18 px-1.5 py-0.5 text-[7px] font-black uppercase tracking-[0.04em] text-lime-200 sm:px-3 sm:py-1 sm:text-[10px] sm:tracking-[0.08em]">
+                        <span className="col-span-2 max-w-full justify-self-start truncate rounded-full bg-emerald-400/18 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.04em] text-lime-200 sm:px-3 sm:py-1 sm:text-[10px] sm:tracking-[0.08em]">
                           {condition.badgeIcon} {condition.badge}
                         </span>
                       </div>
@@ -2414,7 +2447,7 @@ export default function Map() {
                 </div>
 
                 <div className="flex min-h-0 flex-1 flex-col gap-2 sm:gap-3">
-                  <div className={`flex min-h-0 flex-col rounded-md border border-yellow-300/20 bg-black/25 p-2 sm:p-3 ${selectedCaptureSpot.captures.length >= 3 ? "max-h-[clamp(295px,36vh,360px)]" : ""}`}>
+                  <div className={`flex min-h-0 flex-1 flex-col rounded-md border border-yellow-300/20 bg-black/25 p-2 sm:p-3 ${selectedCaptureSpot.captures.length >= 4 ? "max-h-[clamp(322px,36vh,380px)] overflow-hidden" : ""}`}>
                     <div className="flex items-center justify-between gap-3">
                       <p className="flex items-center gap-2 text-[12px] font-black uppercase tracking-[0.16em] text-emerald-200">
                         <span>🐟</span>
@@ -2449,7 +2482,7 @@ export default function Map() {
                       </div>
                     </div>
 
-                    <div className={`mt-2 min-h-0 space-y-2 overflow-y-auto pr-1 sm:mt-3 ${selectedCaptureSpot.captures.length >= 3 ? "max-h-[clamp(220px,28vh,280px)]" : ""}`}>
+                    <div className={`mt-2 min-h-0 space-y-2 pr-1 sm:mt-3 ${selectedCaptureSpot.captures.length >= 4 ? "max-h-[clamp(232px,28vh,288px)] overflow-y-auto" : "overflow-visible"}`}>
                       {[...selectedCaptureSpot.captures].reverse().map((capture) => {
                         const originalIndex = captures.findIndex((item) => item.id === capture.id);
 
@@ -2506,7 +2539,7 @@ export default function Map() {
                     </div>
                   </div>
 
-                  <div className="grid shrink-0 grid-cols-2 gap-3 border-t border-white/10 bg-[#020a14]/98 pt-3 pb-[calc(18px+env(safe-area-inset-bottom))] sm:pb-0">
+                  <div className="mt-auto grid shrink-0 grid-cols-2 gap-3 border-t border-white/10 bg-[#020a14]/98 pt-3 pb-[calc(18px+env(safe-area-inset-bottom))] sm:pb-0">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -2553,7 +2586,7 @@ export default function Map() {
 
       {selectedCapture && (
         <div
-          className="map-control-overlay fixed bottom-2 left-1/2 top-[56px] z-[7000] w-[calc(100vw-24px)] max-w-[460px] -translate-x-1/2 sm:bottom-4 sm:top-[96px]"
+          className="map-control-overlay fixed bottom-2 left-1/2 top-2 z-[7000] w-[calc(100vw-16px)] max-w-[460px] -translate-x-1/2 sm:bottom-4 sm:top-[96px] sm:w-[calc(100vw-24px)]"
           onClick={stopPanelEvent}
           onPointerDown={stopPanelEvent}
         >
@@ -2573,14 +2606,16 @@ export default function Map() {
             </div>
 
             <div className="flex h-full min-h-0 flex-col gap-2 p-3 sm:gap-2.5 sm:p-4">
-              <div className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto_auto] items-start gap-3 border-b border-white/10 pb-2">
+              <div className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-2 border-b border-white/10 pb-2 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:gap-3">
                 <div className="min-w-0">
                   <p className="text-[11px] font-black uppercase tracking-[0.22em] text-emerald-200">Minha captura</p>
                   <h2 className="mt-1 line-clamp-1 text-2xl font-black leading-tight text-white sm:text-3xl">
-                    {selectedCapture.species || "EspÃ©cie nÃ£o informada"}
+                    {selectedCapture.species || "Espécie não informada"}
                   </h2>
                 </div>
-                <CoordinatesBadge lat={selectedCapture.lat} lng={selectedCapture.lng} />
+                <div className="hidden sm:block">
+                  <CoordinatesBadge lat={selectedCapture.lat} lng={selectedCapture.lng} />
+                </div>
                 <button
                   onClick={() => {
                     setSelectedCapture(null);
@@ -2592,12 +2627,12 @@ export default function Map() {
                   ×
                 </button>
               </div>
-              <div className="min-h-0 flex-1 space-y-2 overflow-hidden sm:space-y-2.5">
+              <div className="min-h-0 flex-1 space-y-1.5 overflow-hidden sm:space-y-2.5">
               <div
                 className={`flex items-center justify-center overflow-hidden rounded-sm border border-white/10 bg-[#020617] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] ${
                   shareOptionsCaptureId === selectedCapture.id
-                    ? "h-[clamp(92px,16vh,150px)] sm:h-[clamp(160px,26vh,260px)]"
-                    : "h-[clamp(130px,24vh,240px)] sm:h-[clamp(180px,32vh,320px)]"
+                    ? "h-[clamp(72px,12vh,112px)] sm:h-[clamp(160px,26vh,260px)]"
+                    : "h-[clamp(108px,20vh,188px)] sm:h-[clamp(180px,32vh,320px)]"
                 }`}
               >
                 {selectedCapture.photo ? (
@@ -2611,7 +2646,7 @@ export default function Map() {
                 )}
               </div>
 
-              <div className="border-b border-white/10 pb-2 pr-10">
+              <div className="hidden border-b border-white/10 pb-2 pr-10 sm:block">
                 <span className="inline-flex rounded-sm border border-emerald-300/25 bg-emerald-300/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-emerald-200">
                   Minha captura
                 </span>
@@ -2624,22 +2659,22 @@ export default function Map() {
               </div>
 
               <div className="grid grid-cols-3 gap-2">
-                <div className="min-h-12 rounded-sm border border-emerald-300/15 bg-black/25 p-2 sm:min-h-16 sm:p-2.5">
+                <div className="min-h-11 rounded-sm border border-emerald-300/15 bg-black/25 p-1.5 sm:min-h-16 sm:p-2.5">
                   <p className={infoLabelClass}>Peso</p>
                   <p className="mt-0.5 truncate text-xs font-black text-white sm:mt-1 sm:text-sm">{selectedCapture.weight ? `${selectedCapture.weight} kg` : "--"}</p>
                 </div>
-                <div className="min-h-12 rounded-sm border border-emerald-300/15 bg-black/25 p-2 sm:min-h-16 sm:p-2.5">
+                <div className="min-h-11 rounded-sm border border-emerald-300/15 bg-black/25 p-1.5 sm:min-h-16 sm:p-2.5">
                   <p className={infoLabelClass}>Tamanho</p>
                   <p className="mt-0.5 truncate text-xs font-black text-white sm:mt-1 sm:text-sm">{selectedCapture.size ? `${selectedCapture.size} cm` : "--"}</p>
                 </div>
-                <div className="min-h-12 rounded-sm border border-emerald-300/15 bg-black/25 p-2 sm:min-h-16 sm:p-2.5">
+                <div className="min-h-11 rounded-sm border border-emerald-300/15 bg-black/25 p-1.5 sm:min-h-16 sm:p-2.5">
                   <p className={infoLabelClass}>Isca</p>
                   <p className="mt-0.5 truncate text-xs font-black text-white sm:mt-1 sm:text-sm">{selectedCapture.bait || "--"}</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 gap-2">
-                <div className="min-h-12 rounded-sm border border-emerald-300/15 bg-black/25 p-2 sm:min-h-16 sm:p-2.5">
+                <div className="min-h-11 rounded-sm border border-emerald-300/15 bg-black/25 p-1.5 sm:min-h-16 sm:p-2.5">
                   <p className={infoLabelClass}>Data/hora</p>
                   <p className="mt-0.5 text-xs font-black leading-snug text-white sm:mt-1 sm:text-sm">{formatCaptureDate(selectedCapture.capturedAt)}</p>
                 </div>
@@ -2647,14 +2682,14 @@ export default function Map() {
 
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-400">Observações</p>
-                <p className="mt-1 min-h-10 overflow-hidden rounded-sm border border-emerald-300/15 bg-black/25 p-2 text-xs leading-snug text-zinc-200 sm:min-h-14 sm:p-2.5 sm:text-sm">
+                <p className="mt-1 line-clamp-2 min-h-9 overflow-hidden rounded-sm border border-emerald-300/15 bg-black/25 p-1.5 text-xs leading-snug text-zinc-200 sm:min-h-14 sm:p-2.5 sm:text-sm">
                   {selectedCapture.comment || "Sem observações adicionadas."}
                 </p>
               </div>
 
               </div>
 
-              <div className="grid shrink-0 grid-cols-1 gap-2 sm:grid-cols-2">
+              <div className="grid shrink-0 grid-cols-2 gap-2">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -2662,7 +2697,7 @@ export default function Map() {
                       current === selectedCapture.id ? null : selectedCapture.id
                     );
                   }}
-                  className={`${panelButtonPrimary} justify-center rounded-xl border-emerald-300/35 bg-emerald-400/18 shadow-[0_0_24px_rgba(16,185,129,0.14)]`}
+                  className="flex min-h-[52px] w-full items-center justify-center rounded-md border border-emerald-300/35 bg-emerald-400/18 px-3 py-2 text-center text-sm font-black leading-tight text-emerald-100 shadow-[0_0_24px_rgba(16,185,129,0.14)] transition hover:bg-emerald-400/25 sm:min-h-16 sm:rounded-xl sm:px-5 sm:py-4 sm:text-base"
                 >
                   {shareFeedback?.captureId === selectedCapture.id ? shareFeedback.message : "Compartilhar"}
                 </button>
@@ -2678,19 +2713,19 @@ export default function Map() {
 
                     deleteCapture(selectedCapture.id);
                   }}
-                  className={`${panelButtonDanger} rounded-xl`}
+                  className="flex min-h-[52px] w-full items-center justify-center rounded-md border border-red-300/20 bg-red-500/15 px-3 py-2 text-center text-sm font-black leading-tight text-red-100 transition hover:bg-red-500/25 sm:min-h-16 sm:rounded-xl sm:px-5 sm:py-4 sm:text-base"
                 >
                   Apagar captura
                 </button>
               </div>
               {shareOptionsCaptureId === selectedCapture.id && (
-                <div className="grid min-w-0 shrink-0 grid-cols-1 gap-2 rounded-md border border-yellow-300/20 bg-yellow-300/5 p-2 sm:grid-cols-2">
+                <div className="grid min-w-0 shrink-0 grid-cols-2 gap-2 rounded-md border border-yellow-300/20 bg-yellow-300/5 p-2">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       void shareCapture(selectedCapture, "complete");
                     }}
-                    className={`${panelButtonSuccess} rounded-xl whitespace-normal break-words leading-tight`}
+                    className="flex min-h-[54px] w-full items-center justify-center whitespace-normal rounded-md border border-emerald-300/25 bg-emerald-400/15 px-2 py-2 text-center text-[13px] font-black leading-tight text-emerald-100 transition hover:bg-emerald-400/25 sm:min-h-16 sm:rounded-xl sm:px-5 sm:py-4 sm:text-base"
                   >
                     Compartilhar completo
                   </button>
@@ -2699,7 +2734,7 @@ export default function Map() {
                       e.stopPropagation();
                       void shareCapture(selectedCapture, "secret");
                     }}
-                    className={`${panelButtonPrimary} rounded-xl whitespace-normal break-words leading-tight`}
+                    className="flex min-h-[54px] w-full items-center justify-center whitespace-normal rounded-md border border-cyan-300/25 bg-cyan-400/15 px-2 py-2 text-center text-[13px] font-black leading-tight text-cyan-100 transition hover:bg-cyan-400/25 sm:min-h-16 sm:rounded-xl sm:px-5 sm:py-4 sm:text-base"
                   >
                     Compartilhar secreto
                   </button>
@@ -2833,6 +2868,7 @@ export default function Map() {
             onLocationClick={handleMapClick}
             onZoomChange={setZoom}
             popupPriorityOpen={popupPriorityOpen}
+            mapDismissBlocked={interactiveWindowOpen}
             interactionPanelOpen={capturesPanelOpen}
             onDismissActivePopup={() => {
               setSpotPopupOpen(false);
@@ -2882,6 +2918,9 @@ export default function Map() {
             eventHandlers={{
               click: (event) => {
                 L.DomEvent.stopPropagation(event.originalEvent);
+                if (interactiveWindowOpen) {
+                  return;
+                }
                 ignoreNextMapClickRef.current = false;
                 setSpotPopupOpen(false);
                 setCapturePopupOpen(false);
@@ -2913,6 +2952,9 @@ export default function Map() {
             eventHandlers={{
               click: (event) => {
                 L.DomEvent.stopPropagation(event.originalEvent);
+                if (interactiveWindowOpen) {
+                  return;
+                }
                 ignoreNextMapClickRef.current = false;
                 setSpotPopupOpen(false);
                 setCapturePopupOpen(false);
@@ -2947,6 +2989,9 @@ export default function Map() {
             eventHandlers={{
               click: (event) => {
                 L.DomEvent.stopPropagation(event.originalEvent);
+                if (interactiveWindowOpen) {
+                  return;
+                }
                 ignoreNextMapClickRef.current = false;
                 openCaptureMarker(capture);
               },
@@ -2957,4 +3002,5 @@ export default function Map() {
     </div>
   );
 }
+
 
