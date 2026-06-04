@@ -3,6 +3,7 @@
 import {
   MapContainer,
   Marker,
+  Pane,
   Polygon,
   TileLayer,
   WMSTileLayer,
@@ -97,6 +98,13 @@ const infoLabelClass =
 
 const MARKER_ICON_SIZE = 52;
 const OFFICIAL_SPOT_MARKER_ICON_SIZE = 45;
+const OFFICIAL_SPOT_MARKER_PANE = "official-spot-markers";
+const OFFICIAL_SPOT_MARKER_PANE_Z_INDEX = 650;
+const OFFICIAL_SPOT_MARKER_Z_INDEX_OFFSET = 1000;
+const USER_CAPTURE_MARKER_PANE = "user-capture-markers";
+const USER_CAPTURE_MARKER_PANE_Z_INDEX = 625;
+const USER_PLACE_MARKER_PANE = "user-place-markers";
+const USER_PLACE_MARKER_PANE_Z_INDEX = 610;
 
 function createPremiumMarkerIcon({
   iconUrl,
@@ -418,7 +426,7 @@ function MapActionButton({
       onPointerDown={(e) => e.stopPropagation()}
       aria-label={ariaLabel}
       title={title}
-      className="group relative flex h-14 w-14 appearance-none items-center justify-center overflow-visible rounded-xl border border-cyan-200/18 bg-[#020a14]/88 p-1 leading-none shadow-[0_14px_34px_rgba(0,0,0,0.38),inset_0_1px_0_rgba(255,255,255,0.08)] outline-none backdrop-blur-md transition duration-200 ease-out hover:scale-[1.03] hover:border-cyan-200/32 hover:bg-[#051827]/94 focus-visible:ring-2 focus-visible:ring-cyan-200/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent active:scale-95 sm:h-[62px] sm:w-[62px]"
+      className="group relative flex h-12 w-12 appearance-none items-center justify-center overflow-visible rounded-xl border border-cyan-200/18 bg-[#020a14]/88 p-1 leading-none shadow-[0_14px_34px_rgba(0,0,0,0.38),inset_0_1px_0_rgba(255,255,255,0.08)] outline-none backdrop-blur-md transition duration-200 ease-out hover:scale-[1.03] hover:border-cyan-200/32 hover:bg-[#051827]/94 focus-visible:ring-2 focus-visible:ring-cyan-200/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent active:scale-95 sm:h-[62px] sm:w-[62px]"
     >
       <span className="sr-only">{label}</span>
       <span className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-lg">
@@ -1709,7 +1717,7 @@ export default function Map() {
       )}
 
       <div
-        className={`map-control-overlay absolute bottom-4 right-4 z-[2000] flex flex-col items-end gap-1 transition sm:bottom-6 sm:right-6 ${
+        className={`map-control-overlay absolute bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] right-[calc(env(safe-area-inset-right)+0.75rem)] z-[2000] flex max-h-[calc(100dvh-env(safe-area-inset-bottom)-env(safe-area-inset-top)-1.5rem)] flex-col items-end gap-1 transition sm:bottom-6 sm:right-6 sm:max-h-none ${
           popupPriorityOpen ? "pointer-events-none opacity-0" : "opacity-100"
         }`}
       >
@@ -2892,113 +2900,129 @@ export default function Map() {
             ignoreNextMapClickRef={ignoreNextMapClickRef}
           />
 
-          {pendingCapture && (
-            <Marker
-              key="pending-capture"
-              position={[pendingCapture.lat, pendingCapture.lng]}
-              icon={createCaptureIcon(iconSize, 1)}
-              interactive={false}
-            />
-          )}
+          <Pane
+            name={USER_PLACE_MARKER_PANE}
+            style={{ zIndex: USER_PLACE_MARKER_PANE_Z_INDEX }}
+          >
+            {pendingPlace && (
+              <Marker
+                key="pending-place"
+                position={[pendingPlace.lat, pendingPlace.lng]}
+                icon={createPersonalPlaceIcon(iconSize, 0)}
+                interactive={false}
+              />
+            )}
 
-          {pendingPlace && (
-            <Marker
-              key="pending-place"
-              position={[pendingPlace.lat, pendingPlace.lng]}
-              icon={createPersonalPlaceIcon(iconSize, 0)}
-              interactive={false}
-            />
-          )}
+            {personalPlaces.map((place) => (
+              <Marker
+                key={`personal-place-${place.id}`}
+                position={[place.lat, place.lng]}
+                icon={createPersonalPlaceIcon(iconSize, getCapturesForPlace(place.id).length)}
+                eventHandlers={{
+                  click: (event) => {
+                    L.DomEvent.stopPropagation(event.originalEvent);
+                    if (interactiveWindowOpen) {
+                      return;
+                    }
+                    ignoreNextMapClickRef.current = false;
+                    setSpotPopupOpen(false);
+                    setCapturePopupOpen(false);
+                    setSelectedCapture(null);
+                    setSelectedCaptureSpot(null);
+                    setShareOptionsCaptureId(null);
+                    setSelectedLocation((current) => {
+                      if (current?.personalPlaceId === place.id) {
+                        return null;
+                      }
 
-          {fishingSpots.map((spot) => (
-          <Marker
-            key={`spot-${spot.id}`}
-            position={[spot.lat, spot.lng]}
-            icon={createSpotIcon(OFFICIAL_SPOT_MARKER_ICON_SIZE)}
-            eventHandlers={{
-              click: (event) => {
-                L.DomEvent.stopPropagation(event.originalEvent);
-                if (interactiveWindowOpen) {
-                  return;
-                }
-                ignoreNextMapClickRef.current = false;
-                setSpotPopupOpen(false);
-                setCapturePopupOpen(false);
-                setSelectedCapture(null);
-                setSelectedCaptureSpot(null);
-                setShareOptionsCaptureId(null);
-              setSelectedLocation((current) => {
-  if (current?.name === spot.name) {
-    return null;
-  }
+                      return {
+                        name: place.name,
+                        lat: place.lat,
+                        lng: place.lng,
+                        personalPlaceId: place.id,
+                        note: place.note,
+                        visibility: place.visibility,
+                        conditions: getConditionsForLocation(place.lat, place.lng),
+                      };
+                    });
+                  },
+                }}
+              />
+            ))}
+          </Pane>
 
-  return {
-    name: spot.name,
-    lat: spot.lat,
-    lng: spot.lng,
-    conditions: getSpotConditions(spot),
-  };
-});  
-              },
-            }}
-          />
-        ))}
+          <Pane
+            name={USER_CAPTURE_MARKER_PANE}
+            style={{ zIndex: USER_CAPTURE_MARKER_PANE_Z_INDEX }}
+          >
+            {pendingCapture && (
+              <Marker
+                key="pending-capture"
+                position={[pendingCapture.lat, pendingCapture.lng]}
+                icon={createCaptureIcon(iconSize, 1)}
+                interactive={false}
+              />
+            )}
 
-        {personalPlaces.map((place) => (
-          <Marker
-            key={`personal-place-${place.id}`}
-            position={[place.lat, place.lng]}
-            icon={createPersonalPlaceIcon(iconSize, getCapturesForPlace(place.id).length)}
-            eventHandlers={{
-              click: (event) => {
-                L.DomEvent.stopPropagation(event.originalEvent);
-                if (interactiveWindowOpen) {
-                  return;
-                }
-                ignoreNextMapClickRef.current = false;
-                setSpotPopupOpen(false);
-                setCapturePopupOpen(false);
-                setSelectedCapture(null);
-                setSelectedCaptureSpot(null);
-                setShareOptionsCaptureId(null);
-                setSelectedLocation((current) => {
-                  if (current?.personalPlaceId === place.id) {
-                    return null;
-                  }
+            {getCaptureSpotMarkers().map((capture) => (
+              <Marker
+                key={`capture-${capture.id}`}
+                position={[capture.lat, capture.lng]}
+                icon={createCaptureIcon(iconSize, getCapturesForCaptureSpot(capture).length)}
+                eventHandlers={{
+                  click: (event) => {
+                    L.DomEvent.stopPropagation(event.originalEvent);
+                    if (interactiveWindowOpen) {
+                      return;
+                    }
+                    ignoreNextMapClickRef.current = false;
+                    openCaptureMarker(capture);
+                  },
+                }}
+              />
+            ))}
+          </Pane>
 
-                  return {
-                    name: place.name,
-                    lat: place.lat,
-                    lng: place.lng,
-                    personalPlaceId: place.id,
-                    note: place.note,
-                    visibility: place.visibility,
-                    conditions: getConditionsForLocation(place.lat, place.lng),
-                  };
-                });
-              },
-            }}
-          />
-        ))}
+          <Pane
+            name={OFFICIAL_SPOT_MARKER_PANE}
+            style={{ zIndex: OFFICIAL_SPOT_MARKER_PANE_Z_INDEX }}
+          >
+            {fishingSpots.map((spot) => (
+              <Marker
+                key={`spot-${spot.id}`}
+                position={[spot.lat, spot.lng]}
+                icon={createSpotIcon(OFFICIAL_SPOT_MARKER_ICON_SIZE)}
+                zIndexOffset={OFFICIAL_SPOT_MARKER_Z_INDEX_OFFSET}
+                eventHandlers={{
+                  click: (event) => {
+                    L.DomEvent.stopPropagation(event.originalEvent);
+                    if (interactiveWindowOpen) {
+                      return;
+                    }
+                    ignoreNextMapClickRef.current = false;
+                    setSpotPopupOpen(false);
+                    setCapturePopupOpen(false);
+                    setSelectedCapture(null);
+                    setSelectedCaptureSpot(null);
+                    setShareOptionsCaptureId(null);
+                    setSelectedLocation((current) => {
+                      if (current?.name === spot.name) {
+                        return null;
+                      }
 
-        {getCaptureSpotMarkers().map((capture) => (
-          <Marker
-            key={`capture-${capture.id}`}
-            position={[capture.lat, capture.lng]}
-            icon={createCaptureIcon(iconSize, getCapturesForCaptureSpot(capture).length)}
-            eventHandlers={{
-              click: (event) => {
-                L.DomEvent.stopPropagation(event.originalEvent);
-                if (interactiveWindowOpen) {
-                  return;
-                }
-                ignoreNextMapClickRef.current = false;
-                openCaptureMarker(capture);
-              },
-            }}
-          />
-        ))}
-      </MapContainer>
+                      return {
+                        name: spot.name,
+                        lat: spot.lat,
+                        lng: spot.lng,
+                        conditions: getSpotConditions(spot),
+                      };
+                    });
+                  },
+                }}
+              />
+            ))}
+          </Pane>
+        </MapContainer>
     </div>
   );
 }
