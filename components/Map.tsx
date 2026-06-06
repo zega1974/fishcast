@@ -1,11 +1,14 @@
 "use client";
 
 import {
+  CircleMarker,
   MapContainer,
   Marker,
   Pane,
   Polygon,
+  Polyline,
   TileLayer,
+  Tooltip,
   WMSTileLayer,
   useMap,
   useMapEvents,
@@ -43,6 +46,12 @@ type PersonalPlace = {
 };
 
 type FocusTarget = {
+  id: number;
+  lat: number;
+  lng: number;
+};
+
+type MeasurementPoint = {
   id: number;
   lat: number;
   lng: number;
@@ -106,6 +115,8 @@ const USER_CAPTURE_MARKER_PANE = "user-capture-markers";
 const USER_CAPTURE_MARKER_PANE_Z_INDEX = 625;
 const USER_PLACE_MARKER_PANE = "user-place-markers";
 const USER_PLACE_MARKER_PANE_Z_INDEX = 610;
+const MEASUREMENT_PANE = "measurement-layer";
+const MEASUREMENT_PANE_Z_INDEX = 690;
 
 function createPremiumMarkerIcon({
   iconUrl,
@@ -279,8 +290,10 @@ function MapEvents({
   placeMode,
   onAddCapture,
   onAddPlace,
+  onAddMeasurementPoint,
   onLocationClick,
   onZoomChange,
+  measurementMode,
   popupPriorityOpen,
   mapDismissBlocked,
   interactionPanelOpen,
@@ -294,8 +307,10 @@ function MapEvents({
   placeMode: boolean;
   onAddCapture: (lat: number, lng: number) => void;
   onAddPlace: (lat: number, lng: number) => void;
+  onAddMeasurementPoint: (lat: number, lng: number) => void;
   onLocationClick: (lat: number, lng: number) => void;
   onZoomChange: (zoom: number) => void;
+  measurementMode: boolean;
   popupPriorityOpen: boolean;
   mapDismissBlocked: boolean;
   interactionPanelOpen: boolean;
@@ -356,6 +371,11 @@ function MapEvents({
       if (interactionPanelOpen) {
         map.closePopup();
         onDismissInteractionPanel();
+        return;
+      }
+
+      if (measurementMode) {
+        onAddMeasurementPoint(e.latlng.lat, e.latlng.lng);
         return;
       }
 
@@ -454,6 +474,134 @@ function MapActionButton({
         </span>
       )}
     </button>
+  );
+}
+
+function MeasurementControl({
+  active,
+  points,
+  totalMeters,
+  hidden,
+  onToggle,
+  onClear,
+  onExit,
+}: {
+  active: boolean;
+  points: MeasurementPoint[];
+  totalMeters: number;
+  hidden: boolean;
+  onToggle: () => void;
+  onClear: () => void;
+  onExit: () => void;
+}) {
+  const segments = getMeasurementSegments(points);
+
+  return (
+    <div
+      className={`map-control-overlay absolute left-4 top-[224px] z-[2000] w-[min(260px,calc(100vw-32px))] text-white transition ${
+        hidden ? "pointer-events-none opacity-0" : "opacity-100"
+      }`}
+      onPointerDown={(event) => event.stopPropagation()}
+      onClick={(event) => event.stopPropagation()}
+    >
+      <button
+        type="button"
+        onClick={onToggle}
+        className={`flex min-h-11 w-full items-center justify-center rounded-2xl border px-4 py-2.5 text-sm font-black uppercase tracking-[0.08em] shadow-[0_16px_42px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl transition active:scale-95 ${
+          active
+            ? "border-sky-300/80 bg-[linear-gradient(145deg,rgba(5,22,42,0.96),rgba(1,9,19,0.98))] text-sky-300 shadow-[0_0_18px_rgba(56,189,248,0.34),0_16px_42px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,255,255,0.1)]"
+            : "border-cyan-200/20 bg-[#020a14]/88 text-cyan-50 hover:border-cyan-200/36 hover:bg-[#061827]/94"
+        }`}
+        aria-pressed={active}
+      >
+        <span aria-hidden="true" className="mr-2 text-base">
+          📏
+        </span>
+        Medir
+      </button>
+
+      {active && (
+        <div className="mt-2 rounded-2xl border border-cyan-200/18 bg-[#020a14]/94 p-3 shadow-[0_18px_50px_rgba(0,0,0,0.48),0_0_22px_rgba(34,211,238,0.1)] backdrop-blur-xl">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-100/76">
+              Total
+            </span>
+            <strong className="text-base font-black text-white">
+              {formatMeasurementDistance(totalMeters)}
+            </strong>
+          </div>
+
+          <div className="mt-2 max-h-28 space-y-1 overflow-y-auto text-xs font-bold text-zinc-300">
+            {segments.length === 0 ? (
+              <p>Toque no mapa para iniciar.</p>
+            ) : (
+              segments.map((segment, index) => (
+                <p key={`${segment.to.id}-${index}`}>
+                  Ponto {points.findIndex((point) => point.id === segment.from.id) + 1} →{" "}
+                  {points.findIndex((point) => point.id === segment.to.id) + 1}:{" "}
+                  {formatMeasurementDistance(segment.distance)}
+                </p>
+              ))
+            )}
+          </div>
+
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={onClear}
+              className="min-h-10 rounded-xl border border-amber-300/30 bg-amber-300/10 px-2 text-[10px] font-black uppercase tracking-[0.04em] text-amber-100 transition hover:bg-amber-300/16"
+            >
+              🗑 Limpar Medição
+            </button>
+            <button
+              type="button"
+              onClick={onExit}
+              className="min-h-10 rounded-xl border border-red-300/28 bg-red-500/12 px-2 text-[10px] font-black uppercase tracking-[0.04em] text-red-100 transition hover:bg-red-500/18"
+            >
+              ❌ Sair da Medição
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MeasurementLayer({ points }: { points: MeasurementPoint[] }) {
+  const positions = points.map((point) => [point.lat, point.lng] as [number, number]);
+
+  return (
+    <Pane name={MEASUREMENT_PANE} style={{ zIndex: MEASUREMENT_PANE_Z_INDEX }}>
+      {positions.length > 1 && (
+        <Polyline
+          positions={positions}
+          pathOptions={{
+            color: "#38bdf8",
+            opacity: 0.92,
+            weight: 4,
+          }}
+        />
+      )}
+
+      {points.map((point, index) => (
+        <CircleMarker
+          key={point.id}
+          center={[point.lat, point.lng]}
+          radius={5}
+          pathOptions={{
+            color: "#e0f2fe",
+            fillColor: "#38bdf8",
+            fillOpacity: 0.95,
+            opacity: 0.95,
+            weight: 2,
+          }}
+        >
+          <Tooltip direction="top" offset={[0, -6]} opacity={0.92} permanent>
+            {index + 1}
+          </Tooltip>
+        </CircleMarker>
+      ))}
+    </Pane>
   );
 }
 
@@ -669,6 +817,30 @@ function getDistanceMeters(from: { lat: number; lng: number }, to: { lat: number
   return 2 * earthRadiusMeters * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+function getMeasurementSegments(points: MeasurementPoint[]) {
+  return points.slice(1).map((point, index) => {
+    const previousPoint = points[index];
+
+    return {
+      from: previousPoint,
+      to: point,
+      distance: getDistanceMeters(previousPoint, point),
+    };
+  });
+}
+
+function getMeasurementTotalMeters(points: MeasurementPoint[]) {
+  return getMeasurementSegments(points).reduce((total, segment) => total + segment.distance, 0);
+}
+
+function formatMeasurementDistance(distanceMeters: number) {
+  if (distanceMeters >= 1000) {
+    return `${(distanceMeters / 1000).toFixed(distanceMeters >= 10000 ? 1 : 2)} km`;
+  }
+
+  return `${Math.round(distanceMeters)} m`;
+}
+
 function createEmptyFormData(): CaptureFormData {
   return {
     species: "",
@@ -856,6 +1028,8 @@ export default function Map() {
   const [premiumPreviewOpen, setPremiumPreviewOpen] = useState(false);
   const [captureMode, setCaptureMode] = useState(false);
   const [placeMode, setPlaceMode] = useState(false);
+  const [measurementMode, setMeasurementMode] = useState(false);
+  const [measurementPoints, setMeasurementPoints] = useState<MeasurementPoint[]>([]);
   const [capturesPanelOpen, setCapturesPanelOpen] = useState(false);
   const [mapMode, setMapMode] = useState<MapMode>("map");
   const [zoom, setZoom] = useState(MAP_INITIAL_ZOOM);
@@ -894,6 +1068,7 @@ export default function Map() {
   const [capturePhotoMigrationDone, setCapturePhotoMigrationDone] = useState(false);
 
   const iconSize = MARKER_ICON_SIZE;
+  const measurementTotalMeters = getMeasurementTotalMeters(measurementPoints);
   const popupPriorityOpen =
     Boolean(selectedLocation) ||
     Boolean(selectedCapture) ||
@@ -907,6 +1082,41 @@ export default function Map() {
     Boolean(selectedCapture) ||
     Boolean(selectedCaptureSpot) ||
     Boolean(selectedLocation?.personalPlaceId);
+
+  function addMeasurementPoint(lat: number, lng: number) {
+    setMeasurementPoints((currentPoints) => [
+      ...currentPoints,
+      {
+        id: Date.now(),
+        lat,
+        lng,
+      },
+    ]);
+  }
+
+  function startMeasurement() {
+    setMeasurementMode(true);
+    setCaptureMode(false);
+    setPlaceMode(false);
+    setCapturesPanelOpen(false);
+    setPendingCapture(null);
+    setPendingPlace(null);
+    setSelectedLocation(null);
+    setSelectedCapture(null);
+    setSelectedCaptureSpot(null);
+    setShareOptionsCaptureId(null);
+    setSpotPopupOpen(false);
+    setCapturePopupOpen(false);
+  }
+
+  function clearMeasurement() {
+    setMeasurementPoints([]);
+  }
+
+  function exitMeasurement() {
+    setMeasurementMode(false);
+    setMeasurementPoints([]);
+  }
 
   useEffect(() => {
     let active = true;
@@ -1756,6 +1966,8 @@ export default function Map() {
           onClick={() => {
             setCaptureMode((prev) => !prev);
             setPlaceMode(false);
+            setMeasurementMode(false);
+            setMeasurementPoints([]);
             setCapturesPanelOpen(false);
             setSelectedCaptureSpot(null);
           }}
@@ -1769,6 +1981,8 @@ export default function Map() {
           onClick={() => {
             setPlaceMode((prev) => !prev);
             setCaptureMode(false);
+            setMeasurementMode(false);
+            setMeasurementPoints([]);
             setCapturesPanelOpen(false);
             setSelectedCaptureSpot(null);
           }}
@@ -1784,6 +1998,8 @@ export default function Map() {
             setCapturesPanelOpen((prev) => !prev);
             setCaptureMode(false);
             setPlaceMode(false);
+            setMeasurementMode(false);
+            setMeasurementPoints([]);
             setSelectedLocation(null);
             setSelectedCapture(null);
             setSelectedCaptureSpot(null);
@@ -1793,6 +2009,23 @@ export default function Map() {
           title="Ver minhas capturas"
         />
       </div>
+
+      <MeasurementControl
+        active={measurementMode}
+        points={measurementPoints}
+        totalMeters={measurementTotalMeters}
+        hidden={popupPriorityOpen || Boolean(pendingCapture) || Boolean(pendingPlace)}
+        onToggle={() => {
+          if (measurementMode) {
+            exitMeasurement();
+            return;
+          }
+
+          startMeasurement();
+        }}
+        onClear={clearMeasurement}
+        onExit={exitMeasurement}
+      />
 
       <MapModeSelector
         mode={mapMode}
@@ -2891,6 +3124,7 @@ export default function Map() {
             }}
           />
 
+          <MeasurementLayer points={measurementPoints} />
           <ZoomButtons hidden={popupPriorityOpen} />
           <CenterButton personalPlaces={personalPlaces} hidden={popupPriorityOpen} />
           <HomeMapViewController personalPlaces={personalPlaces} />
@@ -2902,8 +3136,10 @@ export default function Map() {
             placeMode={placeMode}
             onAddCapture={addCapture}
             onAddPlace={addPersonalPlace}
+            onAddMeasurementPoint={addMeasurementPoint}
             onLocationClick={handleMapClick}
             onZoomChange={setZoom}
+            measurementMode={measurementMode}
             popupPriorityOpen={popupPriorityOpen}
             mapDismissBlocked={interactiveWindowOpen}
             interactionPanelOpen={capturesPanelOpen}
@@ -2931,7 +3167,10 @@ export default function Map() {
 
           <Pane
             name={USER_PLACE_MARKER_PANE}
-            style={{ zIndex: USER_PLACE_MARKER_PANE_Z_INDEX }}
+            style={{
+              zIndex: USER_PLACE_MARKER_PANE_Z_INDEX,
+              pointerEvents: measurementMode ? "none" : "auto",
+            }}
           >
             {pendingPlace && (
               <Marker
@@ -2944,11 +3183,16 @@ export default function Map() {
 
             {personalPlaces.map((place) => (
               <Marker
-                key={`personal-place-${place.id}`}
+                key={`personal-place-${place.id}-${measurementMode ? "measure" : "normal"}`}
                 position={[place.lat, place.lng]}
                 icon={createPersonalPlaceIcon(iconSize, getCapturesForPlace(place.id).length)}
+                interactive={!measurementMode}
                 eventHandlers={{
                   click: (event) => {
+                    if (measurementMode) {
+                      return;
+                    }
+
                     L.DomEvent.stopPropagation(event.originalEvent);
                     if (interactiveWindowOpen) {
                       return;
@@ -2982,7 +3226,10 @@ export default function Map() {
 
           <Pane
             name={USER_CAPTURE_MARKER_PANE}
-            style={{ zIndex: USER_CAPTURE_MARKER_PANE_Z_INDEX }}
+            style={{
+              zIndex: USER_CAPTURE_MARKER_PANE_Z_INDEX,
+              pointerEvents: measurementMode ? "none" : "auto",
+            }}
           >
             {pendingCapture && (
               <Marker
@@ -2995,11 +3242,16 @@ export default function Map() {
 
             {getCaptureSpotMarkers().map((capture) => (
               <Marker
-                key={`capture-${capture.id}`}
+                key={`capture-${capture.id}-${measurementMode ? "measure" : "normal"}`}
                 position={[capture.lat, capture.lng]}
                 icon={createCaptureIcon(iconSize, getCapturesForCaptureSpot(capture).length)}
+                interactive={!measurementMode}
                 eventHandlers={{
                   click: (event) => {
+                    if (measurementMode) {
+                      return;
+                    }
+
                     L.DomEvent.stopPropagation(event.originalEvent);
                     if (interactiveWindowOpen) {
                       return;
@@ -3014,16 +3266,24 @@ export default function Map() {
 
           <Pane
             name={OFFICIAL_SPOT_MARKER_PANE}
-            style={{ zIndex: OFFICIAL_SPOT_MARKER_PANE_Z_INDEX }}
+            style={{
+              zIndex: OFFICIAL_SPOT_MARKER_PANE_Z_INDEX,
+              pointerEvents: measurementMode ? "none" : "auto",
+            }}
           >
             {fishingSpots.map((spot) => (
               <Marker
-                key={`spot-${spot.id}`}
+                key={`spot-${spot.id}-${measurementMode ? "measure" : "normal"}`}
                 position={[spot.lat, spot.lng]}
                 icon={createSpotIcon(OFFICIAL_SPOT_MARKER_ICON_SIZE)}
+                interactive={!measurementMode}
                 zIndexOffset={OFFICIAL_SPOT_MARKER_Z_INDEX_OFFSET}
                 eventHandlers={{
                   click: (event) => {
+                    if (measurementMode) {
+                      return;
+                    }
+
                     L.DomEvent.stopPropagation(event.originalEvent);
                     if (interactiveWindowOpen) {
                       return;
