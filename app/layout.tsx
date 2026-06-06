@@ -6,9 +6,9 @@ export const metadata: Metadata = {
   title: "VouPescar",
   description: "Seu lugar, sua pescaria",
   icons: {
-    icon: "/icons/logonovo.png",
-    shortcut: "/icons/logonovo.png",
-    apple: "/icons/logonovo.png",
+    icon: "/icons/logonovo-simples.png",
+    shortcut: "/icons/logonovo-simples.png",
+    apple: "/icons/logonovo-simples.png",
   },
 };
 

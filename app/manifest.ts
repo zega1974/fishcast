@@ -12,13 +12,13 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#020b16",
     icons: [
       {
-        src: "/icons/logonovo.png",
+        src: "/icons/logonovo-simples.png",
         sizes: "1254x1254",
         type: "image/png",
         purpose: "any",
       },
       {
-        src: "/icons/logonovo.png",
+        src: "/icons/logonovo-simples.png",
         sizes: "1254x1254",
         type: "image/png",
         purpose: "maskable",
