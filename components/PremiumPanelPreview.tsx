@@ -313,15 +313,18 @@ function ScoreGauge() {
       <div className="absolute h-[154px] w-[154px] rounded-full bg-[radial-gradient(circle_at_50%_34%,rgba(255,255,255,0.045),transparent_36%),#06111a] shadow-[inset_0_0_26px_rgba(0,0,0,0.48)]" />
       <div className="absolute left-1/2 top-1/2 z-[8] h-[3px] w-[69px] origin-left -translate-y-1/2 rotate-[-36deg] rounded-full bg-[linear-gradient(90deg,rgba(35,211,122,0.18)_0%,#27d77a_62%,#4ade80_100%)] shadow-[0_0_10px_rgba(52,211,153,0.72)]" />
       <div className="absolute left-1/2 top-1/2 z-[9] h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-emerald-200/45 bg-[#09231f] shadow-[0_0_10px_rgba(52,211,153,0.42)]" />
-      <div className="relative z-10 mt-8 text-center">
+      <div className="relative z-10 mt-1 text-center">
         <div className="text-[48px] font-black leading-none text-white drop-shadow-[0_5px_14px_rgba(0,0,0,0.56)]">
           81
         </div>
-        <div className="mt-1.5 flex items-center justify-center gap-2 text-[20px] font-black text-lime-400">
-          <span className="text-yellow-300">★</span>
+      </div>
+      <div className="absolute bottom-0 left-0 right-0 z-10 text-center">
+        <div className="text-[18px] font-black leading-none tracking-[0.12em] text-yellow-300 drop-shadow-[0_0_10px_rgba(250,204,21,0.44)]">
+          ★★★
+        </div>
+        <div className="mt-1 text-[20px] font-black leading-none text-lime-400 drop-shadow-[0_0_10px_rgba(132,204,22,0.2)]">
           Excelente
         </div>
-        <div className="mt-1.5 text-[22px] text-white">⚓</div>
       </div>
     </div>
   );
@@ -448,20 +451,23 @@ export default function PremiumPanelPreview({ onClose }: PremiumPanelPreviewProp
                   <button
                     type="button"
                     onClick={copyCoordinates}
-                    className="inline-flex h-[42px] shrink-0 items-center gap-2.5 rounded-xl border border-lime-300/24 bg-[linear-gradient(135deg,rgba(9,38,32,0.96),rgba(4,24,29,0.88))] px-5 text-[13px] font-bold leading-none text-lime-300 shadow-[0_0_14px_rgba(132,204,22,0.08),inset_0_1px_0_rgba(255,255,255,0.08)]"
+                    className="inline-flex h-[42px] shrink-0 items-center gap-2.5 rounded-full border border-cyan-300/62 bg-[radial-gradient(circle_at_28%_18%,rgba(255,255,255,0.12),transparent_34%),linear-gradient(135deg,rgba(13,148,136,0.92),rgba(8,86,118,0.94)_48%,rgba(3,22,45,0.96))] px-5 text-[13px] font-black uppercase leading-none tracking-[0.025em] text-cyan-50 shadow-[0_0_18px_rgba(34,211,238,0.3),0_0_34px_rgba(14,165,233,0.16),inset_0_1px_0_rgba(255,255,255,0.18),inset_0_0_0_1px_rgba(103,232,249,0.12)] transition duration-200 hover:border-cyan-200/78 hover:shadow-[0_0_24px_rgba(34,211,238,0.4),0_0_44px_rgba(14,165,233,0.22),inset_0_1px_0_rgba(255,255,255,0.2),inset_0_0_0_1px_rgba(103,232,249,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200/65"
                   >
-                    <PreviewIcon name="copy" className="h-[17px] w-[17px] text-lime-300" />
-                    Copiar coordenadas
+                    <PreviewIcon name="copy" className="h-[17px] w-[17px] text-cyan-100 drop-shadow-[0_0_8px_rgba(103,232,249,0.48)]" />
+                    COPIAR COORDENADAS
                   </button>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={onClose}
-                className="flex h-[56px] w-[56px] items-center justify-center rounded-[18px] border border-cyan-100/24 bg-[linear-gradient(145deg,rgba(7,30,45,0.92),rgba(2,8,18,0.74))] text-[42px] font-light leading-none text-white shadow-[0_12px_24px_rgba(0,0,0,0.24),0_0_18px_rgba(34,211,238,0.08),inset_0_1px_0_rgba(255,255,255,0.1)]"
+                className="group relative flex h-[58px] w-[58px] items-center justify-center overflow-hidden rounded-full border border-cyan-100/22 bg-[radial-gradient(circle_at_35%_24%,rgba(255,255,255,0.11),transparent_34%),linear-gradient(145deg,rgba(8,38,52,0.9),rgba(2,10,21,0.78))] text-[40px] font-light leading-none text-white shadow-[0_14px_30px_rgba(0,0,0,0.28),0_0_18px_rgba(34,211,238,0.1),inset_0_1px_0_rgba(255,255,255,0.12),inset_0_0_0_1px_rgba(34,211,238,0.06)] backdrop-blur-md transition duration-200 hover:border-cyan-200/44 hover:bg-[radial-gradient(circle_at_35%_24%,rgba(255,255,255,0.14),transparent_34%),linear-gradient(145deg,rgba(10,50,62,0.95),rgba(15,18,28,0.84))] hover:shadow-[0_16px_34px_rgba(0,0,0,0.3),0_0_24px_rgba(34,211,238,0.18),0_0_18px_rgba(248,113,113,0.08),inset_0_1px_0_rgba(255,255,255,0.14),inset_0_0_0_1px_rgba(34,211,238,0.1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200/55"
                 aria-label="Fechar preview premium"
               >
-                ×
+                <span className="pointer-events-none absolute inset-2 rounded-full border border-cyan-100/10 shadow-[inset_0_0_18px_rgba(34,211,238,0.045)] transition duration-200 group-hover:border-cyan-100/18" />
+                <span className="relative -mt-0.5 drop-shadow-[0_2px_8px_rgba(0,0,0,0.65)] transition duration-200 group-hover:text-cyan-50">
+                  ×
+                </span>
               </button>
             </div>
 
