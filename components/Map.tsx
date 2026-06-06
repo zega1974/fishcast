@@ -407,7 +407,6 @@ function MapFocusController({ target }: { target: FocusTarget | null }) {
 }
 
 function MapActionButton({
-  label,
   iconSrc,
   badge,
   onClick,
@@ -421,25 +420,27 @@ function MapActionButton({
   ariaLabel: string;
   title: string;
 }) {
+  const hasBadge = typeof badge === "number" && badge > 0;
+
   return (
     <button
       onClick={onClick}
       onPointerDown={(e) => e.stopPropagation()}
       aria-label={ariaLabel}
       title={title}
-      className="group relative flex h-12 w-12 appearance-none items-center justify-center overflow-visible rounded-xl border border-cyan-200/18 bg-[#020a14]/88 p-1 leading-none shadow-[0_14px_34px_rgba(0,0,0,0.38),inset_0_1px_0_rgba(255,255,255,0.08)] outline-none backdrop-blur-md transition duration-200 ease-out hover:scale-[1.03] hover:border-cyan-200/32 hover:bg-[#051827]/94 focus-visible:ring-2 focus-visible:ring-cyan-200/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent active:scale-95 sm:h-[62px] sm:w-[62px]"
+      className="group relative flex h-[66px] w-[66px] appearance-none items-center justify-center overflow-visible rounded-[20px] border border-cyan-200/20 bg-[radial-gradient(circle_at_30%_18%,rgba(34,211,238,0.16),transparent_38%),linear-gradient(145deg,rgba(5,36,50,0.94),rgba(2,10,20,0.96)_62%,rgba(4,26,38,0.92))] p-2.5 leading-none shadow-[0_16px_42px_rgba(0,0,0,0.42),0_0_24px_rgba(34,211,238,0.12),inset_0_1px_0_rgba(255,255,255,0.1),inset_0_0_0_1px_rgba(103,232,249,0.045)] outline-none backdrop-blur-xl transition duration-200 ease-out hover:scale-[1.035] hover:border-cyan-200/38 hover:bg-[radial-gradient(circle_at_30%_18%,rgba(34,211,238,0.22),transparent_38%),linear-gradient(145deg,rgba(7,48,64,0.98),rgba(2,12,24,0.98)_62%,rgba(5,32,46,0.96))] hover:shadow-[0_18px_48px_rgba(0,0,0,0.46),0_0_34px_rgba(34,211,238,0.18),inset_0_1px_0_rgba(255,255,255,0.12),inset_0_0_0_1px_rgba(103,232,249,0.07)] focus-visible:ring-2 focus-visible:ring-cyan-200/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent active:scale-95 sm:h-[78px] sm:w-[78px] sm:rounded-[22px] sm:p-3"
     >
-      <span className="sr-only">{label}</span>
-      <span className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-lg">
+      <span className="pointer-events-none absolute inset-x-3 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(125,211,252,0.46),rgba(190,242,100,0.1),transparent)]" />
+      <span className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-[20px]">
         <img
           src={iconSrc}
           alt=""
           draggable={false}
-          className="h-[118%] w-[118%] max-w-none select-none object-contain transition duration-200"
+          className="h-[118%] w-[118%] max-w-none select-none object-contain transition duration-200 group-hover:scale-[1.03]"
         />
       </span>
-      {typeof badge === "number" && badge > 0 && (
-        <span className="absolute right-1 top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full border border-white/60 bg-white px-1 text-[10px] font-black text-slate-950 shadow-[0_4px_14px_rgba(0,0,0,0.28)]">
+      {hasBadge && (
+        <span className="absolute -right-1.5 -top-1.5 flex min-h-7 min-w-7 items-center justify-center rounded-full border border-white/75 bg-white px-1.5 text-sm font-black text-slate-950 shadow-[0_8px_20px_rgba(0,0,0,0.34),0_0_12px_rgba(255,255,255,0.24)] sm:min-h-8 sm:min-w-8 sm:text-base">
           {badge > 99 ? "99+" : badge}
         </span>
       )}
@@ -1736,7 +1737,7 @@ export default function Map() {
       </button>
 
       <div
-        className={`map-control-overlay absolute bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] right-[calc(env(safe-area-inset-right)+0.75rem)] z-[2000] flex max-h-[calc(100dvh-env(safe-area-inset-bottom)-env(safe-area-inset-top)-1.5rem)] flex-col items-end gap-1 transition sm:bottom-6 sm:right-6 sm:max-h-none ${
+        className={`map-control-overlay absolute bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] right-[calc(env(safe-area-inset-right)+0.75rem)] z-[2000] flex max-h-[calc(100dvh-env(safe-area-inset-bottom)-env(safe-area-inset-top)-1.5rem)] flex-col items-end gap-2 transition sm:bottom-6 sm:right-6 sm:max-h-none ${
           popupPriorityOpen ? "pointer-events-none opacity-0" : "opacity-100"
         }`}
       >
@@ -1768,7 +1769,7 @@ export default function Map() {
 
         <MapActionButton
           label="Minhas Capturas"
-          iconSrc="/icons/minhas-capturas.png"
+          iconSrc="/icons/minhas-capturasnovo.png"
           badge={captures.length}
           onClick={() => {
             setCapturesPanelOpen((prev) => !prev);

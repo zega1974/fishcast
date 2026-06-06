@@ -318,11 +318,11 @@ function ScoreGauge() {
           81
         </div>
       </div>
-      <div className="absolute bottom-0 left-0 right-0 z-10 text-center">
+      <div className="absolute bottom-[-2px] left-1/2 right-0 z-10 flex w-full -translate-x-1/2 flex-col items-center text-center">
         <div className="text-[18px] font-black leading-none tracking-[0.12em] text-yellow-300 drop-shadow-[0_0_10px_rgba(250,204,21,0.44)]">
           ★★★
         </div>
-        <div className="mt-1 text-[20px] font-black leading-none text-lime-400 drop-shadow-[0_0_10px_rgba(132,204,22,0.2)]">
+        <div className="mt-1.5 text-[20px] font-black leading-none text-lime-400 drop-shadow-[0_0_10px_rgba(132,204,22,0.2)]">
           Excelente
         </div>
       </div>
@@ -487,10 +487,13 @@ export default function PremiumPanelPreview({ onClose }: PremiumPanelPreviewProp
           </div>
 
           <div className="mt-7 flex items-center gap-3">
-            <h2 className="text-[22px] font-black uppercase text-cyan-300">Condições atuais</h2>
-            <span className="flex h-7 w-7 items-center justify-center rounded-full border border-cyan-100/45 text-sm text-zinc-200">
+            <h2 className="text-[22px] font-black uppercase text-cyan-300 drop-shadow-[0_0_12px_rgba(34,211,238,0.2)]">
+              Condições atuais
+            </h2>
+            <span className="flex h-7 w-7 items-center justify-center rounded-full border border-cyan-200/48 bg-cyan-300/10 text-sm font-black text-cyan-100 shadow-[0_0_14px_rgba(34,211,238,0.16),inset_0_1px_0_rgba(255,255,255,0.12)]">
               i
             </span>
+            <span className="h-px flex-1 bg-[linear-gradient(90deg,rgba(34,211,238,0.42),rgba(34,211,238,0.08),transparent)]" />
           </div>
 
           <div className="mt-4 grid grid-cols-3 gap-4">
@@ -520,8 +523,10 @@ export default function PremiumPanelPreview({ onClose }: PremiumPanelPreviewProp
             ))}
           </div>
 
-          <div className="mt-4 text-center text-sm text-zinc-300">
-            Dados baseados em condições atuais e podem mudar.
+          <div className="mt-3 flex items-center justify-center text-center text-[13px] font-medium text-cyan-50/70 drop-shadow-[0_0_8px_rgba(34,211,238,0.12)]">
+            <span className="border-t border-cyan-100/10 px-10 pt-2">
+              Dados baseados em condições atuais e podem mudar.
+            </span>
           </div>
         </PreviewGlass>
 
