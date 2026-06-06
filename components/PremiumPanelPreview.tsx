@@ -308,20 +308,20 @@ function PreviewGlass({
 
 function ScoreGauge() {
   return (
-    <div className="relative flex min-h-[218px] items-center justify-center px-5">
-      <div className="absolute h-[224px] w-[224px] rounded-full bg-[conic-gradient(from_235deg,#ff3b30_0deg,#ff3b30_48deg,#ff9820_49deg,#ffe45c_112deg,#26d77a_168deg,#26d77a_236deg,transparent_237deg)] shadow-[0_0_22px_rgba(34,211,238,0.1),0_0_26px_rgba(16,185,129,0.07)] [mask:radial-gradient(circle,transparent_0_75px,#000_76px_90px,transparent_91px)]" />
-      <div className="absolute h-[174px] w-[174px] rounded-full bg-[radial-gradient(circle_at_50%_34%,rgba(255,255,255,0.045),transparent_36%),#06111a] shadow-[inset_0_0_26px_rgba(0,0,0,0.48)]" />
-      <div className="absolute left-1/2 top-1/2 z-[8] h-[3px] w-[78px] origin-left -translate-y-1/2 rotate-[-36deg] rounded-full bg-[linear-gradient(90deg,rgba(35,211,122,0.18)_0%,#27d77a_62%,#4ade80_100%)] shadow-[0_0_10px_rgba(52,211,153,0.72)]" />
-      <div className="absolute left-1/2 top-1/2 z-[9] h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-emerald-200/45 bg-[#09231f] shadow-[0_0_10px_rgba(52,211,153,0.42)]" />
-      <div className="relative z-10 mt-9 text-center">
-        <div className="text-[52px] font-black leading-none text-white drop-shadow-[0_5px_14px_rgba(0,0,0,0.56)]">
+    <div className="relative flex min-h-[188px] items-center justify-center px-4">
+      <div className="absolute h-[198px] w-[198px] rounded-full bg-[conic-gradient(from_235deg,#ff3b30_0deg,#ff3b30_48deg,#ff9820_49deg,#ffe45c_112deg,#26d77a_168deg,#26d77a_236deg,transparent_237deg)] shadow-[0_0_22px_rgba(34,211,238,0.1),0_0_26px_rgba(16,185,129,0.07)] [mask:radial-gradient(circle,transparent_0_66px,#000_67px_80px,transparent_81px)]" />
+      <div className="absolute h-[154px] w-[154px] rounded-full bg-[radial-gradient(circle_at_50%_34%,rgba(255,255,255,0.045),transparent_36%),#06111a] shadow-[inset_0_0_26px_rgba(0,0,0,0.48)]" />
+      <div className="absolute left-1/2 top-1/2 z-[8] h-[3px] w-[69px] origin-left -translate-y-1/2 rotate-[-36deg] rounded-full bg-[linear-gradient(90deg,rgba(35,211,122,0.18)_0%,#27d77a_62%,#4ade80_100%)] shadow-[0_0_10px_rgba(52,211,153,0.72)]" />
+      <div className="absolute left-1/2 top-1/2 z-[9] h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-emerald-200/45 bg-[#09231f] shadow-[0_0_10px_rgba(52,211,153,0.42)]" />
+      <div className="relative z-10 mt-8 text-center">
+        <div className="text-[48px] font-black leading-none text-white drop-shadow-[0_5px_14px_rgba(0,0,0,0.56)]">
           81
         </div>
-        <div className="mt-2 flex items-center justify-center gap-2 text-[21px] font-black text-lime-400">
+        <div className="mt-1.5 flex items-center justify-center gap-2 text-[20px] font-black text-lime-400">
           <span className="text-yellow-300">★</span>
           Excelente
         </div>
-        <div className="mt-2 text-2xl text-white">⚓</div>
+        <div className="mt-1.5 text-[22px] text-white">⚓</div>
       </div>
     </div>
   );
@@ -329,16 +329,16 @@ function ScoreGauge() {
 
 function TimeBar() {
   return (
-    <div className="mt-8 px-4">
-      <div className="relative h-14 rounded-2xl bg-[radial-gradient(ellipse_at_center,rgba(34,211,238,0.11),transparent_70%)]">
-        <div className="absolute left-4 right-4 top-[23px] h-6 rounded-full bg-[linear-gradient(90deg,rgba(12,31,47,0.12),#f3b81e_24%,#ffe75a_55%,#79dd62_86%,rgba(12,31,47,0.16))] shadow-[0_0_28px_rgba(250,204,21,0.52),0_0_34px_rgba(34,211,238,0.15)]" />
-        <div className="absolute left-[15%] top-[-5px] text-6xl drop-shadow-[0_0_18px_rgba(250,204,21,0.86)]">☀</div>
-        <div className="absolute right-[12%] top-[-5px] text-6xl drop-shadow-[0_0_18px_rgba(250,204,21,0.86)]">☀</div>
+    <div className="mt-7 px-4">
+      <div className="relative h-12 rounded-2xl bg-[radial-gradient(ellipse_at_center,rgba(34,211,238,0.11),transparent_70%)]">
+        <div className="absolute left-4 right-4 top-[20px] h-5 rounded-full bg-[linear-gradient(90deg,rgba(12,31,47,0.12),#f3b81e_24%,#ffe75a_55%,#79dd62_86%,rgba(12,31,47,0.16))] shadow-[0_0_28px_rgba(250,204,21,0.52),0_0_34px_rgba(34,211,238,0.15)]" />
+        <div className="absolute left-[15%] top-[-5px] text-5xl drop-shadow-[0_0_18px_rgba(250,204,21,0.86)]">☀</div>
+        <div className="absolute right-[12%] top-[-5px] text-5xl drop-shadow-[0_0_18px_rgba(250,204,21,0.86)]">☀</div>
         <div className="absolute inset-x-3 bottom-0 h-px bg-cyan-100/30" />
         {["0h", "6h", "12h", "18h", "24h"].map((time, index) => (
           <div
             key={time}
-            className="absolute bottom-[-26px] flex -translate-x-1/2 flex-col items-center gap-1 text-sm text-zinc-200"
+            className="absolute bottom-[-24px] flex -translate-x-1/2 flex-col items-center gap-1 text-xs text-zinc-200"
             style={{ left: `${index * 25}%` }}
           >
             <span className="h-3 w-px bg-cyan-100/35" />
@@ -384,6 +384,12 @@ function ConditionCard({
 }
 
 export default function PremiumPanelPreview({ onClose }: PremiumPanelPreviewProps) {
+  const coordinates = "-25.483339, -48.451338";
+
+  function copyCoordinates() {
+    void navigator.clipboard?.writeText(coordinates);
+  }
+
   return (
     <div
       className="map-control-overlay fixed inset-0 z-[9500] overflow-auto bg-[#03151f] text-white"
@@ -416,43 +422,61 @@ export default function PremiumPanelPreview({ onClose }: PremiumPanelPreviewProp
         </div>
 
         <PreviewGlass className="col-start-2 row-start-1 place-self-center rounded-3xl p-8">
-          <div className="grid grid-cols-[1fr_auto] items-start gap-5">
-            <div className="min-w-0">
-              <div className="text-[30px] font-black uppercase leading-none tracking-[0.03em] text-cyan-300">
-                Ponto selecionado
-              </div>
-              <div className="mt-4 inline-flex max-w-full items-center gap-5 rounded-[22px] border border-emerald-300/10 bg-emerald-300/[0.035] py-1 pl-0 pr-1">
-                <div className="flex min-h-[46px] items-center gap-3 text-[25px] font-black leading-none text-lime-400 drop-shadow-[0_0_10px_rgba(132,204,22,0.16)]">
-                  <span className="text-[38px] leading-none">●</span>
-                  <span className="whitespace-nowrap">-25.483339, -48.451338</span>
+          <div className="relative overflow-hidden rounded-[26px] border border-cyan-200/18 bg-[radial-gradient(circle_at_18%_24%,rgba(34,211,238,0.13),transparent_36%),radial-gradient(circle_at_68%_18%,rgba(250,204,21,0.1),transparent_24%),linear-gradient(135deg,rgba(5,38,50,0.94),rgba(2,12,23,0.9)_58%,rgba(5,46,43,0.76))] px-6 pb-5 pt-6 shadow-[0_22px_52px_rgba(0,0,0,0.28),0_0_34px_rgba(34,211,238,0.09),inset_0_1px_0_rgba(255,255,255,0.08)]">
+            <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(125,211,252,0.58),rgba(190,242,100,0.38),transparent)]" />
+            <div className="grid grid-cols-[minmax(0,1fr)_60px] items-start gap-4">
+              <div className="min-w-0">
+                <div className="flex items-center gap-4">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-cyan-200/20 bg-cyan-100/8 text-[26px] leading-none text-white shadow-[0_0_20px_rgba(34,211,238,0.12),inset_0_1px_0_rgba(255,255,255,0.08)]">
+                    <svg className="h-7 w-7" viewBox="0 0 32 32" aria-hidden="true">
+                      <path
+                        d="M16 29s10-9.2 10-17A10 10 0 0 0 6 12c0 7.8 10 17 10 17Z"
+                        fill="currentColor"
+                      />
+                      <circle cx="16" cy="12" r="3.8" fill="#08263a" />
+                    </svg>
+                  </span>
+                  <div className="text-[31px] font-black uppercase leading-none tracking-[0.025em] text-white drop-shadow-[0_3px_12px_rgba(0,0,0,0.55)]">
+                    Ponto selecionado
+                  </div>
                 </div>
-                <button className="inline-flex h-[44px] items-center gap-3 rounded-[18px] border border-lime-300/25 bg-[#061815]/74 px-7 text-[13px] font-semibold leading-none text-lime-300 shadow-[0_0_10px_rgba(132,204,22,0.06),inset_0_1px_0_rgba(255,255,255,0.07)]">
-                  <PreviewIcon name="copy" className="h-[18px] w-[18px] text-lime-300" />
-                  Copiar coordenadas
-                </button>
+                <div className="mt-4 inline-flex max-w-full items-center gap-2 rounded-2xl border border-lime-300/14 bg-[#041b22]/72 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.055)]">
+                  <div className="flex min-h-[42px] shrink-0 items-center gap-3 rounded-xl bg-emerald-300/[0.035] px-3 text-[24px] font-black leading-none text-lime-400 drop-shadow-[0_0_10px_rgba(132,204,22,0.16)]">
+                    <span className="text-[28px] leading-none">●</span>
+                    <span className="whitespace-nowrap">{coordinates}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={copyCoordinates}
+                    className="inline-flex h-[42px] shrink-0 items-center gap-2.5 rounded-xl border border-lime-300/24 bg-[linear-gradient(135deg,rgba(9,38,32,0.96),rgba(4,24,29,0.88))] px-5 text-[13px] font-bold leading-none text-lime-300 shadow-[0_0_14px_rgba(132,204,22,0.08),inset_0_1px_0_rgba(255,255,255,0.08)]"
+                  >
+                    <PreviewIcon name="copy" className="h-[17px] w-[17px] text-lime-300" />
+                    Copiar coordenadas
+                  </button>
+                </div>
               </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex h-[56px] w-[56px] items-center justify-center rounded-[18px] border border-cyan-100/24 bg-[linear-gradient(145deg,rgba(7,30,45,0.92),rgba(2,8,18,0.74))] text-[42px] font-light leading-none text-white shadow-[0_12px_24px_rgba(0,0,0,0.24),0_0_18px_rgba(34,211,238,0.08),inset_0_1px_0_rgba(255,255,255,0.1)]"
+                aria-label="Fechar preview premium"
+              >
+                ×
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex h-16 w-16 items-center justify-center rounded-2xl border border-cyan-100/25 bg-slate-950/55 text-5xl font-light leading-none text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
-              aria-label="Fechar preview premium"
-            >
-              ×
-            </button>
-          </div>
 
-          <div className="mt-7 grid grid-cols-[1fr_1px_1fr] rounded-[22px] border border-emerald-300/17 bg-[linear-gradient(135deg,rgba(9,68,62,0.43),rgba(3,16,30,0.8))] p-8 shadow-[0_16px_42px_rgba(0,0,0,0.22),0_0_26px_rgba(16,185,129,0.07),inset_0_1px_0_rgba(255,255,255,0.06)]">
-            <ScoreGauge />
-            <div className="bg-cyan-100/12" />
-            <div className="px-8 text-center">
-              <div className="mt-2 flex items-center justify-center gap-3 text-base font-black uppercase text-cyan-300">
-                <PreviewIcon name="clock" className="h-7 w-7 text-cyan-300" />
-                Melhor horario
+            <div className="mt-5 grid grid-cols-[minmax(300px,0.92fr)_1px_minmax(330px,1fr)] items-center rounded-[22px] border border-emerald-300/13 bg-[linear-gradient(135deg,rgba(4,25,30,0.58),rgba(2,12,23,0.52))] px-5 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.055)]">
+              <ScoreGauge />
+              <div className="h-[158px] bg-[linear-gradient(180deg,transparent,rgba(125,211,252,0.2),rgba(190,242,100,0.12),transparent)]" />
+              <div className="px-8 text-center">
+                <div className="flex items-center justify-center gap-3 text-base font-black uppercase text-cyan-300">
+                  <PreviewIcon name="clock" className="h-7 w-7 text-cyan-300" />
+                  Melhor horario
+                </div>
+                <div className="mt-3 text-[38px] font-black leading-none text-yellow-200">14h às 17h</div>
+                <div className="mt-3 text-[15px] text-white">Baseado nas condições atuais</div>
+                <TimeBar />
               </div>
-              <div className="mt-4 text-[42px] font-black leading-none text-yellow-200">14h às 17h</div>
-              <div className="mt-4 text-base text-white">Baseado nas condições atuais</div>
-              <TimeBar />
             </div>
           </div>
 
