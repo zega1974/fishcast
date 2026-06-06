@@ -498,27 +498,29 @@ function MeasurementControl({
 
   return (
     <div
-      className={`map-control-overlay absolute left-4 top-[224px] z-[2000] w-[min(260px,calc(100vw-32px))] text-white transition ${
+      className={`map-control-overlay absolute left-4 top-[calc(42vh+150px)] z-[2000] w-[min(260px,calc(100vw-32px))] text-white transition ${
         hidden ? "pointer-events-none opacity-0" : "opacity-100"
       }`}
       onPointerDown={(event) => event.stopPropagation()}
       onClick={(event) => event.stopPropagation()}
     >
-      <button
-        type="button"
-        onClick={onToggle}
-        className={`flex min-h-11 w-full items-center justify-center rounded-2xl border px-4 py-2.5 text-sm font-black uppercase tracking-[0.08em] shadow-[0_16px_42px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl transition active:scale-95 ${
-          active
-            ? "border-sky-300/80 bg-[linear-gradient(145deg,rgba(5,22,42,0.96),rgba(1,9,19,0.98))] text-sky-300 shadow-[0_0_18px_rgba(56,189,248,0.34),0_16px_42px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,255,255,0.1)]"
-            : "border-cyan-200/20 bg-[#020a14]/88 text-cyan-50 hover:border-cyan-200/36 hover:bg-[#061827]/94"
-        }`}
-        aria-pressed={active}
-      >
-        <span aria-hidden="true" className="mr-2 text-base">
-          📏
-        </span>
-        Medir
-      </button>
+      <div className="flex flex-col items-start">
+        <button
+          type="button"
+          onClick={onToggle}
+          className="flex h-[60px] w-[60px] appearance-none items-center justify-center overflow-hidden bg-transparent p-0 leading-none outline-none transition active:scale-95 sm:h-[72px] sm:w-[72px]"
+          aria-label={active ? "Sair da medição" : "Medir"}
+          aria-pressed={active}
+        >
+          <img
+            src="/icons/botao-regua-v3.png"
+            alt=""
+            draggable={false}
+            className="max-h-full max-w-full select-none object-contain"
+          />
+        </button>
+        <div className="mt-3.5" aria-hidden="true" />
+      </div>
 
       {active && (
         <div className="mt-2 rounded-2xl border border-cyan-200/18 bg-[#020a14]/94 p-3 shadow-[0_18px_50px_rgba(0,0,0,0.48),0_0_22px_rgba(34,211,238,0.1)] backdrop-blur-xl">
