@@ -79,6 +79,10 @@ type FishCastScore = {
 
 const MAP_MIN_ZOOM = 6;
 const MAP_INITIAL_ZOOM = 7;
+const MAP_MAX_BOUNDS: L.LatLngBoundsExpression = [
+  [-35.5, -75],
+  [7, -30],
+];
 const OSM_MAX_NATIVE_ZOOM = 18;
 const SATELLITE_MAX_NATIVE_ZOOM = 18;
 const NIGHT_MAX_NATIVE_ZOOM = 18;
@@ -168,12 +172,16 @@ function createPersonalPlaceIcon(size: number, captureCount: number) {
   });
 }
 
-function ZoomButtons({ hidden }: { hidden: boolean }) {
-  const map = useMap();
-
+function ZoomButtons({
+  hidden,
+  mapRef,
+}: {
+  hidden: boolean;
+  mapRef: { current: L.Map | null };
+}) {
   return (
     <div
-      className={`zoom-button-overlay map-control-overlay absolute top-28 left-4 z-[2000] flex flex-col overflow-hidden rounded-3xl border border-cyan-500/25 bg-slate-950/85 shadow-[0_24px_80px_rgba(0,255,255,0.12)] transition ${
+      className={`fixed-ui-control zoom-button-overlay map-control-overlay fixed top-28 left-4 z-[2000] flex flex-col overflow-hidden rounded-3xl border border-cyan-500/25 bg-slate-950/85 shadow-[0_24px_80px_rgba(0,255,255,0.12)] transition ${
         hidden ? "pointer-events-none opacity-0" : "opacity-100"
       }`}
     >
@@ -181,7 +189,7 @@ function ZoomButtons({ hidden }: { hidden: boolean }) {
         onClick={(e) => {
           e.stopPropagation();
           e.preventDefault();
-          map.zoomIn();
+          mapRef.current?.zoomIn();
         }}
         onPointerDown={(e) => e.stopPropagation()}
         className="w-12 h-12 bg-white text-black text-2xl font-bold border-b border-zinc-300 hover:bg-zinc-100 transition-colors"
@@ -192,7 +200,7 @@ function ZoomButtons({ hidden }: { hidden: boolean }) {
         onClick={(e) => {
           e.stopPropagation();
           e.preventDefault();
-          map.zoomOut();
+          mapRef.current?.zoomOut();
         }}
         onPointerDown={(e) => e.stopPropagation()}
         className="w-12 h-12 bg-white text-black text-2xl font-bold hover:bg-zinc-100 transition-colors"
@@ -206,24 +214,30 @@ function ZoomButtons({ hidden }: { hidden: boolean }) {
 function CenterButton({
   personalPlaces,
   hidden,
+  mapRef,
 }: {
   personalPlaces: PersonalPlace[];
   hidden: boolean;
+  mapRef: { current: L.Map | null };
 }) {
-  const map = useMap();
-
   return (
     <button
       onClick={(e) => {
         e.stopPropagation();
         e.preventDefault();
+        const map = mapRef.current;
+
+        if (!map) {
+          return;
+        }
+
         map.closePopup();
         scheduleHomeMapView(map, personalPlaces, true);
       }}
       onPointerDown={(e) => e.stopPropagation()}
       aria-label="Centralizar mapa"
       title="Centralizar mapa"
-      className={`map-control-overlay absolute top-[164px] right-4 z-[2000] flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-[#03110d]/70 text-xl font-black text-emerald-100/90 shadow-[0_14px_36px_rgba(0,0,0,0.34),0_0_16px_rgba(34,197,94,0.12)] backdrop-blur-md transition hover:border-emerald-200/30 hover:bg-[#062018]/85 active:scale-95 sm:top-[178px] ${
+      className={`fixed-ui-control map-control-overlay fixed top-[164px] right-4 z-[2000] flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-[#03110d]/70 text-xl font-black text-emerald-100/90 shadow-[0_14px_36px_rgba(0,0,0,0.34),0_0_16px_rgba(34,197,94,0.12)] backdrop-blur-md transition hover:border-emerald-200/30 hover:bg-[#062018]/85 active:scale-95 sm:top-[178px] ${
         hidden ? "pointer-events-none opacity-0" : "opacity-100"
       }`}
     >
@@ -243,7 +257,7 @@ function MapModeSelector({
 }) {
   return (
     <div
-      className={`map-control-overlay absolute right-4 top-4 z-[2000] text-white transition ${
+      className={`fixed-ui-control map-control-overlay fixed right-4 top-4 z-[2000] text-white transition ${
         hidden ? "pointer-events-none opacity-0" : "opacity-100"
       }`}
     >
@@ -457,7 +471,7 @@ function MapActionButton({
       onPointerDown={(e) => e.stopPropagation()}
       aria-label={ariaLabel}
       title={title}
-      className="group relative flex h-[66px] w-[66px] appearance-none items-center justify-center overflow-visible rounded-[20px] border border-cyan-200/20 bg-[radial-gradient(circle_at_30%_18%,rgba(34,211,238,0.16),transparent_38%),linear-gradient(145deg,rgba(5,36,50,0.94),rgba(2,10,20,0.96)_62%,rgba(4,26,38,0.92))] p-2.5 leading-none shadow-[0_16px_42px_rgba(0,0,0,0.42),0_0_24px_rgba(34,211,238,0.12),inset_0_1px_0_rgba(255,255,255,0.1),inset_0_0_0_1px_rgba(103,232,249,0.045)] outline-none backdrop-blur-xl transition duration-200 ease-out hover:scale-[1.035] hover:border-cyan-200/38 hover:bg-[radial-gradient(circle_at_30%_18%,rgba(34,211,238,0.22),transparent_38%),linear-gradient(145deg,rgba(7,48,64,0.98),rgba(2,12,24,0.98)_62%,rgba(5,32,46,0.96))] hover:shadow-[0_18px_48px_rgba(0,0,0,0.46),0_0_34px_rgba(34,211,238,0.18),inset_0_1px_0_rgba(255,255,255,0.12),inset_0_0_0_1px_rgba(103,232,249,0.07)] focus-visible:ring-2 focus-visible:ring-cyan-200/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent active:scale-95 sm:h-[78px] sm:w-[78px] sm:rounded-[22px] sm:p-3"
+      className="fixed-ui-control group relative flex h-[66px] w-[66px] appearance-none items-center justify-center overflow-visible rounded-[20px] border border-cyan-200/20 bg-[radial-gradient(circle_at_30%_18%,rgba(34,211,238,0.16),transparent_38%),linear-gradient(145deg,rgba(5,36,50,0.94),rgba(2,10,20,0.96)_62%,rgba(4,26,38,0.92))] p-2.5 leading-none shadow-[0_16px_42px_rgba(0,0,0,0.42),0_0_24px_rgba(34,211,238,0.12),inset_0_1px_0_rgba(255,255,255,0.1),inset_0_0_0_1px_rgba(103,232,249,0.045)] outline-none backdrop-blur-xl transition duration-200 ease-out hover:scale-[1.035] hover:border-cyan-200/38 hover:bg-[radial-gradient(circle_at_30%_18%,rgba(34,211,238,0.22),transparent_38%),linear-gradient(145deg,rgba(7,48,64,0.98),rgba(2,12,24,0.98)_62%,rgba(5,32,46,0.96))] hover:shadow-[0_18px_48px_rgba(0,0,0,0.46),0_0_34px_rgba(34,211,238,0.18),inset_0_1px_0_rgba(255,255,255,0.12),inset_0_0_0_1px_rgba(103,232,249,0.07)] focus-visible:ring-2 focus-visible:ring-cyan-200/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent active:scale-95 sm:h-[78px] sm:w-[78px] sm:rounded-[22px] sm:p-3"
     >
       <span className="pointer-events-none absolute inset-x-3 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(125,211,252,0.46),rgba(190,242,100,0.1),transparent)]" />
       <span className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-[20px]">
@@ -497,8 +511,9 @@ function MeasurementControl({
   const segments = getMeasurementSegments(points);
 
   return (
-    <div
-      className={`map-control-overlay absolute left-4 top-[calc(42vh+150px)] z-[2000] w-[min(260px,calc(100vw-32px))] text-white transition ${
+    <>
+      <div
+      className={`map-control-overlay fixed left-4 top-[calc(42vh+150px)] z-[2000] w-[min(260px,calc(100vw-32px))] text-white transition ${
         hidden ? "pointer-events-none opacity-0" : "opacity-100"
       }`}
       onPointerDown={(event) => event.stopPropagation()}
@@ -508,7 +523,7 @@ function MeasurementControl({
         <button
           type="button"
           onClick={onToggle}
-          className="flex h-[60px] w-[60px] appearance-none items-center justify-center overflow-hidden bg-transparent p-0 leading-none outline-none transition active:scale-95 sm:h-[72px] sm:w-[72px]"
+          className="fixed-ui-control flex h-[60px] w-[60px] appearance-none items-center justify-center overflow-hidden bg-transparent p-0 leading-none outline-none transition active:scale-95 sm:h-[72px] sm:w-[72px]"
           aria-label={active ? "Sair da medição" : "Medir"}
           aria-pressed={active}
         >
@@ -522,8 +537,14 @@ function MeasurementControl({
         <div className="mt-3.5" aria-hidden="true" />
       </div>
 
-      {active && (
-        <div className="mt-2 rounded-2xl border border-cyan-200/18 bg-[#020a14]/94 p-3 shadow-[0_18px_50px_rgba(0,0,0,0.48),0_0_22px_rgba(34,211,238,0.1)] backdrop-blur-xl">
+      </div>
+
+      {active && !hidden && (
+        <div
+          className="measurement-panel-overlay map-control-overlay fixed bottom-[calc(env(safe-area-inset-bottom)+1rem)] left-1/2 z-[2100] w-[92vw] max-w-[360px] -translate-x-1/2 rounded-2xl border border-cyan-200/18 bg-[#020a14]/94 p-3 text-white shadow-[0_18px_50px_rgba(0,0,0,0.48),0_0_22px_rgba(34,211,238,0.1)] backdrop-blur-xl sm:bottom-auto sm:left-4 sm:top-[calc(42vh+232px)] sm:w-[260px] sm:translate-x-0"
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => event.stopPropagation()}
+        >
           <div className="flex items-center justify-between gap-3">
             <span className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-100/76">
               Total
@@ -551,21 +572,21 @@ function MeasurementControl({
             <button
               type="button"
               onClick={onClear}
-              className="min-h-10 rounded-xl border border-amber-300/30 bg-amber-300/10 px-2 text-[10px] font-black uppercase tracking-[0.04em] text-amber-100 transition hover:bg-amber-300/16"
+              className="min-h-12 rounded-xl border border-amber-300/30 bg-amber-300/10 px-3 text-sm font-black uppercase tracking-[0.04em] text-amber-100 transition hover:bg-amber-300/16 sm:min-h-10 sm:px-2 sm:text-[10px]"
             >
-              🗑 Limpar Medição
+              🗑 Limpar
             </button>
             <button
               type="button"
               onClick={onExit}
-              className="min-h-10 rounded-xl border border-red-300/28 bg-red-500/12 px-2 text-[10px] font-black uppercase tracking-[0.04em] text-red-100 transition hover:bg-red-500/18"
+              className="min-h-12 rounded-xl border border-red-300/28 bg-red-500/12 px-3 text-sm font-black uppercase tracking-[0.04em] text-red-100 transition hover:bg-red-500/18 sm:min-h-10 sm:px-2 sm:text-[10px]"
             >
-              ❌ Sair da Medição
+              ❌ Sair
             </button>
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 
@@ -1027,6 +1048,7 @@ function readStoredPersonalPlaces() {
 }
 
 export default function Map() {
+  const mapRef = useRef<L.Map | null>(null);
   const [premiumPreviewOpen, setPremiumPreviewOpen] = useState(false);
   const [captureMode, setCaptureMode] = useState(false);
   const [placeMode, setPlaceMode] = useState(false);
@@ -1084,6 +1106,48 @@ export default function Map() {
     Boolean(selectedCapture) ||
     Boolean(selectedCaptureSpot) ||
     Boolean(selectedLocation?.personalPlaceId);
+
+  useEffect(() => {
+    function getEventElement(target: EventTarget | null) {
+      if (target instanceof Element) {
+        return target;
+      }
+
+      if (target instanceof Node) {
+        return target.parentElement;
+      }
+
+      return null;
+    }
+
+    function isLeafletMapGesture(target: EventTarget | null) {
+      return Boolean(getEventElement(target)?.closest(".leaflet-container"));
+    }
+
+    function preventInterfacePinch(event: TouchEvent) {
+      if (event.touches.length > 1 && !isLeafletMapGesture(event.target)) {
+        event.preventDefault();
+      }
+    }
+
+    function preventInterfaceGesture(event: Event) {
+      if (!isLeafletMapGesture(event.target)) {
+        event.preventDefault();
+      }
+    }
+
+    document.addEventListener("touchmove", preventInterfacePinch, { passive: false });
+    document.addEventListener("gesturestart", preventInterfaceGesture);
+    document.addEventListener("gesturechange", preventInterfaceGesture);
+    document.addEventListener("gestureend", preventInterfaceGesture);
+
+    return () => {
+      document.removeEventListener("touchmove", preventInterfacePinch);
+      document.removeEventListener("gesturestart", preventInterfaceGesture);
+      document.removeEventListener("gesturechange", preventInterfaceGesture);
+      document.removeEventListener("gestureend", preventInterfaceGesture);
+    };
+  }, []);
 
   function addMeasurementPoint(lat: number, lng: number) {
     setMeasurementPoints((currentPoints) => [
@@ -1949,7 +2013,7 @@ export default function Map() {
           setPremiumPreviewOpen(true);
         }}
         onPointerDown={(event) => event.stopPropagation()}
-        className={`map-control-overlay absolute left-4 bottom-4 z-[2100] rounded-2xl border border-cyan-300/25 bg-slate-950/88 px-4 py-3 text-xs font-black uppercase tracking-[0.12em] text-cyan-100 shadow-[0_18px_50px_rgba(0,0,0,0.45),0_0_22px_rgba(34,211,238,0.14)] backdrop-blur-xl transition hover:border-cyan-200/45 hover:bg-slate-900/95 ${
+        className={`fixed-ui-control map-control-overlay fixed left-4 bottom-4 z-[2100] rounded-2xl border border-cyan-300/25 bg-slate-950/88 px-4 py-3 text-xs font-black uppercase tracking-[0.12em] text-cyan-100 shadow-[0_18px_50px_rgba(0,0,0,0.45),0_0_22px_rgba(34,211,238,0.14)] backdrop-blur-xl transition hover:border-cyan-200/45 hover:bg-slate-900/95 ${
           popupPriorityOpen ? "pointer-events-none opacity-0" : "opacity-100"
         }`}
         aria-label="Abrir preview premium"
@@ -1958,8 +2022,8 @@ export default function Map() {
       </button>
 
       <div
-        className={`map-control-overlay absolute bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] right-[calc(env(safe-area-inset-right)+0.75rem)] z-[2000] flex max-h-[calc(100dvh-env(safe-area-inset-bottom)-env(safe-area-inset-top)-1.5rem)] flex-col items-end gap-2 transition sm:bottom-6 sm:right-6 sm:max-h-none ${
-          popupPriorityOpen ? "pointer-events-none opacity-0" : "opacity-100"
+        className={`fixed-ui-control map-control-overlay fixed bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] right-[calc(env(safe-area-inset-right)+0.75rem)] z-[2000] flex max-h-[calc(100dvh-env(safe-area-inset-bottom)-env(safe-area-inset-top)-1.5rem)] flex-col items-end gap-2 transition sm:bottom-6 sm:right-6 sm:max-h-none ${
+          popupPriorityOpen || measurementMode ? "pointer-events-none opacity-0" : "opacity-100"
         }`}
       >
         <MapActionButton
@@ -2029,6 +2093,9 @@ export default function Map() {
         onExit={exitMeasurement}
       />
 
+      <ZoomButtons hidden={popupPriorityOpen} mapRef={mapRef} />
+      <CenterButton personalPlaces={personalPlaces} hidden={popupPriorityOpen} mapRef={mapRef} />
+
       <MapModeSelector
         mode={mapMode}
         onChange={setMapMode}
@@ -2036,13 +2103,13 @@ export default function Map() {
       />
 
       {captureMode && (
-        <div className="absolute bottom-[270px] right-4 z-[2000] max-w-[210px] rounded-sm border border-cyan-500/20 bg-[#020a14]/95 px-4 py-3 text-center text-sm font-bold text-white shadow-[0_20px_70px_rgba(0,0,0,0.55)] sm:bottom-[292px] sm:right-6 sm:max-w-[240px] sm:px-5 sm:py-4">
+        <div className="fixed bottom-[270px] right-4 z-[2000] max-w-[210px] rounded-sm border border-cyan-500/20 bg-[#020a14]/95 px-4 py-3 text-center text-sm font-bold text-white shadow-[0_20px_70px_rgba(0,0,0,0.55)] sm:bottom-[292px] sm:right-6 sm:max-w-[240px] sm:px-5 sm:py-4">
           Toque uma vez no mapa para marcar a captura
         </div>
       )}
 
       {placeMode && (
-        <div className="absolute bottom-[270px] right-4 z-[2000] max-w-[210px] rounded-sm border border-cyan-300/25 bg-[#020a14]/95 px-4 py-3 text-center text-sm font-bold text-cyan-50 shadow-[0_20px_70px_rgba(0,0,0,0.55),0_0_26px_rgba(34,211,238,0.18)] sm:bottom-[292px] sm:right-6 sm:max-w-[240px] sm:px-5 sm:py-4">
+        <div className="fixed bottom-[270px] right-4 z-[2000] max-w-[210px] rounded-sm border border-cyan-300/25 bg-[#020a14]/95 px-4 py-3 text-center text-sm font-bold text-cyan-50 shadow-[0_20px_70px_rgba(0,0,0,0.55),0_0_26px_rgba(34,211,238,0.18)] sm:bottom-[292px] sm:right-6 sm:max-w-[240px] sm:px-5 sm:py-4">
           Toque no mapa para salvar um lugar privado
         </div>
       )}
@@ -3018,10 +3085,13 @@ export default function Map() {
       )}
 
           <MapContainer
+          ref={mapRef}
           center={paranaCenter}
           zoom={zoom}
           minZoom={MAP_MIN_ZOOM}
           maxZoom={MAP_MAX_ZOOM}
+          maxBounds={MAP_MAX_BOUNDS}
+          maxBoundsViscosity={0.85}
           zoomControl={false}
           scrollWheelZoom={true}
           doubleClickZoom={false}
@@ -3127,8 +3197,6 @@ export default function Map() {
           />
 
           <MeasurementLayer points={measurementPoints} />
-          <ZoomButtons hidden={popupPriorityOpen} />
-          <CenterButton personalPlaces={personalPlaces} hidden={popupPriorityOpen} />
           <HomeMapViewController personalPlaces={personalPlaces} />
           <MapFocusController target={focusTarget} />
           <MapMaxZoomController maxZoom={MAP_MAX_ZOOM} />

@@ -27,6 +27,47 @@ body {
   z-index: auto;
 }
 
+.fixed-ui-control {
+  touch-action: none;
+  overscroll-behavior: contain;
+  transform: none !important;
+  zoom: 1;
+  user-select: none;
+  -webkit-user-select: none;
+  will-change: auto;
+}
+
+.map-control-overlay {
+  overscroll-behavior: contain;
+  zoom: 1;
+  will-change: auto;
+}
+
+.map-control-overlay:not(.fixed-ui-control) {
+  touch-action: pan-y;
+}
+
+.fixed-ui-control button,
+.fixed-ui-control button:hover,
+.fixed-ui-control button:active,
+button.fixed-ui-control,
+button.fixed-ui-control:hover,
+button.fixed-ui-control:active,
+.fixed-ui-control img,
+.fixed-ui-control svg,
+.fixed-ui-control span {
+  touch-action: none;
+  transform: none !important;
+}
+
+.measurement-panel-overlay {
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+  zoom: 1;
+  transform-origin: center bottom;
+  will-change: auto;
+}
+
 .leaflet-popup-pane {
   z-index: 6000 !important;
 }
