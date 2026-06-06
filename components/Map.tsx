@@ -15,7 +15,7 @@ import L from "leaflet";
 
 import { useEffect, useRef, useState } from "react";
 
-import PremiumPanelPreview from "@/components/PremiumPanelPreview";
+import PremiumPanelPreview, { PreviewIcon, type PreviewIconName } from "@/components/PremiumPanelPreview";
 import { shareCapture as shareCaptureFile } from "@/components/captures/sharing";
 import {
   deleteCapturePhoto,
@@ -87,11 +87,11 @@ const NAUTICAL_MAX_ZOOM = 18;
 const NAUTICAL_SEAMARK_MAX_NATIVE_ZOOM = 18;
 
 
-const mapModes: { id: MapMode; label: string; iconClassName: string }[] = [
-  { id: "map", label: "Mapa", iconClassName: "map-mode-icon--map" },
-  { id: "satellite", label: "Satélite", iconClassName: "map-mode-icon--satellite" },
-  { id: "nautical", label: "Náutico", iconClassName: "map-mode-icon--nautical" },
-  { id: "night", label: "Noturno", iconClassName: "map-mode-icon--night" },
+const mapModes: { id: MapMode; label: string; iconName: PreviewIconName }[] = [
+  { id: "map", label: "Mapa", iconName: "map" },
+  { id: "satellite", label: "Satélite", iconName: "satellite" },
+  { id: "nautical", label: "Náutico", iconName: "anchor" },
+  { id: "night", label: "Noturno", iconName: "night" },
 ];
 
 const infoLabelClass =
@@ -212,7 +212,7 @@ function CenterButton({
       onPointerDown={(e) => e.stopPropagation()}
       aria-label="Centralizar mapa"
       title="Centralizar mapa"
-      className={`map-control-overlay absolute top-[136px] right-4 z-[2000] flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-[#03110d]/70 text-xl font-black text-emerald-100/90 shadow-[0_14px_36px_rgba(0,0,0,0.34),0_0_16px_rgba(34,197,94,0.12)] backdrop-blur-md transition hover:border-emerald-200/30 hover:bg-[#062018]/85 active:scale-95 sm:top-28 ${
+      className={`map-control-overlay absolute top-[164px] right-4 z-[2000] flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-[#03110d]/70 text-xl font-black text-emerald-100/90 shadow-[0_14px_36px_rgba(0,0,0,0.34),0_0_16px_rgba(34,197,94,0.12)] backdrop-blur-md transition hover:border-emerald-200/30 hover:bg-[#062018]/85 active:scale-95 sm:top-[178px] ${
         hidden ? "pointer-events-none opacity-0" : "opacity-100"
       }`}
     >
@@ -232,11 +232,11 @@ function MapModeSelector({
 }) {
   return (
     <div
-      className={`map-control-overlay absolute right-4 top-4 z-[2000] rounded-[22px] border border-cyan-200/20 bg-black/58 p-1.5 text-white shadow-[0_18px_48px_rgba(0,0,0,0.46),0_0_28px_rgba(34,211,238,0.14)] backdrop-blur-2xl transition ${
+      className={`map-control-overlay absolute right-4 top-4 z-[2000] text-white transition ${
         hidden ? "pointer-events-none opacity-0" : "opacity-100"
       }`}
     >
-      <div className="grid grid-cols-2 gap-1 sm:flex">
+      <div className="grid grid-cols-2 gap-2">
         {mapModes.map((mapMode) => {
           const active = mapMode.id === mode;
 
@@ -249,14 +249,23 @@ function MapModeSelector({
                 onChange(mapMode.id);
               }}
               onPointerDown={(e) => e.stopPropagation()}
-              className={`group flex min-h-9 items-center justify-center rounded-2xl px-2.5 text-[10px] font-black uppercase tracking-[0.08em] transition sm:min-h-10 sm:px-3 ${
+              className={`group relative flex h-[60px] w-[60px] flex-col items-center justify-center overflow-hidden rounded-[18px] border p-1.5 text-[8.5px] font-black uppercase leading-none tracking-[0.04em] outline-none backdrop-blur-xl transition duration-200 ease-out active:scale-95 sm:h-[72px] sm:w-[72px] sm:rounded-[20px] sm:text-[10px] ${
                 active
-                  ? "border border-cyan-100/45 bg-[linear-gradient(135deg,rgba(103,232,249,0.94),rgba(52,211,153,0.88))] text-slate-950 shadow-[0_0_22px_rgba(34,211,238,0.42),inset_0_1px_0_rgba(255,255,255,0.6)]"
-                  : "border border-white/10 bg-white/[0.055] text-cyan-50/78 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] hover:border-cyan-200/25 hover:bg-white/[0.12] hover:text-white"
+                  ? "border-sky-300/90 bg-[radial-gradient(circle_at_50%_22%,rgba(0,132,255,0.28),transparent_42%),linear-gradient(145deg,rgba(5,22,42,0.96),rgba(1,9,19,0.98)_62%,rgba(4,18,34,0.94))] text-sky-400 shadow-[0_0_20px_rgba(56,189,248,0.56),0_0_42px_rgba(14,165,233,0.28),0_16px_42px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,255,255,0.12),inset_0_0_18px_rgba(14,165,233,0.16)]"
+                  : "border-slate-300/24 bg-[radial-gradient(circle_at_50%_0%,rgba(226,232,240,0.11),transparent_44%),linear-gradient(145deg,rgba(10,22,34,0.88),rgba(2,8,18,0.96)_64%,rgba(7,18,30,0.9))] text-slate-100/90 shadow-[0_14px_34px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,255,255,0.12),inset_0_0_0_1px_rgba(255,255,255,0.035)] hover:border-slate-100/34 hover:bg-[radial-gradient(circle_at_50%_0%,rgba(226,232,240,0.15),transparent_44%),linear-gradient(145deg,rgba(13,29,44,0.92),rgba(2,8,18,0.98)_64%,rgba(9,22,36,0.94))]"
               }`}
               aria-pressed={active}
             >
-              {mapMode.label}
+              <span className="pointer-events-none absolute inset-x-3 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(226,232,240,0.45),transparent)]" />
+              <PreviewIcon
+                name={mapMode.iconName}
+                className={`mb-0.5 h-[24px] w-[24px] sm:h-[29px] sm:w-[29px] ${
+                  active
+                    ? "text-sky-400 drop-shadow-[0_0_12px_rgba(56,189,248,0.9)]"
+                    : "text-slate-100 drop-shadow-[0_0_8px_rgba(226,232,240,0.18)]"
+                }`}
+              />
+              <span className="drop-shadow-[0_1px_2px_rgba(0,0,0,0.72)]">{mapMode.label}</span>
             </button>
           );
         })}

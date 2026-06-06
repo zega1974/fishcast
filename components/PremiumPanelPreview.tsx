@@ -4,7 +4,7 @@ type PremiumPanelPreviewProps = {
   onClose: () => void;
 };
 
-type PreviewIconName =
+export type PreviewIconName =
   | "weather"
   | "pressure"
   | "airTemp"
@@ -78,7 +78,7 @@ const mapModes = [
   { label: "Noturno", icon: "night" },
 ] satisfies { label: string; icon: PreviewIconName; active?: boolean }[];
 
-function PreviewIcon({
+export function PreviewIcon({
   name,
   className = "h-12 w-12",
 }: {
@@ -163,8 +163,8 @@ function PreviewIcon({
     return (
       <svg className={`${className} ${common}`} viewBox="0 0 64 64" aria-hidden="true">
         <circle cx="32" cy="32" r="30" fill={name === "moon" ? "#08263a" : "transparent"} />
-        <path d="M43 52c-16 1-29-10-29-25 0-9 5-17 13-22-3 15 6 30 23 34-4 6-7 10-7 13Z" fill="#f8fbff" />
-        <path d="M50 39c-6 10-18 14-30 8 11 11 28 9 38-2-3-2-5-4-8-6Z" fill="#aebdd0" opacity=".55" />
+        <path d="M43 52c-16 1-29-10-29-25 0-9 5-17 13-22-3 15 6 30 23 34-4 6-7 10-7 13Z" fill="currentColor" />
+        <path d="M50 39c-6 10-18 14-30 8 11 11 28 9 38-2-3-2-5-4-8-6Z" fill="currentColor" opacity=".55" />
       </svg>
     );
   }
@@ -199,11 +199,11 @@ function PreviewIcon({
   if (name === "anchor") {
     return (
       <svg className={`${className} ${common}`} viewBox="0 0 64 64" aria-hidden="true">
-        <circle cx="32" cy="10" r="6" fill="none" stroke="#f8fbff" strokeWidth="4" />
-        <path d="M32 16v38" stroke="#f8fbff" strokeLinecap="round" strokeWidth="5" />
-        <path d="M20 25h24" stroke="#f8fbff" strokeLinecap="round" strokeWidth="5" />
-        <path d="M15 39c2 12 11 18 17 18s15-6 17-18" fill="none" stroke="#f8fbff" strokeLinecap="round" strokeWidth="5" />
-        <path d="M11 42l5-7 7 5M53 42l-5-7-7 5" fill="none" stroke="#f8fbff" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" />
+        <circle cx="32" cy="10" r="6" fill="none" stroke="currentColor" strokeWidth="4" />
+        <path d="M32 16v38" stroke="currentColor" strokeLinecap="round" strokeWidth="5" />
+        <path d="M20 25h24" stroke="currentColor" strokeLinecap="round" strokeWidth="5" />
+        <path d="M15 39c2 12 11 18 17 18s15-6 17-18" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="5" />
+        <path d="M11 42l5-7 7 5M53 42l-5-7-7 5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" />
       </svg>
     );
   }
@@ -221,8 +221,8 @@ function PreviewIcon({
   if (name === "map") {
     return (
       <svg className={className} viewBox="0 0 64 64" aria-hidden="true">
-        <path d="M9 14 24 8l16 6 15-6v42l-15 6-16-6-15 6V14Z" fill="#f8fbff" />
-        <path d="M24 8v42M40 14v42" stroke="#0ba7a7" strokeWidth="4" />
+        <path d="M9 14 24 8l16 6 15-6v42l-15 6-16-6-15 6V14Z" fill="currentColor" />
+        <path d="M24 8v42M40 14v42" stroke="rgba(2,8,18,0.42)" strokeWidth="4" />
       </svg>
     );
   }
@@ -248,8 +248,8 @@ function PreviewIcon({
   if (name === "satellite") {
     return (
       <svg className={className} viewBox="0 0 64 64" aria-hidden="true">
-        <path d="M16 38 38 16l10 10-22 22-10-10Z" fill="#f8fbff" />
-        <path d="M8 30 30 8M20 42 42 20M30 52 52 30" stroke="#f8fbff" strokeWidth="5" />
+        <path d="M16 38 38 16l10 10-22 22-10-10Z" fill="currentColor" />
+        <path d="M8 30 30 8M20 42 42 20M30 52 52 30" stroke="currentColor" strokeWidth="5" />
       </svg>
     );
   }
