@@ -15,6 +15,7 @@ import L from "leaflet";
 
 import { useEffect, useRef, useState } from "react";
 
+import PremiumPanelPreview from "@/components/PremiumPanelPreview";
 import { shareCapture as shareCaptureFile } from "@/components/captures/sharing";
 import {
   deleteCapturePhoto,
@@ -842,6 +843,7 @@ function readStoredPersonalPlaces() {
 }
 
 export default function Map() {
+  const [premiumPreviewOpen, setPremiumPreviewOpen] = useState(false);
   const [captureMode, setCaptureMode] = useState(false);
   const [placeMode, setPlaceMode] = useState(false);
   const [capturesPanelOpen, setCapturesPanelOpen] = useState(false);
@@ -1707,6 +1709,8 @@ export default function Map() {
 
   return (
     <div className="relative w-full h-full">
+      {premiumPreviewOpen && <PremiumPanelPreview onClose={() => setPremiumPreviewOpen(false)} />}
+
       {storageFeedback && (
         <div
           className="map-control-overlay fixed left-1/2 top-4 z-[9000] w-[calc(100vw-32px)] max-w-[420px] -translate-x-1/2 rounded-sm border border-amber-300/30 bg-amber-950/95 px-4 py-3 text-sm font-bold leading-snug text-amber-50 shadow-[0_18px_60px_rgba(0,0,0,0.45)]"
@@ -1715,6 +1719,21 @@ export default function Map() {
           {storageFeedback}
         </div>
       )}
+
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          setPremiumPreviewOpen(true);
+        }}
+        onPointerDown={(event) => event.stopPropagation()}
+        className={`map-control-overlay absolute left-4 bottom-4 z-[2100] rounded-2xl border border-cyan-300/25 bg-slate-950/88 px-4 py-3 text-xs font-black uppercase tracking-[0.12em] text-cyan-100 shadow-[0_18px_50px_rgba(0,0,0,0.45),0_0_22px_rgba(34,211,238,0.14)] backdrop-blur-xl transition hover:border-cyan-200/45 hover:bg-slate-900/95 ${
+          popupPriorityOpen ? "pointer-events-none opacity-0" : "opacity-100"
+        }`}
+        aria-label="Abrir preview premium"
+      >
+        Preview premium
+      </button>
 
       <div
         className={`map-control-overlay absolute bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] right-[calc(env(safe-area-inset-right)+0.75rem)] z-[2000] flex max-h-[calc(100dvh-env(safe-area-inset-bottom)-env(safe-area-inset-top)-1.5rem)] flex-col items-end gap-1 transition sm:bottom-6 sm:right-6 sm:max-h-none ${
