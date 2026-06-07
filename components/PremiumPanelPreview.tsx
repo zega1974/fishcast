@@ -894,17 +894,40 @@ export default function PremiumPanelPreview({ onClose }: PremiumPanelPreviewProp
             justify-content: center;
             padding: 24px;
             box-sizing: border-box;
+            background:
+              radial-gradient(circle at 50% 12%, rgba(14, 165, 233, 0.12), transparent 38%),
+              radial-gradient(circle at 50% 50%, rgba(15, 23, 42, 0.2), transparent 58%),
+              rgba(2, 8, 15, 0.58);
+            backdrop-filter: blur(2px);
+          }
+
+          .vpOfficialCloseButton {
+            position: absolute;
+            top: max(24px, calc(50% - 410px));
+            left: calc(50% + min(43vw, 460px) + 12px);
+            right: auto;
           }
 
           .vpOfficialPanelShell {
             width: min(86vw, 920px);
             height: auto;
             max-height: min(92dvh, 820px);
-            padding: 0;
+            padding: 14px;
             display: grid;
             grid-template-columns: 1fr 1fr;
             grid-template-rows: auto auto auto auto;
             gap: 16px;
+            background: rgba(3, 10, 18, 0.82);
+            border: 1px solid rgba(148, 163, 184, 0.14);
+            border-radius: 28px;
+            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.34);
+            backdrop-filter: blur(6px);
+          }
+
+          .vpOfficialCard,
+          .vpOfficialAdvancedButton {
+            background: rgba(10, 18, 30, 0.82);
+            border: 1px solid rgba(148, 163, 184, 0.18);
           }
 
           .vpOfficialPlaceBlock {
