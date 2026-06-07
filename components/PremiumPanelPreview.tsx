@@ -738,25 +738,25 @@ export default function PremiumPanelPreview({ onClose }: PremiumPanelPreviewProp
 
         .vpOfficialTileText span {
           color: rgba(226, 232, 240, 0.72);
-          font-size: clamp(10px, 2.65vw, 12px);
+          font-size: 11px;
           line-height: 1.05;
           font-weight: 620;
-          letter-spacing: 0.04em;
+          letter-spacing: 0.08em;
           text-transform: uppercase;
         }
 
         .vpOfficialTileText strong {
           color: #ffffff;
-          font-size: clamp(18px, 4.95vw, 22px);
-          line-height: 1.05;
+          font-size: clamp(20px, 4.9vw, 24px);
+          line-height: 1.08;
           font-weight: 680;
           letter-spacing: -0.02em;
         }
 
         .vpOfficialTileText small {
           color: rgba(226, 232, 240, 0.68);
-          font-size: clamp(11px, 3vw, 13px);
-          line-height: 1.05;
+          font-size: 12px;
+          line-height: 1.2;
           font-weight: 400;
         }
 
@@ -879,7 +879,7 @@ export default function PremiumPanelPreview({ onClose }: PremiumPanelPreviewProp
           }
 
           .vpOfficialTileText strong {
-            font-size: 17px;
+            font-size: 18px;
           }
 
           .vpOfficialAdvancedButton {
@@ -980,11 +980,11 @@ export default function PremiumPanelPreview({ onClose }: PremiumPanelPreviewProp
           }
 
           .vpOfficialTileText span {
-            font-size: 11px;
+            font-size: 12px;
           }
 
           .vpOfficialTileText strong {
-            font-size: 18px;
+            font-size: 20px;
           }
 
           .vpOfficialAdvancedButton {
