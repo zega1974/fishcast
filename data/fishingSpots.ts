@@ -71,8 +71,8 @@ export const fishingSpots: FishingSpot[] = [
     name: "Ilha do Mel",
     city: "Paranaguá",
     type: "litoral",
-    lat: -25.5658,
-    lng: -48.3194,
+    lat: -25.5685,
+    lng: -48.3152,
     conditions: {
       clima: "Ventando",
       pressao: 1016,

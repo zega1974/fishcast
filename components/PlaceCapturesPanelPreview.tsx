@@ -13,6 +13,10 @@ type PreviewCapture = {
   kind: 'peva' | 'flecha' | 'sargo';
 };
 
+type PlaceCapturesPanelPreviewProps = {
+  onClose?: () => void;
+};
+
 type IconProps = {
   className?: string;
 };
@@ -174,22 +178,78 @@ function CardShell({
   return <div className={`vpPlaceCard ${className}`}>{children}</div>;
 }
 
+async function copyTextWithFallback(text: string) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    // tenta fallback abaixo
+  }
+
+  try {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.top = '-9999px';
+    textarea.style.left = '-9999px';
+    textarea.style.opacity = '0';
+
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+
+    const copied = document.execCommand('copy');
+    document.body.removeChild(textarea);
+
+    return copied;
+  } catch {
+    return false;
+  }
+}
+
 function PlaceCopyButton({ coordinates }: { coordinates: string }) {
   const [copied, setCopied] = useState(false);
 
   const copyCoords = async () => {
-    try {
-      await navigator.clipboard.writeText(coordinates);
+    const success = await copyTextWithFallback(coordinates);
+
+    if (success) {
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1800);
-    } catch {
-      // preview visual
     }
   };
 
   return (
     <button
       className={`vpPlaceCopyButton ${copied ? 'isCopied' : ''}`}
+      type="button"
+      onClick={copyCoords}
+      aria-live="polite"
+    >
+      <CopyIcon />
+      <span>{copied ? 'Copiado!' : 'Copiar'}</span>
+    </button>
+  );
+}
+
+function PlaceMobileCopyButton({ coordinates }: { coordinates: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const copyCoords = async () => {
+    const success = await copyTextWithFallback(coordinates);
+
+    if (success) {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    }
+  };
+
+  return (
+    <button
+      className={`vpPlaceMobileCopyButton ${copied ? 'isCopied' : ''}`}
       type="button"
       onClick={copyCoords}
       aria-live="polite"
@@ -255,28 +315,57 @@ function FishThumb({ kind }: { kind: PreviewCapture['kind'] }) {
 function PlaceHeaderCard() {
   return (
     <CardShell className="vpPlaceHeaderCard">
-      <div className="vpPlacePinIcon">
-        <PinIcon />
-      </div>
-
-      <div className="vpPlaceHeaderText">
-        <span>Meu Lugar</span>
-        <strong>Pontal de Matinhos</strong>
-
-        <div className="vpPlaceCoordinatesRow">
-          <small>{previewCoordinates}</small>
-          <PlaceCopyButton coordinates={previewCoordinates} />
+      <div className="vpPlaceHeaderDesktop">
+        <div className="vpPlacePinIcon">
+          <PinIcon />
         </div>
+
+        <div className="vpPlaceHeaderText">
+          <span>Meu Lugar</span>
+          <strong>Pontal de Matinhos</strong>
+
+          <div className="vpPlaceCoordinatesRow">
+            <small>{previewCoordinates}</small>
+            <PlaceCopyButton coordinates={previewCoordinates} />
+          </div>
+        </div>
+
+        <button
+          className="vpPlaceDataButton"
+          type="button"
+          onClick={() => console.log('Preview: abrir Dados do Spot')}
+        >
+          <ChartIcon />
+          <span>Dados do Spot</span>
+        </button>
       </div>
 
-      <button
-        className="vpPlaceDataButton"
-        type="button"
-        onClick={() => console.log('Preview: abrir Dados do Spot')}
-      >
-        <ChartIcon />
-        <span>Dados do Spot</span>
-      </button>
+      <div className="vpPlaceHeaderMobile">
+        <div className="vpPlaceMobileTop">
+          <div className="vpPlaceMobilePinIcon">
+            <PinIcon />
+          </div>
+
+          <div className="vpPlaceMobileText">
+            <span>Meu Lugar</span>
+            <strong>Pontal de Matinhos</strong>
+
+            <div className="vpPlaceMobileCoordinates">
+              <small>{previewCoordinates}</small>
+              <PlaceMobileCopyButton coordinates={previewCoordinates} />
+            </div>
+          </div>
+        </div>
+
+        <button
+          className="vpPlaceMobileDataButton"
+          type="button"
+          onClick={() => console.log('Preview: abrir Dados do Spot')}
+        >
+          <ChartIcon />
+          <span>Dados do Spot</span>
+        </button>
+      </div>
     </CardShell>
   );
 }
@@ -348,18 +437,27 @@ function FooterActions() {
   );
 }
 
-export default function PlaceCapturesPanelPreview() {
+export default function PlaceCapturesPanelPreview({
+  onClose,
+}: PlaceCapturesPanelPreviewProps) {
   return (
     <section className="vpPlacePreview" aria-label="Preview Meu Lugar com Capturas">
-      <button className="vpPlaceCloseButton" type="button" aria-label="Fechar">
-        <CloseIcon />
-      </button>
+      <div className="vpPlacePanelFrame">
+        <button
+          className="vpPlaceCloseButton"
+          type="button"
+          aria-label="Fechar"
+          onClick={onClose}
+        >
+          <CloseIcon />
+        </button>
 
-      <main className="vpPlacePanelShell">
-        <PlaceHeaderCard />
-        <CapturesBlock />
-        <FooterActions />
-      </main>
+        <main className="vpPlacePanelShell">
+          <PlaceHeaderCard />
+          <CapturesBlock />
+          <FooterActions />
+        </main>
+      </div>
 
       <style jsx global>{`
         .vpPlacePreview {
@@ -447,6 +545,14 @@ export default function PlaceCapturesPanelPreview() {
           gap: 11px;
           padding: 10px 10px 10px 11px;
           box-sizing: border-box;
+        }
+
+        .vpPlaceHeaderDesktop {
+          display: contents;
+        }
+
+        .vpPlaceHeaderMobile {
+          display: none;
         }
 
         .vpPlacePinIcon {
@@ -792,41 +898,6 @@ export default function PlaceCapturesPanelPreview() {
             padding-right: 10px;
           }
 
-          .vpPlaceHeaderCard {
-            min-height: 70px;
-            padding: 8px 8px 8px 9px;
-            gap: 9px;
-          }
-
-          .vpPlacePinIcon {
-            width: 38px;
-            height: 38px;
-          }
-
-          .vpPlacePinIcon svg {
-            width: 24px;
-            height: 24px;
-          }
-
-          .vpPlaceDataButton {
-            width: 38px;
-            padding: 0;
-          }
-
-          .vpPlaceDataButton span {
-            display: none;
-          }
-
-          .vpPlaceCoordinatesRow {
-            gap: 6px;
-          }
-
-          .vpPlaceCopyButton {
-            height: 34px;
-            padding: 0 9px;
-            font-size: 12px;
-          }
-
           .vpPlaceCaptureCard {
             min-height: 92px;
             gap: 10px;
@@ -868,26 +939,41 @@ export default function PlaceCapturesPanelPreview() {
             backdrop-filter: blur(2px);
           }
 
+          .vpPlacePanelFrame {
+            position: relative;
+            width: min(86vw, 760px);
+            height: auto;
+            max-height: calc(100dvh - 96px);
+            display: flex;
+            justify-content: center;
+            align-items: stretch;
+          }
+
           .vpPlaceCloseButton {
             position: absolute;
-            top: max(24px, calc(50% - 316px));
-            left: calc(50% + min(43vw, 380px) + 12px);
-            right: auto;
+            top: -34px;
+            right: -54px;
+            left: auto;
+            width: 44px;
+            height: 44px;
+            border-radius: 15px;
           }
 
           .vpPlacePanelShell {
-            width: min(86vw, 760px);
+            width: 100%;
             height: auto;
-            max-height: min(92dvh, 640px);
+            max-height: calc(100dvh - 96px);
             padding: 14px;
             display: flex;
             flex-direction: column;
-            gap: 14px;
+            gap: 12px;
             background: rgba(3, 10, 18, 0.82);
             border: 1px solid rgba(148, 163, 184, 0.14);
             border-radius: 28px;
             box-shadow: 0 24px 80px rgba(0, 0, 0, 0.34);
             backdrop-filter: blur(6px);
+            overflow: hidden;
+            box-sizing: border-box;
           }
 
           .vpPlaceCard,
@@ -897,10 +983,11 @@ export default function PlaceCapturesPanelPreview() {
           }
 
           .vpPlaceHeaderCard {
+            flex: 0 0 auto;
             min-height: 92px;
-            border-radius: 20px;
             padding: 16px 18px;
-            gap: 14px;
+            border-radius: 18px;
+            gap: 16px;
           }
 
           .vpPlacePinIcon {
@@ -933,9 +1020,12 @@ export default function PlaceCapturesPanelPreview() {
           }
 
           .vpPlaceCapturesBlock {
-            flex: 0 0 auto;
-            border-radius: 20px;
-            padding: 14px;
+            flex: 1 1 auto;
+            min-height: 0;
+            max-height: none;
+            overflow: hidden;
+            border-radius: 18px;
+            padding: 12px;
           }
 
           .vpPlaceSectionTitle {
@@ -945,7 +1035,9 @@ export default function PlaceCapturesPanelPreview() {
           }
 
           .vpPlaceCapturesScroll {
-            max-height: 365px;
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow-y: auto;
           }
 
           .vpPlaceCapturesList {
@@ -975,16 +1067,172 @@ export default function PlaceCapturesPanelPreview() {
           }
 
           .vpPlaceFooter {
+            flex: 0 0 auto;
             border-radius: 18px;
             gap: 14px;
-            padding: 12px;
+            padding: 10px;
+            margin-top: 0;
+            box-sizing: border-box;
           }
 
           .vpPlacePrimaryButton,
           .vpPlaceDangerButton {
-            min-height: 58px;
-            border-radius: 16px;
-            font-size: 20px;
+            min-height: 56px;
+            border-radius: 15px;
+            font-size: 18px;
+          }
+        }
+
+        @media (max-width: 767px) {
+          .vpPlaceHeaderCard {
+            min-height: 132px !important;
+            display: block !important;
+            padding: 14px 16px !important;
+            border-radius: 18px !important;
+          }
+
+          .vpPlaceHeaderDesktop {
+            display: none !important;
+          }
+
+          .vpPlaceHeaderMobile {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 10px !important;
+          }
+
+          .vpPlaceMobileTop {
+            display: grid !important;
+            grid-template-columns: 48px minmax(0, 1fr) !important;
+            align-items: center !important;
+            gap: 12px !important;
+          }
+
+          .vpPlaceMobilePinIcon {
+            width: 46px !important;
+            height: 46px !important;
+            transform: translateY(-24px) !important;
+            border-radius: 999px !important;
+            color: #38bdf8 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            background: rgba(14, 165, 233, 0.12) !important;
+            box-shadow: 0 0 22px rgba(14, 165, 233, 0.18) !important;
+          }
+
+          .vpPlaceMobilePinIcon svg {
+            width: 29px !important;
+            height: 29px !important;
+          }
+
+          .vpPlaceMobileText {
+            min-width: 0 !important;
+            padding-right: 68px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 4px !important;
+          }
+
+          .vpPlaceMobileText span {
+            color: rgba(226, 232, 240, 0.72) !important;
+            font-size: 11px !important;
+            line-height: 1 !important;
+            letter-spacing: 0.08em !important;
+            text-transform: uppercase !important;
+            font-weight: 620 !important;
+          }
+
+          .vpPlaceMobileText strong {
+            color: #38bdf8 !important;
+            font-size: clamp(22px, 6vw, 27px) !important;
+            line-height: 1.08 !important;
+            font-weight: 700 !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            letter-spacing: -0.025em !important;
+          }
+
+          .vpPlaceMobileCoordinates {
+            display: flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+            flex-wrap: wrap !important;
+          }
+
+          .vpPlaceMobileCoordinates small {
+            max-width: calc(100vw - 220px) !important;
+            color: rgba(226, 232, 240, 0.74) !important;
+            font-size: 14px !important;
+            line-height: 1.1 !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+          }
+
+          .vpPlaceMobileCopyButton {
+            min-width: 108px !important;
+            height: 38px !important;
+            border: 1px solid rgba(56, 189, 248, 0.36) !important;
+            border-radius: 14px !important;
+            background: rgba(14, 165, 233, 0.08) !important;
+            color: #7dd3fc !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 6px !important;
+            padding: 0 11px !important;
+            font-size: 12px !important;
+            font-weight: 560 !important;
+            cursor: pointer !important;
+            white-space: nowrap !important;
+          }
+
+          .vpPlaceMobileCopyButton svg {
+            width: 17px !important;
+            height: 17px !important;
+          }
+
+          .vpPlaceMobileCopyButton span {
+            display: inline !important;
+            white-space: nowrap !important;
+          }
+
+          .vpPlaceMobileCopyButton.isCopied {
+            min-width: 126px !important;
+            border-color: rgba(34, 197, 94, 0.48) !important;
+            background: rgba(34, 197, 94, 0.12) !important;
+            color: #86efac !important;
+            box-shadow: 0 0 18px rgba(34, 197, 94, 0.14) !important;
+          }
+
+          .vpPlaceMobileDataButton {
+            align-self: flex-end !important;
+            min-width: 150px !important;
+            height: 44px !important;
+            border: 1px solid rgba(56, 189, 248, 0.36) !important;
+            border-radius: 15px !important;
+            background: rgba(14, 165, 233, 0.08) !important;
+            color: #7dd3fc !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 8px !important;
+            padding: 0 14px !important;
+            font-size: 13px !important;
+            font-weight: 720 !important;
+            cursor: pointer !important;
+            white-space: nowrap !important;
+          }
+
+          .vpPlaceMobileDataButton svg {
+            width: 20px !important;
+            height: 20px !important;
+          }
+
+          .vpPlaceMobileDataButton span {
+            display: inline !important;
           }
         }
       `}</style>

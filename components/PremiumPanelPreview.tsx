@@ -270,6 +270,38 @@ function CardShell({
   return <div className={`vpOfficialCard ${className}`}>{children}</div>;
 }
 
+async function copyTextWithFallback(text: string) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    // tenta fallback abaixo
+  }
+
+  try {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.top = "-9999px";
+    textarea.style.left = "-9999px";
+    textarea.style.opacity = "0";
+
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+
+    const copied = document.execCommand("copy");
+    document.body.removeChild(textarea);
+
+    return copied;
+  } catch {
+    return false;
+  }
+}
+
 function ScoreGauge() {
   return (
     <div className="vpOfficialScoreGauge">
@@ -326,12 +358,11 @@ function SelectedPointCard() {
   const [copied, setCopied] = useState(false);
 
   const copyCoords = async () => {
-    try {
-      await navigator.clipboard.writeText(coords);
+    const success = await copyTextWithFallback(coords);
+
+    if (success) {
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1800);
-    } catch {
-      // preview visual
     }
   };
 
@@ -609,6 +640,10 @@ export default function PremiumPanelPreview({ onClose }: PremiumPanelPreviewProp
         .vpOfficialCopyButton svg {
           width: 17px;
           height: 17px;
+        }
+
+        .vpOfficialCopyButton span {
+          white-space: nowrap;
         }
 
         .vpOfficialCopyButton.isCopied {
