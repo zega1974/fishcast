@@ -1,6 +1,7 @@
 "use client";
 
 import type React from "react";
+import { useState } from "react";
 
 type PremiumPanelPreviewProps = {
   onClose?: () => void;
@@ -322,10 +323,13 @@ function ScoreGauge() {
 
 function SelectedPointCard() {
   const coords = "-25.823456, -48.536789";
+  const [copied, setCopied] = useState(false);
 
   const copyCoords = async () => {
     try {
       await navigator.clipboard.writeText(coords);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
     } catch {
       // preview visual
     }
@@ -343,9 +347,14 @@ function SelectedPointCard() {
         <small>{coords}</small>
       </div>
 
-      <button className="vpOfficialCopyButton" type="button" onClick={copyCoords}>
+      <button
+        className={`vpOfficialCopyButton ${copied ? "isCopied" : ""}`}
+        type="button"
+        onClick={copyCoords}
+        aria-live="polite"
+      >
         <CopyIcon />
-        <span>Copiar</span>
+        <span>{copied ? "Copiado!" : "Copiar"}</span>
       </button>
     </CardShell>
   );
@@ -590,11 +599,23 @@ export default function PremiumPanelPreview({ onClose }: PremiumPanelPreviewProp
           font-size: 13px;
           font-weight: 560;
           cursor: pointer;
+          transition:
+            border-color 160ms ease,
+            background 160ms ease,
+            color 160ms ease,
+            box-shadow 160ms ease;
         }
 
         .vpOfficialCopyButton svg {
           width: 17px;
           height: 17px;
+        }
+
+        .vpOfficialCopyButton.isCopied {
+          border-color: rgba(34, 197, 94, 0.48);
+          background: rgba(34, 197, 94, 0.12);
+          color: #86efac;
+          box-shadow: 0 0 18px rgba(34, 197, 94, 0.14);
         }
 
         .vpOfficialTopGrid {
@@ -738,7 +759,7 @@ export default function PremiumPanelPreview({ onClose }: PremiumPanelPreviewProp
 
         .vpOfficialTileText span {
           color: rgba(226, 232, 240, 0.72);
-          font-size: 11px;
+          font-size: 11.5px;
           line-height: 1.05;
           font-weight: 620;
           letter-spacing: 0.08em;
@@ -879,7 +900,7 @@ export default function PremiumPanelPreview({ onClose }: PremiumPanelPreviewProp
           }
 
           .vpOfficialTileText strong {
-            font-size: 18px;
+            font-size: 19px;
           }
 
           .vpOfficialAdvancedButton {
