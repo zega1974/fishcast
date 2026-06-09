@@ -19,6 +19,7 @@ import L from "leaflet";
 import { useEffect, useRef, useState } from "react";
 
 import OfficialFreePanelPreview from "@/components/OfficialFreePanelPreview";
+import CaptureSpotPanelPreview from "@/components/CaptureSpotPanelPreview";
 import PlaceCapturesPanelPreview from "@/components/PlaceCapturesPanelPreview";
 import PremiumPanelPreview, { PreviewIcon, type PreviewIconName } from "@/components/PremiumPanelPreview";
 import { shareCapture as shareCaptureFile } from "@/components/captures/sharing";
@@ -1783,34 +1784,6 @@ export default function Map() {
     ];
   }
 
-  function formatCaptureSize(value: string) {
-    const size = parseConditionNumber(value);
-
-    if (size === null) {
-      return "—";
-    }
-
-    if (size >= 100) {
-      return `${(size / 100).toFixed(2).replace(".", ",")} m`;
-    }
-
-    return `${size.toFixed(0)} cm`;
-  }
-
-  function getLargestCaptureSizeValue(spotCaptures: Capture[]) {
-    const largestSize = spotCaptures.reduce<number | null>((largest, capture) => {
-      const size = parseConditionNumber(capture.size);
-
-      if (size === null) {
-        return largest;
-      }
-
-      return largest === null || size > largest ? size : largest;
-    }, null);
-
-    return largestSize === null ? "—" : formatCaptureSize(String(largestSize));
-  }
-
   function formatSpotHistoryDate(value?: string) {
     if (!value) {
       return "—";
@@ -2947,218 +2920,43 @@ export default function Map() {
       )}
 
       {selectedCaptureSpot && (
-        <div
-          className="map-control-overlay fixed left-1/2 top-2 z-[7000] w-[calc(100vw-16px)] max-w-[900px] -translate-x-1/2 sm:top-6 sm:w-[calc(100vw-24px)]"
-          onClick={stopPanelEvent}
-          onPointerDown={stopPanelEvent}
-        >
-          {(() => {
-            const spotConditions = getConditionsForLocation(
-              selectedCaptureSpot.lat,
-              selectedCaptureSpot.lng
-            );
-            const fishCastScore = calculateFishCastScore(spotConditions);
-            const conditionRows = getSpotConditionRows(spotConditions);
-            const largestFish = getLargestCaptureSizeValue(selectedCaptureSpot.captures);
-            const lastCapture = getLastSpotCaptureDate(selectedCaptureSpot.captures);
+        <CaptureSpotPanelPreview
+          lat={selectedCaptureSpot.lat}
+          lng={selectedCaptureSpot.lng}
+          captures={selectedCaptureSpot.captures}
+          onClose={() => {
+            setSelectedCaptureSpot(null);
+            setShareOptionsCaptureId(null);
+          }}
+          onAddCapture={() => {
+            setPendingCapture({
+              lat: selectedCaptureSpot.lat,
+              lng: selectedCaptureSpot.lng,
+              placeId: null,
+            });
+            setSelectedCaptureSpot(null);
+            setCaptureMode(false);
+            setPlaceMode(false);
+          }}
+          onDeleteSpot={() => deleteCaptureSpot(selectedCaptureSpot)}
+          onOpenCapture={(captureId) => openCaptureSpotCard(captureId)}
+          onOpenSpotData={() => {
+            const coordinatesText = `${selectedCaptureSpot.lat.toFixed(6)}, ${selectedCaptureSpot.lng.toFixed(6)}`;
 
-            return (
-              <div className="flex h-[calc(100dvh-16px)] max-h-[calc(100dvh-16px)] w-full flex-col overflow-hidden rounded-md border border-cyan-300/18 bg-[#020a14]/97 p-3 text-white shadow-[0_24px_70px_rgba(0,0,0,0.62),0_0_34px_rgba(34,211,238,0.18)] backdrop-blur-xl sm:h-[calc(100vh-48px)] sm:max-h-[calc(100vh-48px)] sm:p-5">
-                <div className="mb-1.5 shrink-0 border-b border-white/10 pb-1.5 sm:mb-5 sm:pb-4">
-                    <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-start gap-3">
-                    <div className="min-w-0">
-                      <p className="text-[11px] font-black uppercase tracking-[0.22em] text-emerald-200">
-                        Detalhe do ponto
-                      </p>
-                      <h2 className="mt-1 text-3xl font-black leading-none text-white sm:text-5xl">
-                        Capturas
-                      </h2>
-                    </div>
-                    <CoordinatesBadge lat={selectedCaptureSpot.lat} lng={selectedCaptureSpot.lng} />
-                    <button
-                      onClick={() => {
-                        setSelectedCaptureSpot(null);
-                        setShareOptionsCaptureId(null);
-                      }}
-                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md border border-emerald-300/35 bg-black/65 text-2xl font-black text-white shadow-[0_0_18px_rgba(16,185,129,0.18)] transition hover:bg-black/80"
-                      aria-label="Fechar spot de captura"
-                    >
-                      ×
-                    </button>
-                  </div>
-                </div>
-
-                <VouPescarScoreGauge score={fishCastScore.value} partial={fishCastScore.partial} compactMobile />
-
-                <div className="mb-1.5 shrink-0 rounded-md border border-emerald-300/25 bg-[linear-gradient(135deg,rgba(6,78,59,0.34),rgba(2,6,23,0.44))] p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] sm:mb-4 sm:p-4">
-                  <h3 className="mb-1.5 flex items-center gap-2 border-b border-emerald-300/18 pb-1 text-[11px] font-black uppercase tracking-[0.12em] text-emerald-200 sm:mb-3 sm:pb-2 sm:text-base sm:tracking-[0.18em]">
-                    <span>☁</span>
-                    Condições atuais
-                  </h3>
-                  <div className="grid grid-cols-3 gap-1 sm:grid-cols-2 sm:gap-2.5 lg:grid-cols-3">
-                    {conditionRows.map((condition) => (
-                      <div
-                        key={condition.label}
-                        className="grid grid-cols-[24px_1fr] items-center gap-1.5 rounded-sm border border-emerald-200/14 bg-black/28 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:grid-cols-[52px_1fr] sm:gap-3 sm:p-4"
-                      >
-                        <div className="flex h-6 w-6 items-center justify-center rounded-full border border-cyan-300/30 bg-cyan-300/10 text-sm sm:h-12 sm:w-12 sm:text-3xl">
-                          {condition.icon}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="truncate text-[8px] font-black uppercase tracking-[0.06em] text-emerald-200 sm:text-xs sm:tracking-[0.16em]">
-                            {condition.label}
-                          </p>
-                          <p className="truncate text-base font-black leading-tight text-white sm:mt-1 sm:text-2xl">{condition.value}</p>
-                          <p className="hidden sm:mt-1 sm:line-clamp-2 sm:block sm:text-xs sm:font-bold sm:leading-snug sm:text-zinc-300">
-                            {condition.description}
-                          </p>
-                        </div>
-                        <span className="col-span-2 max-w-full justify-self-start truncate rounded-full bg-emerald-400/18 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.04em] text-lime-200 sm:px-3 sm:py-1 sm:text-[10px] sm:tracking-[0.08em]">
-                          {condition.badgeIcon} {condition.badge}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex min-h-0 flex-1 flex-col gap-2 sm:gap-3">
-                  <div className={`flex min-h-0 flex-1 flex-col rounded-md border border-yellow-300/20 bg-black/25 p-2 sm:p-3 ${selectedCaptureSpot.captures.length >= 4 ? "max-h-[clamp(322px,36vh,380px)] overflow-hidden" : ""}`}>
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="flex items-center gap-2 text-[12px] font-black uppercase tracking-[0.16em] text-emerald-200">
-                        <span>🐟</span>
-                        Histórico do ponto
-                      </p>
-                      <span className="text-sm font-black text-white">
-                        {selectedCaptureSpot.captures.length} capturas
-                      </span>
-                    </div>
-
-                    <div className="mt-2 grid grid-cols-3 gap-2 rounded-sm border border-yellow-300/25 bg-yellow-300/5 p-2 sm:mt-3 sm:p-2.5">
-                      <div className="flex items-center gap-3">
-                        <span className="hidden text-2xl sm:inline">🏆</span>
-                        <div>
-                          <p className="text-xs font-bold text-zinc-300">Maior peixe</p>
-                          <p className="text-sm font-black text-white sm:text-lg">{largestFish}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 border-white/10 sm:border-l sm:pl-3">
-                        <span className="hidden text-2xl sm:inline">▣</span>
-                        <div>
-                          <p className="text-xs font-bold text-zinc-300">Última captura</p>
-                          <p className="text-sm font-black text-white sm:text-lg">{lastCapture}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 border-white/10 sm:border-l sm:pl-3">
-                        <span className="hidden text-2xl sm:inline">▮</span>
-                        <div>
-                          <p className="text-xs font-bold text-zinc-300">Total de capturas</p>
-                          <p className="text-sm font-black text-white sm:text-lg">{selectedCaptureSpot.captures.length}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className={`mt-2 min-h-0 space-y-2 pr-1 sm:mt-3 ${selectedCaptureSpot.captures.length >= 4 ? "max-h-[clamp(232px,28vh,288px)] overflow-y-auto" : "overflow-visible"}`}>
-                      {[...selectedCaptureSpot.captures].reverse().map((capture) => {
-                        const originalIndex = captures.findIndex((item) => item.id === capture.id);
-
-                        return (
-                          <article
-                            key={`capture-spot-${capture.id}`}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              openCaptureSpotCard(capture.id);
-                            }}
-                            className="flex cursor-pointer gap-3 rounded-sm border border-white/10 bg-white/[0.06] p-3 transition hover:border-red-300/25 hover:bg-white/[0.09]"
-                            role="button"
-                            tabIndex={0}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" || e.key === " ") {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                openCaptureSpotCard(capture.id);
-                              }
-                            }}
-                          >
-                            <div className="h-16 w-24 shrink-0 overflow-hidden rounded-sm border border-white/10 bg-black/30">
-                              {capture.photo ? (
-                                <img
-                                  src={capture.photo}
-                                  alt="Foto da captura"
-                                  className="h-full w-full object-cover"
-                                />
-                              ) : (
-                                <div className="h-full w-full bg-[radial-gradient(circle_at_50%_25%,rgba(127,29,29,0.44),transparent_44%),linear-gradient(135deg,#450a0a,#020617)]" />
-                              )}
-                            </div>
-
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="min-w-0">
-                                  <h3 className="truncate text-sm font-black">
-                                    {getCaptureTitle(capture, originalIndex)}
-                                  </h3>
-                                  <p className="mt-2 truncate text-xs font-black text-cyan-100/85">
-                                    {capture.size ? `${capture.size} cm` : "Tam. --"} • {capture.weight ? `${capture.weight} kg` : "Peso --"}
-                                  </p>
-                                  <p className="mt-1 truncate text-xs font-bold text-zinc-400">
-                                    {formatCaptureDate(capture.capturedAt)}
-                                  </p>
-                                </div>
-                              </div>
-
-                            </div>
-                          </article>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="mt-auto grid shrink-0 grid-cols-2 gap-3 border-t border-white/10 bg-[#020a14]/98 pt-3 pb-[calc(18px+env(safe-area-inset-bottom))] sm:pb-0">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPendingCapture({
-                          lat: selectedCaptureSpot.lat,
-                          lng: selectedCaptureSpot.lng,
-                          placeId: null,
-                        });
-                        setSelectedCaptureSpot(null);
-                        setCaptureMode(false);
-                        setPlaceMode(false);
-                      }}
-                      className="inline-flex min-h-[68px] w-full items-center justify-center gap-3 rounded-md border border-emerald-300/60 bg-emerald-500/24 px-4 py-4 text-base font-black text-emerald-50 shadow-[0_0_24px_rgba(16,185,129,0.16),inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:bg-emerald-500/32 sm:min-h-[72px] sm:px-6 sm:text-lg"
-                    >
-                      <svg aria-hidden="true" viewBox="0 0 24 24" className="h-6 w-6 shrink-0" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2">
-                        <path d="M12 5v14" />
-                        <path d="M5 12h14" />
-                      </svg>
-                      <span>Captura</span>
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteCaptureSpot(selectedCaptureSpot);
-                      }}
-                      className="inline-flex min-h-[68px] w-full items-center justify-center gap-3 rounded-md border border-red-400/65 bg-red-500/22 px-4 py-4 text-base font-black text-red-50 shadow-[0_0_24px_rgba(239,68,68,0.12),inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:bg-red-500/30 sm:min-h-[72px] sm:px-6 sm:text-lg"
-                    >
-                      <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2">
-                        <path d="M3 6h18" />
-                        <path d="M8 6V4h8v2" />
-                        <path d="M19 6l-1 14H6L5 6" />
-                        <path d="M10 11v5" />
-                        <path d="M14 11v5" />
-                      </svg>
-                      <span>Apagar Spot</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
-        </div>
+            setOfficialFreeSpotDataPlace({
+              id: Math.round(
+                Math.abs(selectedCaptureSpot.lat) * 1000000 +
+                Math.abs(selectedCaptureSpot.lng) * 1000000
+              ),
+              name: "Ponto de captura",
+              lat: selectedCaptureSpot.lat,
+              lng: selectedCaptureSpot.lng,
+              coordinatesText,
+            });
+            setSelectedCaptureSpot(null);
+          }}
+        />
       )}
-
       {selectedCapture && (
         <div
           className="map-control-overlay fixed bottom-2 left-1/2 top-2 z-[7000] w-[calc(100vw-16px)] max-w-[460px] -translate-x-1/2 sm:bottom-4 sm:top-[96px] sm:w-[calc(100vw-24px)]"
