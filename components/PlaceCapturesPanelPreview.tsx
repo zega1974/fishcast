@@ -15,6 +15,12 @@ type PreviewCapture = {
 
 type PlaceCapturesPanelPreviewProps = {
   onClose?: () => void;
+  place?: {
+    id: number | string;
+    name: string;
+    coordinates: string;
+  };
+  captures?: PreviewCapture[];
 };
 
 type IconProps = {
@@ -23,7 +29,7 @@ type IconProps = {
 
 const previewCoordinates = '-25.823456, -48.536789';
 
-const captures: PreviewCapture[] = [
+const previewCaptures: PreviewCapture[] = [
   {
     id: '1',
     species: 'Robalo Peva',
@@ -312,7 +318,13 @@ function FishThumb({ kind }: { kind: PreviewCapture['kind'] }) {
   );
 }
 
-function PlaceHeaderCard() {
+function PlaceHeaderCard({
+  name,
+  coordinates,
+}: {
+  name: string;
+  coordinates: string;
+}) {
   return (
     <CardShell className="vpPlaceHeaderCard">
       <div className="vpPlaceHeaderDesktop">
@@ -322,11 +334,11 @@ function PlaceHeaderCard() {
 
         <div className="vpPlaceHeaderText">
           <span>Meu Lugar</span>
-          <strong>Pontal de Matinhos</strong>
+          <strong>{name}</strong>
 
           <div className="vpPlaceCoordinatesRow">
-            <small>{previewCoordinates}</small>
-            <PlaceCopyButton coordinates={previewCoordinates} />
+            <small>{coordinates}</small>
+            <PlaceCopyButton coordinates={coordinates} />
           </div>
         </div>
 
@@ -348,11 +360,11 @@ function PlaceHeaderCard() {
 
           <div className="vpPlaceMobileText">
             <span>Meu Lugar</span>
-            <strong>Pontal de Matinhos</strong>
+            <strong>{name}</strong>
 
             <div className="vpPlaceMobileCoordinates">
-              <small>{previewCoordinates}</small>
-              <PlaceMobileCopyButton coordinates={previewCoordinates} />
+              <small>{coordinates}</small>
+              <PlaceMobileCopyButton coordinates={coordinates} />
             </div>
           </div>
         </div>
@@ -403,7 +415,7 @@ function CaptureCard({ capture }: { capture: PreviewCapture }) {
   );
 }
 
-function CapturesBlock() {
+function CapturesBlock({ captures }: { captures: PreviewCapture[] }) {
   return (
     <CardShell className="vpPlaceCapturesBlock">
       <div className="vpPlaceSectionTitle">
@@ -439,7 +451,16 @@ function FooterActions() {
 
 export default function PlaceCapturesPanelPreview({
   onClose,
+  place,
+  captures,
 }: PlaceCapturesPanelPreviewProps) {
+  const panelPlace = place ?? {
+    id: 'preview',
+    name: 'Pontal de Matinhos',
+    coordinates: previewCoordinates,
+  };
+  const panelCaptures = captures ?? previewCaptures;
+
   return (
     <section className="vpPlacePreview" aria-label="Preview Meu Lugar com Capturas">
       <div className="vpPlacePanelFrame">
@@ -453,8 +474,8 @@ export default function PlaceCapturesPanelPreview({
         </button>
 
         <main className="vpPlacePanelShell">
-          <PlaceHeaderCard />
-          <CapturesBlock />
+          <PlaceHeaderCard name={panelPlace.name} coordinates={panelPlace.coordinates} />
+          <CapturesBlock captures={panelCaptures} />
           <FooterActions />
         </main>
       </div>
@@ -942,7 +963,7 @@ export default function PlaceCapturesPanelPreview({
           .vpPlacePanelFrame {
             position: relative;
             width: min(86vw, 760px);
-            height: auto;
+            height: min(78dvh, 680px);
             max-height: calc(100dvh - 96px);
             display: flex;
             justify-content: center;
@@ -961,7 +982,7 @@ export default function PlaceCapturesPanelPreview({
 
           .vpPlacePanelShell {
             width: 100%;
-            height: auto;
+            height: 100%;
             max-height: calc(100dvh - 96px);
             padding: 14px;
             display: flex;

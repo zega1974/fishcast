@@ -18,6 +18,7 @@ import L from "leaflet";
 
 import { useEffect, useRef, useState } from "react";
 
+import PlaceCapturesPanelPreview from "@/components/PlaceCapturesPanelPreview";
 import PremiumPanelPreview, { PreviewIcon, type PreviewIconName } from "@/components/PremiumPanelPreview";
 import { shareCapture as shareCaptureFile } from "@/components/captures/sharing";
 import {
@@ -1050,6 +1051,8 @@ function readStoredPersonalPlaces() {
 export default function Map() {
   const mapRef = useRef<L.Map | null>(null);
   const [premiumPreviewOpen, setPremiumPreviewOpen] = useState(false);
+  const [placeCapturesPreviewOpen, setPlaceCapturesPreviewOpen] = useState(false);
+  const [placeCapturesPreviewPlaceId, setPlaceCapturesPreviewPlaceId] = useState<number | null>(null);
   const [captureMode, setCaptureMode] = useState(false);
   const [placeMode, setPlaceMode] = useState(false);
   const [measurementMode, setMeasurementMode] = useState(false);
@@ -1523,6 +1526,90 @@ export default function Map() {
     return capture.species || `Captura #${index + 1}`;
   }
 
+  function getPlacePreviewCaptureKind(species: string): "peva" | "flecha" | "sargo" {
+    const normalizedSpecies = species
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+
+    if (normalizedSpecies.includes("sargo")) {
+      return "sargo";
+    }
+
+    if (normalizedSpecies.includes("flecha")) {
+      return "flecha";
+    }
+
+    return "peva";
+  }
+
+  function formatPlacePreviewMeasure(value: string, unit: "kg" | "cm", fallback: string) {
+    const trimmedValue = value.trim();
+
+    if (!trimmedValue) {
+      return fallback;
+    }
+
+    return trimmedValue.toLowerCase().includes(unit) ? trimmedValue : `${trimmedValue} ${unit}`;
+  }
+
+  function formatPlacePreviewCaptureDateTime(value: string) {
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return {
+        date: "--/--/----",
+        time: "--h",
+      };
+    }
+
+    const datePart = new Intl.DateTimeFormat("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).format(date);
+    const hour = date.getHours();
+    const minutes = date.getMinutes();
+
+    return {
+      date: datePart,
+      time: minutes === 0 ? `${hour}h` : `${hour}h${String(minutes).padStart(2, "0")}`,
+    };
+  }
+
+  function getPlaceCapturesPreviewData(placeId: number | null) {
+    if (!placeId) {
+      return null;
+    }
+
+    const place = personalPlaces.find((item) => item.id === placeId);
+
+    if (!place) {
+      return null;
+    }
+
+    return {
+      place: {
+        id: place.id,
+        name: place.name,
+        coordinates: `${place.lat.toFixed(6)}, ${place.lng.toFixed(6)}`,
+      },
+      captures: getCapturesForPlace(place.id).map((capture, index) => {
+        const capturedAt = formatPlacePreviewCaptureDateTime(capture.capturedAt);
+
+        return {
+          id: String(capture.id),
+          species: getCaptureTitle(capture, index),
+          weight: formatPlacePreviewMeasure(capture.weight, "kg", "Peso --"),
+          size: formatPlacePreviewMeasure(capture.size, "cm", "Tam. --"),
+          date: capturedAt.date,
+          time: capturedAt.time,
+          kind: getPlacePreviewCaptureKind(capture.species),
+        };
+      }),
+    };
+  }
+
   function getCapturePlaceLabel(capture: Capture) {
     const place = capture.placeId
       ? personalPlaces.find((personalPlace) => personalPlace.id === capture.placeId)
@@ -1993,9 +2080,18 @@ export default function Map() {
     });
   }
 
+  const placeCapturesPreviewData = getPlaceCapturesPreviewData(placeCapturesPreviewPlaceId);
+
   return (
     <div className="relative w-full h-full">
       {premiumPreviewOpen && <PremiumPanelPreview onClose={() => setPremiumPreviewOpen(false)} />}
+      {placeCapturesPreviewOpen && (
+        <PlaceCapturesPanelPreview
+          onClose={() => setPlaceCapturesPreviewOpen(false)}
+          place={placeCapturesPreviewData?.place}
+          captures={placeCapturesPreviewData?.captures}
+        />
+      )}
 
       {storageFeedback && (
         <div
@@ -2019,6 +2115,25 @@ export default function Map() {
         aria-label="Abrir preview premium"
       >
         Preview premium
+      </button>
+
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          setPlaceCapturesPreviewPlaceId(selectedLocation?.personalPlaceId ?? null);
+          setPlaceCapturesPreviewOpen((prev) => !prev);
+        }}
+        onPointerDown={(event) => event.stopPropagation()}
+        className={`fixed-ui-control map-control-overlay fixed left-4 bottom-20 ${
+          placeCapturesPreviewOpen ? "z-[100000]" : "z-[2100]"
+        } rounded-2xl border border-cyan-300/25 bg-slate-950/88 px-4 py-3 text-xs font-black uppercase tracking-[0.12em] text-cyan-100 shadow-[0_18px_50px_rgba(0,0,0,0.45),0_0_22px_rgba(34,211,238,0.14)] backdrop-blur-xl transition hover:border-cyan-200/45 hover:bg-slate-900/95 ${
+          popupPriorityOpen && !placeCapturesPreviewOpen ? "pointer-events-none opacity-0" : "opacity-100"
+        }`}
+        aria-label={placeCapturesPreviewOpen ? "Fechar preview meu lugar e capturas" : "Abrir preview meu lugar e capturas"}
+        aria-pressed={placeCapturesPreviewOpen}
+      >
+        {placeCapturesPreviewOpen ? "Fechar preview lugar" : "Preview lugar"}
       </button>
 
       <div
@@ -3273,21 +3388,9 @@ export default function Map() {
                     setSelectedCapture(null);
                     setSelectedCaptureSpot(null);
                     setShareOptionsCaptureId(null);
-                    setSelectedLocation((current) => {
-                      if (current?.personalPlaceId === place.id) {
-                        return null;
-                      }
-
-                      return {
-                        name: place.name,
-                        lat: place.lat,
-                        lng: place.lng,
-                        personalPlaceId: place.id,
-                        note: place.note,
-                        visibility: place.visibility,
-                        conditions: getConditionsForLocation(place.lat, place.lng),
-                      };
-                    });
+                    setPlaceCapturesPreviewPlaceId(place.id);
+                    setPlaceCapturesPreviewOpen(true);
+                    setSelectedLocation(null);
                   },
                 }}
               />
