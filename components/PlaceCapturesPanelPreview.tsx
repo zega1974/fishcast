@@ -11,10 +11,12 @@ type PreviewCapture = {
   date: string;
   time: string;
   kind: 'peva' | 'flecha' | 'sargo';
+  photoUrl?: string;
 };
 
 type PlaceCapturesPanelPreviewProps = {
   onClose?: () => void;
+  onAddCapture?: () => void;
   place?: {
     id: number | string;
     name: string;
@@ -387,7 +389,18 @@ function CaptureCard({ capture }: { capture: PreviewCapture }) {
 
   return (
     <article className="vpPlaceCaptureCard">
-      <FishThumb kind={capture.kind} />
+      {capture.photoUrl ? (
+        <div className="vpPlaceFishThumb">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={capture.photoUrl}
+            alt="Foto da captura"
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          />
+        </div>
+      ) : (
+        <FishThumb kind={capture.kind} />
+      )}
 
       <div className="vpPlaceCaptureText">
         <strong>{capture.species}</strong>
@@ -434,10 +447,10 @@ function CapturesBlock({ captures }: { captures: PreviewCapture[] }) {
   );
 }
 
-function FooterActions() {
+function FooterActions({ onAddCapture }: { onAddCapture?: () => void }) {
   return (
     <div className="vpPlaceFooter">
-      <button className="vpPlacePrimaryButton" type="button">
+      <button className="vpPlacePrimaryButton" type="button" onClick={onAddCapture}>
         + Captura
       </button>
 
@@ -451,6 +464,7 @@ function FooterActions() {
 
 export default function PlaceCapturesPanelPreview({
   onClose,
+  onAddCapture,
   place,
   captures,
 }: PlaceCapturesPanelPreviewProps) {
@@ -476,7 +490,7 @@ export default function PlaceCapturesPanelPreview({
         <main className="vpPlacePanelShell">
           <PlaceHeaderCard name={panelPlace.name} coordinates={panelPlace.coordinates} />
           <CapturesBlock captures={panelCaptures} />
-          <FooterActions />
+          <FooterActions onAddCapture={onAddCapture} />
         </main>
       </div>
 

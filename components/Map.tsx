@@ -1089,6 +1089,7 @@ export default function Map() {
   const [placeFormData, setPlaceFormData] = useState(createEmptyPlaceFormData);
   const [pendingPlace, setPendingPlace] = useState<{ lat: number; lng: number } | null>(null);
   const [captures, setCaptures] = useState<Capture[]>(readStoredCaptures);
+  const [placeCapturesPreviewPhotos, setPlaceCapturesPreviewPhotos] = useState<Record<number, string>>({});
   const [personalPlaces, setPersonalPlaces] = useState<PersonalPlace[]>(readStoredPersonalPlaces);
   const [focusTarget, setFocusTarget] = useState<FocusTarget | null>(null);
   const [storageFeedback, setStorageFeedback] = useState<string | null>(null);
@@ -1300,6 +1301,63 @@ export default function Map() {
     // Carrega fotos do IndexedDB apenas na montagem; alteracoes novas ja estao no estado.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [capturePhotoMigrationDone]);
+
+  useEffect(() => {
+    if (!placeCapturesPreviewOpen || !placeCapturesPreviewPlaceId) {
+      return;
+    }
+
+    let active = true;
+    const placeCapturesMissingPhotos = captures.filter(
+      (capture) =>
+        capture.placeId === placeCapturesPreviewPlaceId &&
+        !capture.photo &&
+        !placeCapturesPreviewPhotos[capture.id]
+    );
+
+    if (placeCapturesMissingPhotos.length === 0) {
+      return;
+    }
+
+    async function loadPlacePreviewPhotos() {
+      const photoEntries = await Promise.all(
+        placeCapturesMissingPhotos.map(async (capture) => {
+          const photo = await readCapturePhoto(capture.id);
+          return photo ? [capture.id, photo] as const : null;
+        })
+      );
+
+      if (!active) {
+        return;
+      }
+
+      setPlaceCapturesPreviewPhotos((current) => {
+        const next = { ...current };
+        let changed = false;
+
+        photoEntries.forEach((entry) => {
+          if (!entry) {
+            return;
+          }
+
+          const [captureId, photo] = entry;
+
+          if (next[captureId] !== photo) {
+            next[captureId] = photo;
+            changed = true;
+          }
+        });
+
+        return changed ? next : current;
+      });
+    }
+
+    void loadPlacePreviewPhotos();
+
+    return () => {
+      active = false;
+    };
+  }, [captures, placeCapturesPreviewOpen, placeCapturesPreviewPhotos, placeCapturesPreviewPlaceId]);
 
   useEffect(() => {
     try {
@@ -1605,6 +1663,7 @@ export default function Map() {
           date: capturedAt.date,
           time: capturedAt.time,
           kind: getPlacePreviewCaptureKind(capture.species),
+          photoUrl: capture.photo || placeCapturesPreviewPhotos[capture.id] || undefined,
         };
       }),
     };
@@ -2081,6 +2140,9 @@ export default function Map() {
   }
 
   const placeCapturesPreviewData = getPlaceCapturesPreviewData(placeCapturesPreviewPlaceId);
+  const placeCapturesPreviewPlace = placeCapturesPreviewPlaceId
+    ? personalPlaces.find((place) => place.id === placeCapturesPreviewPlaceId)
+    : null;
 
   return (
     <div className="relative w-full h-full">
@@ -2088,6 +2150,14 @@ export default function Map() {
       {placeCapturesPreviewOpen && (
         <PlaceCapturesPanelPreview
           onClose={() => setPlaceCapturesPreviewOpen(false)}
+          onAddCapture={
+            placeCapturesPreviewPlace
+              ? () => {
+                  addCaptureAtPersonalPlace(placeCapturesPreviewPlace);
+                  setPlaceCapturesPreviewOpen(false);
+                }
+              : undefined
+          }
           place={placeCapturesPreviewData?.place}
           captures={placeCapturesPreviewData?.captures}
         />
