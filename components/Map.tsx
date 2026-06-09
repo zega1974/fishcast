@@ -2073,14 +2073,38 @@ export default function Map() {
   }
 
   function deletePersonalPlace(id: number) {
-    const confirmed = window.confirm("Deseja realmente apagar este lugar?");
+    const captureIdsToDelete = captures
+      .filter((capture) => capture.placeId === id)
+      .map((capture) => capture.id);
+    const confirmed = window.confirm(
+      captureIdsToDelete.length > 0
+        ? "Este lugar contém capturas vinculadas.\n\nAo apagar este lugar, todas as capturas salvas nele também serão apagadas.\n\nDeseja mesmo continuar?"
+        : "Deseja apagar este lugar?"
+    );
 
     if (!confirmed) {
       return;
     }
 
+    if (captureIdsToDelete.length > 0) {
+      setCaptures((prev) => prev.filter((capture) => capture.placeId !== id));
+      captureIdsToDelete.forEach((captureId) => {
+        void deleteCapturePhoto(captureId);
+      });
+    }
+
     setPersonalPlaces((prev) => prev.filter((place) => place.id !== id));
     setSelectedLocation((current) => (current?.personalPlaceId === id ? null : current));
+    setSelectedCapture((current) =>
+      current && captureIdsToDelete.includes(current.id) ? null : current
+    );
+    setShareOptionsCaptureId((current) =>
+      current && captureIdsToDelete.includes(current) ? null : current
+    );
+    setPlaceCapturesPreviewPlaceId((current) => (current === id ? null : current));
+    setPlaceCapturesPreviewOpen(false);
+    setReturnToPlaceCapturesPreviewPlaceId((current) => (current === id ? null : current));
+    setOfficialFreeSpotDataPlace((current) => (current?.id === id ? null : current));
   }
 
   function deleteCaptureSpot(spot: { lat: number; lng: number }) {
@@ -2197,6 +2221,11 @@ export default function Map() {
                   });
                   setPlaceCapturesPreviewOpen(false);
                 }
+              : undefined
+          }
+          onDeletePlace={
+            placeCapturesPreviewPlace
+              ? () => deletePersonalPlace(placeCapturesPreviewPlace.id)
               : undefined
           }
           place={placeCapturesPreviewData?.place}

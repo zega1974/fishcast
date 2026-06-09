@@ -18,6 +18,7 @@ type PlaceCapturesPanelPreviewProps = {
   onClose?: () => void;
   onAddCapture?: () => void;
   onOpenSpotData?: () => void;
+  onDeletePlace?: () => void;
   place?: {
     id: number | string;
     name: string;
@@ -450,14 +451,20 @@ function CapturesBlock({ captures }: { captures: PreviewCapture[] }) {
   );
 }
 
-function FooterActions({ onAddCapture }: { onAddCapture?: () => void }) {
+function FooterActions({
+  onAddCapture,
+  onDeletePlace,
+}: {
+  onAddCapture?: () => void;
+  onDeletePlace?: () => void;
+}) {
   return (
     <div className="vpPlaceFooter">
       <button className="vpPlacePrimaryButton" type="button" onClick={onAddCapture}>
         + Captura
       </button>
 
-      <button className="vpPlaceDangerButton" type="button">
+      <button className="vpPlaceDangerButton" type="button" onClick={onDeletePlace}>
         <TrashIcon />
         <span>Apagar Lugar</span>
       </button>
@@ -469,6 +476,7 @@ export default function PlaceCapturesPanelPreview({
   onClose,
   onAddCapture,
   onOpenSpotData,
+  onDeletePlace,
   place,
   captures,
 }: PlaceCapturesPanelPreviewProps) {
@@ -498,7 +506,7 @@ export default function PlaceCapturesPanelPreview({
             onOpenSpotData={onOpenSpotData}
           />
           <CapturesBlock captures={panelCaptures} />
-          <FooterActions onAddCapture={onAddCapture} />
+          <FooterActions onAddCapture={onAddCapture} onDeletePlace={onDeletePlace} />
         </main>
       </div>
 
