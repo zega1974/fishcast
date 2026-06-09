@@ -1053,6 +1053,7 @@ export default function Map() {
   const [premiumPreviewOpen, setPremiumPreviewOpen] = useState(false);
   const [placeCapturesPreviewOpen, setPlaceCapturesPreviewOpen] = useState(false);
   const [placeCapturesPreviewPlaceId, setPlaceCapturesPreviewPlaceId] = useState<number | null>(null);
+  const [returnToPlaceCapturesPreviewPlaceId, setReturnToPlaceCapturesPreviewPlaceId] = useState<number | null>(null);
   const [captureMode, setCaptureMode] = useState(false);
   const [placeMode, setPlaceMode] = useState(false);
   const [measurementMode, setMeasurementMode] = useState(false);
@@ -1987,12 +1988,19 @@ export default function Map() {
     setCaptureMode(false);
     setPlaceMode(false);
     setFocusTarget({ id: newCaptureId, lat: newCaptureLat, lng: newCaptureLng });
+
+    if (capturePlaceId && capturePlaceId === returnToPlaceCapturesPreviewPlaceId) {
+      setPlaceCapturesPreviewPlaceId(capturePlaceId);
+      setPlaceCapturesPreviewOpen(true);
+      setReturnToPlaceCapturesPreviewPlaceId(null);
+    }
   }
 
   function cancelCapture() {
     setPendingCapture(null);
     setFormData(createEmptyFormData());
     setCaptureMode(false);
+    setReturnToPlaceCapturesPreviewPlaceId(null);
   }
 
   function addCapture(lat: number, lng: number) {
@@ -2153,6 +2161,7 @@ export default function Map() {
           onAddCapture={
             placeCapturesPreviewPlace
               ? () => {
+                  setReturnToPlaceCapturesPreviewPlaceId(placeCapturesPreviewPlace.id);
                   addCaptureAtPersonalPlace(placeCapturesPreviewPlace);
                   setPlaceCapturesPreviewOpen(false);
                 }
@@ -2185,25 +2194,6 @@ export default function Map() {
         aria-label="Abrir preview premium"
       >
         Preview premium
-      </button>
-
-      <button
-        type="button"
-        onClick={(event) => {
-          event.stopPropagation();
-          setPlaceCapturesPreviewPlaceId(selectedLocation?.personalPlaceId ?? null);
-          setPlaceCapturesPreviewOpen((prev) => !prev);
-        }}
-        onPointerDown={(event) => event.stopPropagation()}
-        className={`fixed-ui-control map-control-overlay fixed left-4 bottom-20 ${
-          placeCapturesPreviewOpen ? "z-[100000]" : "z-[2100]"
-        } rounded-2xl border border-cyan-300/25 bg-slate-950/88 px-4 py-3 text-xs font-black uppercase tracking-[0.12em] text-cyan-100 shadow-[0_18px_50px_rgba(0,0,0,0.45),0_0_22px_rgba(34,211,238,0.14)] backdrop-blur-xl transition hover:border-cyan-200/45 hover:bg-slate-900/95 ${
-          popupPriorityOpen && !placeCapturesPreviewOpen ? "pointer-events-none opacity-0" : "opacity-100"
-        }`}
-        aria-label={placeCapturesPreviewOpen ? "Fechar preview meu lugar e capturas" : "Abrir preview meu lugar e capturas"}
-        aria-pressed={placeCapturesPreviewOpen}
-      >
-        {placeCapturesPreviewOpen ? "Fechar preview lugar" : "Preview lugar"}
       </button>
 
       <div
