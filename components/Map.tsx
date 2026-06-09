@@ -18,6 +18,7 @@ import L from "leaflet";
 
 import { useEffect, useRef, useState } from "react";
 
+import OfficialFreePanelPreview from "@/components/OfficialFreePanelPreview";
 import PlaceCapturesPanelPreview from "@/components/PlaceCapturesPanelPreview";
 import PremiumPanelPreview, { PreviewIcon, type PreviewIconName } from "@/components/PremiumPanelPreview";
 import { shareCapture as shareCaptureFile } from "@/components/captures/sharing";
@@ -44,6 +45,14 @@ type PersonalPlace = {
   note: string;
   visibility: PlaceVisibility;
   createdAt: string;
+};
+
+type OfficialFreeSpotDataPlace = {
+  id: number;
+  name: string;
+  lat: number;
+  lng: number;
+  coordinatesText: string;
 };
 
 type FocusTarget = {
@@ -1051,6 +1060,7 @@ function readStoredPersonalPlaces() {
 export default function Map() {
   const mapRef = useRef<L.Map | null>(null);
   const [premiumPreviewOpen, setPremiumPreviewOpen] = useState(false);
+  const [officialFreeSpotDataPlace, setOfficialFreeSpotDataPlace] = useState<OfficialFreeSpotDataPlace | null>(null);
   const [placeCapturesPreviewOpen, setPlaceCapturesPreviewOpen] = useState(false);
   const [placeCapturesPreviewPlaceId, setPlaceCapturesPreviewPlaceId] = useState<number | null>(null);
   const [returnToPlaceCapturesPreviewPlaceId, setReturnToPlaceCapturesPreviewPlaceId] = useState<number | null>(null);
@@ -2155,6 +2165,14 @@ export default function Map() {
   return (
     <div className="relative w-full h-full">
       {premiumPreviewOpen && <PremiumPanelPreview onClose={() => setPremiumPreviewOpen(false)} />}
+      <OfficialFreePanelPreview
+        isOpen={Boolean(officialFreeSpotDataPlace)}
+        onClose={() => setOfficialFreeSpotDataPlace(null)}
+        placeName={officialFreeSpotDataPlace?.name}
+        lat={officialFreeSpotDataPlace?.lat}
+        lng={officialFreeSpotDataPlace?.lng}
+        coordinatesText={officialFreeSpotDataPlace?.coordinatesText}
+      />
       {placeCapturesPreviewOpen && (
         <PlaceCapturesPanelPreview
           onClose={() => setPlaceCapturesPreviewOpen(false)}
@@ -2163,6 +2181,20 @@ export default function Map() {
               ? () => {
                   setReturnToPlaceCapturesPreviewPlaceId(placeCapturesPreviewPlace.id);
                   addCaptureAtPersonalPlace(placeCapturesPreviewPlace);
+                  setPlaceCapturesPreviewOpen(false);
+                }
+              : undefined
+          }
+          onOpenSpotData={
+            placeCapturesPreviewPlace
+              ? () => {
+                  setOfficialFreeSpotDataPlace({
+                    id: placeCapturesPreviewPlace.id,
+                    name: placeCapturesPreviewPlace.name,
+                    lat: placeCapturesPreviewPlace.lat,
+                    lng: placeCapturesPreviewPlace.lng,
+                    coordinatesText: `${placeCapturesPreviewPlace.lat.toFixed(6)}, ${placeCapturesPreviewPlace.lng.toFixed(6)}`,
+                  });
                   setPlaceCapturesPreviewOpen(false);
                 }
               : undefined

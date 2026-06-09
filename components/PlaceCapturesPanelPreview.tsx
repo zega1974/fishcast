@@ -17,6 +17,7 @@ type PreviewCapture = {
 type PlaceCapturesPanelPreviewProps = {
   onClose?: () => void;
   onAddCapture?: () => void;
+  onOpenSpotData?: () => void;
   place?: {
     id: number | string;
     name: string;
@@ -323,9 +324,11 @@ function FishThumb({ kind }: { kind: PreviewCapture['kind'] }) {
 function PlaceHeaderCard({
   name,
   coordinates,
+  onOpenSpotData,
 }: {
   name: string;
   coordinates: string;
+  onOpenSpotData?: () => void;
 }) {
   return (
     <CardShell className="vpPlaceHeaderCard">
@@ -347,7 +350,7 @@ function PlaceHeaderCard({
         <button
           className="vpPlaceDataButton"
           type="button"
-          onClick={() => console.log('Preview: abrir Dados do Spot')}
+          onClick={onOpenSpotData}
         >
           <ChartIcon />
           <span>Dados do Spot</span>
@@ -374,7 +377,7 @@ function PlaceHeaderCard({
         <button
           className="vpPlaceMobileDataButton"
           type="button"
-          onClick={() => console.log('Preview: abrir Dados do Spot')}
+          onClick={onOpenSpotData}
         >
           <ChartIcon />
           <span>Dados do Spot</span>
@@ -465,6 +468,7 @@ function FooterActions({ onAddCapture }: { onAddCapture?: () => void }) {
 export default function PlaceCapturesPanelPreview({
   onClose,
   onAddCapture,
+  onOpenSpotData,
   place,
   captures,
 }: PlaceCapturesPanelPreviewProps) {
@@ -488,7 +492,11 @@ export default function PlaceCapturesPanelPreview({
         </button>
 
         <main className="vpPlacePanelShell">
-          <PlaceHeaderCard name={panelPlace.name} coordinates={panelPlace.coordinates} />
+          <PlaceHeaderCard
+            name={panelPlace.name}
+            coordinates={panelPlace.coordinates}
+            onOpenSpotData={onOpenSpotData}
+          />
           <CapturesBlock captures={panelCaptures} />
           <FooterActions onAddCapture={onAddCapture} />
         </main>
