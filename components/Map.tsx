@@ -242,7 +242,6 @@ function CenterButton({
           return;
         }
 
-        map.closePopup();
         scheduleHomeMapView(map, personalPlaces, true);
       }}
       onPointerDown={(e) => e.stopPropagation()}
@@ -319,13 +318,8 @@ function MapEvents({
   onLocationClick,
   onZoomChange,
   measurementMode,
-  popupPriorityOpen,
   mapDismissBlocked,
-  interactionPanelOpen,
-  onDismissActivePopup,
-  onDismissInteractionPanel,
   onOtherPopupClose,
-  spotPopupOpen,
   ignoreNextMapClickRef,
 }: {
   captureMode: boolean;
@@ -336,13 +330,8 @@ function MapEvents({
   onLocationClick: (lat: number, lng: number) => void;
   onZoomChange: (zoom: number) => void;
   measurementMode: boolean;
-  popupPriorityOpen: boolean;
   mapDismissBlocked: boolean;
-  interactionPanelOpen: boolean;
-  onDismissActivePopup: () => void;
-  onDismissInteractionPanel: () => void;
   onOtherPopupClose: () => void;
-  spotPopupOpen: boolean;
   ignoreNextMapClickRef: React.MutableRefObject<boolean>;
 }) {
   const isDraggingRef = useRef(false);
@@ -379,23 +368,7 @@ function MapEvents({
         ignoreNextMapClickRef.current = false;
       }
 
-      if (spotPopupOpen) {
-        map.closePopup();
-      }
-
       if (mapDismissBlocked) {
-        return;
-      }
-
-      if (popupPriorityOpen) {
-        map.closePopup();
-        onDismissActivePopup();
-        return;
-      }
-
-      if (interactionPanelOpen) {
-        map.closePopup();
-        onDismissInteractionPanel();
         return;
       }
 
@@ -450,7 +423,6 @@ function MapFocusController({ target }: { target: FocusTarget | null }) {
       return;
     }
 
-    map.closePopup();
     map.flyTo([target.lat, target.lng], Math.max(map.getZoom(), 15), {
       animate: true,
       duration: 0.75,
@@ -2983,7 +2955,7 @@ export default function Map() {
       {selectedCaptureView && (
         <div
           className="map-control-overlay fixed inset-0 z-[7000] flex items-stretch justify-center bg-black/62 p-0 text-white backdrop-blur-[2px] sm:items-center sm:bg-black/45 sm:p-6"
-          onClick={closeSelectedCapture}
+          onClick={stopPanelEvent}
           onPointerDown={stopPanelEvent}
           role="dialog"
           aria-modal="true"
@@ -3262,28 +3234,13 @@ export default function Map() {
             onLocationClick={handleMapClick}
             onZoomChange={setZoom}
             measurementMode={measurementMode}
-            popupPriorityOpen={popupPriorityOpen}
             mapDismissBlocked={interactiveWindowOpen}
-            interactionPanelOpen={capturesPanelOpen}
-            onDismissActivePopup={() => {
-              setSpotPopupOpen(false);
-              setCapturePopupOpen(false);
-              setSelectedCaptureSpot(null);
-              setSelectedLocation(null);
-              setSelectedCapture(null);
-              setShareOptionsCaptureId(null);
-            }}
-            onDismissInteractionPanel={() => {
-              setCapturesPanelOpen(false);
-              setShareOptionsCaptureId(null);
-            }}
             onOtherPopupClose={() => {
               setSpotPopupOpen(false);
               setCapturePopupOpen(false);
               setSelectedCaptureSpot(null);
               setShareOptionsCaptureId(null);
             }}
-            spotPopupOpen={spotPopupOpen}
             ignoreNextMapClickRef={ignoreNextMapClickRef}
           />
 
