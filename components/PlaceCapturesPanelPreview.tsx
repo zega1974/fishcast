@@ -17,6 +17,7 @@ type PreviewCapture = {
 type PlaceCapturesPanelPreviewProps = {
   onClose?: () => void;
   onAddCapture?: () => void;
+  onOpenCapture?: (captureId: string) => void;
   onOpenSpotData?: () => void;
   onDeletePlace?: () => void;
   place?: {
@@ -388,11 +389,32 @@ function PlaceHeaderCard({
   );
 }
 
-function CaptureCard({ capture }: { capture: PreviewCapture }) {
+function CaptureCard({
+  capture,
+  onOpenCapture,
+}: {
+  capture: PreviewCapture;
+  onOpenCapture?: (captureId: string) => void;
+}) {
   const bullet = String.fromCharCode(8226);
 
   return (
-    <article className="vpPlaceCaptureCard">
+    <article
+      className={`vpPlaceCaptureCard${onOpenCapture ? ' cursor-pointer' : ''}`}
+      onClick={() => onOpenCapture?.(capture.id)}
+      role={onOpenCapture ? 'button' : undefined}
+      tabIndex={onOpenCapture ? 0 : undefined}
+      onKeyDown={(event) => {
+        if (!onOpenCapture) {
+          return;
+        }
+
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onOpenCapture(capture.id);
+        }
+      }}
+    >
       {capture.photoUrl ? (
         <div className="vpPlaceFishThumb">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -432,7 +454,13 @@ function CaptureCard({ capture }: { capture: PreviewCapture }) {
   );
 }
 
-function CapturesBlock({ captures }: { captures: PreviewCapture[] }) {
+function CapturesBlock({
+  captures,
+  onOpenCapture,
+}: {
+  captures: PreviewCapture[];
+  onOpenCapture?: (captureId: string) => void;
+}) {
   return (
     <CardShell className="vpPlaceCapturesBlock">
       <div className="vpPlaceSectionTitle">
@@ -443,7 +471,7 @@ function CapturesBlock({ captures }: { captures: PreviewCapture[] }) {
       <div className="vpPlaceCapturesScroll">
         <div className="vpPlaceCapturesList">
           {captures.map((capture) => (
-            <CaptureCard key={capture.id} capture={capture} />
+            <CaptureCard key={capture.id} capture={capture} onOpenCapture={onOpenCapture} />
           ))}
         </div>
       </div>
@@ -475,6 +503,7 @@ function FooterActions({
 export default function PlaceCapturesPanelPreview({
   onClose,
   onAddCapture,
+  onOpenCapture,
   onOpenSpotData,
   onDeletePlace,
   place,
@@ -505,7 +534,7 @@ export default function PlaceCapturesPanelPreview({
             coordinates={panelPlace.coordinates}
             onOpenSpotData={onOpenSpotData}
           />
-          <CapturesBlock captures={panelCaptures} />
+          <CapturesBlock captures={panelCaptures} onOpenCapture={onOpenCapture} />
           <FooterActions onAddCapture={onAddCapture} onDeletePlace={onDeletePlace} />
         </main>
       </div>

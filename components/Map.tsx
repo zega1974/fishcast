@@ -2214,6 +2214,16 @@ export default function Map() {
               ? () => deletePersonalPlace(placeCapturesPreviewPlace.id)
               : undefined
           }
+          onOpenCapture={(captureId) => {
+            const fullCapture = captures.find((capture) => String(capture.id) === String(captureId));
+
+            if (!fullCapture) {
+              return;
+            }
+
+            setPlaceCapturesPreviewOpen(false);
+            openCaptureDetails(fullCapture);
+          }}
           place={placeCapturesPreviewData?.place}
           captures={placeCapturesPreviewData?.captures}
         />
