@@ -33,7 +33,7 @@ import {
   syncCapturePhotos,
 } from "@/components/captures/storage";
 import type { Capture, CaptureFormData, CaptureShareMode } from "@/components/captures/types";
-import { fishingSpots, type SpotConditions, type FishingSpot } from "@/data/fishingSpots";
+import { fishingSpots, type SpotConditions } from "@/data/fishingSpots";
 
 type MapMode = "map" | "satellite" | "nautical" | "night";
 type PlaceVisibility = "private";
@@ -1436,10 +1436,6 @@ export default function Map() {
       lua: luaOptions[Math.floor((Math.abs(lat) + Math.abs(lng)) * 3) % luaOptions.length],
       mare: marineDataAvailable ? mareOptions[Math.floor((Math.abs(lat - lng) * 5)) % mareOptions.length] : undefined,
     }, lat, lng);
-  }
-
-  function getSpotConditions(spot: FishingSpot) {
-    return normalizeConditions(spot.conditions, spot.lat, spot.lng, spot.type);
   }
 
   function parseConditionNumber(value: string) {
@@ -3343,17 +3339,13 @@ export default function Map() {
                     setSelectedCapture(null);
                     setSelectedCaptureSpot(null);
                     setShareOptionsCaptureId(null);
-                    setSelectedLocation((current) => {
-                      if (current?.name === spot.name) {
-                        return null;
-                      }
-
-                      return {
-                        name: spot.name,
-                        lat: spot.lat,
-                        lng: spot.lng,
-                        conditions: getSpotConditions(spot),
-                      };
+                    setSelectedLocation(null);
+                    setOfficialFreeSpotDataPlace({
+                      id: spot.id,
+                      name: spot.name,
+                      lat: spot.lat,
+                      lng: spot.lng,
+                      coordinatesText: `${spot.lat.toFixed(6)}, ${spot.lng.toFixed(6)}`,
                     });
                   },
                 }}
