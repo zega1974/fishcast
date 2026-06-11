@@ -33,7 +33,7 @@ import {
   syncCapturePhotos,
 } from "@/components/captures/storage";
 import type { Capture, CaptureFormData, CaptureShareMode } from "@/components/captures/types";
-import { fishingSpots, type SpotConditions } from "@/data/fishingSpots";
+import { fishingSpots } from "@/data/fishingSpots";
 
 type MapMode = "map" | "satellite" | "nautical" | "night";
 type PlaceVisibility = "private";
@@ -49,7 +49,7 @@ type PersonalPlace = {
 };
 
 type OfficialFreeSpotDataPlace = {
-  id: number;
+  id: number | string;
   name: string;
   lat: number;
   lng: number;
@@ -1363,81 +1363,6 @@ export default function Map() {
     return () => window.clearTimeout(timeoutId);
   }, [storageFeedback]);
 
-  function safeText(value: unknown, fallback = "Dados indisponíveis") {
-    if (typeof value !== "string") {
-      return fallback;
-    }
-
-    const trimmedValue = value.trim();
-
-    return trimmedValue && trimmedValue !== "N/A" ? trimmedValue : fallback;
-  }
-
-  function safeNumberWithUnit(value: unknown, unit: string, fallback = "Dados indisponíveis") {
-    const numericValue = typeof value === "number" ? value : Number(value);
-
-    return Number.isFinite(numericValue) ? `${Math.round(numericValue)} ${unit}` : fallback;
-  }
-
-  function hasValidCoordinates(lat: number, lng: number) {
-    return Number.isFinite(lat) && Number.isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
-  }
-
-  function mayHaveMarineData(lat: number, lng: number, spotType?: FishingSpot["type"]) {
-    if (spotType === "litoral" || spotType === "baía") {
-      return true;
-    }
-
-    if (spotType === "rio" || spotType === "represa") {
-      return false;
-    }
-
-    const nearEquatorOceanBelt = Math.abs(lat) < 68;
-    const offshoreLongitudeBand = Math.abs(lng) > 20 && Math.abs(lng) < 175;
-
-    return nearEquatorOceanBelt && offshoreLongitudeBand;
-  }
-
-  function normalizeConditions(
-    conditions: Partial<SpotConditions> | null | undefined,
-    lat: number,
-    lng: number,
-    spotType?: FishingSpot["type"]
-  ): LocationConditions {
-    const marineDataAvailable = hasValidCoordinates(lat, lng) && mayHaveMarineData(lat, lng, spotType);
-
-    return {
-      clima: safeText(conditions?.clima),
-      pressao: safeNumberWithUnit(conditions?.pressao, "hPa"),
-      temperatura: safeNumberWithUnit(conditions?.temperatura, "°C"),
-      tempAgua: marineDataAvailable
-        ? safeNumberWithUnit(conditions?.tempAgua, "°C", "Temperatura da água indisponível")
-        : "Temperatura da água indisponível",
-      lua: safeText(conditions?.lua),
-      mare: marineDataAvailable ? safeText(conditions?.mare, "Maré indisponível para este local") : "Maré indisponível para este local",
-    };
-  }
-
-  function getConditionsForLocation(lat: number, lng: number): LocationConditions {
-    if (!hasValidCoordinates(lat, lng)) {
-      return normalizeConditions(null, lat, lng);
-    }
-
-    const climaOptions = ["Ensolarado", "Nublado", "Chuvoso", "Ventando", "Calmo", "Parcialmente nublado"];
-    const luaOptions = ["Nova", "Crescente", "Cheia", "Minguante"];
-    const marineDataAvailable = mayHaveMarineData(lat, lng);
-    const mareOptions = ["Alta", "Baixa", "Média"];
-
-    return normalizeConditions({
-      clima: climaOptions[Math.floor(Math.abs(lat + lng) * 7) % climaOptions.length],
-      pressao: 1010 + Math.round((Math.abs(lat - lng) * 10) % 15),
-      tempAgua: marineDataAvailable ? 18 + Math.round((Math.abs(lat + lng) * 3) % 8) : undefined,
-      temperatura: 20 + Math.round((Math.abs(lat * lng) * 0.1) % 10),
-      lua: luaOptions[Math.floor((Math.abs(lat) + Math.abs(lng)) * 3) % luaOptions.length],
-      mare: marineDataAvailable ? mareOptions[Math.floor((Math.abs(lat - lng) * 5)) % mareOptions.length] : undefined,
-    }, lat, lng);
-  }
-
   function parseConditionNumber(value: string) {
     const match = value.match(/-?\d+([.,]\d+)?/);
 
@@ -1536,11 +1461,13 @@ export default function Map() {
   function handleMapClick(lat: number, lng: number) {
     setSelectedCapture(null);
     setShareOptionsCaptureId(null);
-    setSelectedLocation({
+    setSelectedLocation(null);
+    setOfficialFreeSpotDataPlace({
+      id: "selected-map-point",
       name: "Ponto selecionado",
       lat,
       lng,
-      conditions: getConditionsForLocation(lat, lng),
+      coordinatesText: `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
     });
   }
 
