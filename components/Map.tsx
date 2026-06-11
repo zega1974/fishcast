@@ -1093,7 +1093,7 @@ export default function Map() {
     capturesPanelOpen ||
     Boolean(selectedCapture) ||
     Boolean(selectedCaptureSpot) ||
-    Boolean(selectedLocation?.personalPlaceId);
+    Boolean(selectedLocation);
 
   useEffect(() => {
     function getEventElement(target: EventTarget | null) {
@@ -2715,31 +2715,15 @@ export default function Map() {
             return (
               <div
                 className={`relative flex w-full flex-col overflow-hidden rounded-md border border-cyan-300/18 bg-[#020a14]/97 p-3 text-left text-white shadow-[0_24px_70px_rgba(0,0,0,0.58),0_0_34px_rgba(34,211,238,0.18)] backdrop-blur-xl sm:p-5 ${
-                  selectedLocation.personalPlaceId ? "" : "cursor-pointer"
-                } ${
                   selectedLocation.personalPlaceId
                     ? "h-[calc(100dvh-16px)] max-h-[calc(100dvh-16px)] sm:h-[calc(100vh-48px)] sm:max-h-[calc(100vh-48px)]"
                     : "h-full max-h-full"
                 }`}
-                onClick={(event) => {
-                  if (selectedLocation.personalPlaceId) {
-                    event.stopPropagation();
-                    return;
-                  }
-
-                  setSelectedLocation(null);
-                }}
-                onPointerDown={selectedLocation.personalPlaceId ? stopPanelEvent : undefined}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (!selectedLocation.personalPlaceId && (e.key === "Enter" || e.key === " ")) {
-                    setSelectedLocation(null);
-                  }
-                }}
+                onClick={stopPanelEvent}
+                onPointerDown={stopPanelEvent}
               >
                 <div className="mb-2 shrink-0 border-b border-white/10 pb-2 sm:mb-5 sm:pb-4">
-                    <div className={`grid items-start gap-3 ${selectedLocation.personalPlaceId ? "grid-cols-[minmax(0,1fr)_auto_auto]" : "grid-cols-[minmax(0,1fr)_auto]"}`}>
+                    <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-start gap-3">
                     <div className="min-w-0">
                       <p className="text-[11px] font-black uppercase tracking-[0.22em] text-emerald-200">Detalhe do lugar</p>
                       <h2 className="mt-1 text-3xl font-black leading-none text-white sm:text-5xl">{selectedLocation.name}</h2>
@@ -2752,18 +2736,16 @@ export default function Map() {
                         </span>
                       )}
                     </div>
-                    {selectedLocation.personalPlaceId && (
-                      <button
-                        onClick={() => {
-                          setSelectedLocation(null);
-                          setShareOptionsCaptureId(null);
-                        }}
-                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-emerald-300/45 bg-black/70 text-2xl font-black text-white shadow-[0_0_18px_rgba(16,185,129,0.22)] backdrop-blur-md transition hover:bg-black/85 sm:h-12 sm:w-12"
-                        aria-label="Fechar meu lugar"
-                      >
-                        ×
-                      </button>
-                    )}
+                    <button
+                      onClick={() => {
+                        setSelectedLocation(null);
+                        setShareOptionsCaptureId(null);
+                      }}
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-emerald-300/45 bg-black/70 text-2xl font-black text-white shadow-[0_0_18px_rgba(16,185,129,0.22)] backdrop-blur-md transition hover:bg-black/85 sm:h-12 sm:w-12"
+                      aria-label="Fechar detalhe do lugar"
+                    >
+                      ×
+                    </button>
                   </div>
                 </div>
 
