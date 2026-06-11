@@ -73,21 +73,6 @@ type PersonalPlaceFormData = {
   note: string;
 };
 
-type LocationConditions = {
-  clima: string;
-  pressao: string;
-  tempAgua: string;
-  temperatura: string;
-  lua: string;
-  mare: string;
-};
-
-type FishCastScore = {
-  value: number;
-  label: string;
-  partial: boolean;
-};
-
 const MAP_MIN_ZOOM = 6;
 const MAP_INITIAL_ZOOM = 7;
 const MAP_MAX_BOUNDS: L.LatLngBoundsExpression = [
@@ -927,92 +912,6 @@ function CoordinatesBadge({
   );
 }
 
-function getScoreCondition(score: number) {
-  if (score >= 80) return "Excelente";
-  if (score >= 60) return "Bom";
-  if (score >= 40) return "Regular";
-  return "Fraco";
-}
-
-function VouPescarScoreGauge({
-  score,
-  partial,
-  compactMobile = false,
-}: {
-  score: number;
-  partial: boolean;
-  compactMobile?: boolean;
-}) {
-  const condition = getScoreCondition(score);
-  const needleRotation = Math.max(-92, Math.min(92, score * 1.84 - 92));
-
-  return (
-    <div className={`${compactMobile ? "mb-1.5 p-2 sm:mb-3 sm:p-3" : "mb-2 p-2.5 sm:mb-3 sm:p-3"} shrink-0 rounded-md border border-lime-300/30 bg-[radial-gradient(circle_at_12%_20%,rgba(132,204,22,0.14),transparent_48%),linear-gradient(135deg,rgba(5,46,22,0.56),rgba(2,6,23,0.78))] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]`}>
-      <div className={`${compactMobile ? "mb-1" : "mb-1.5"} flex items-center gap-2 text-lime-200`}>
-        <span className="text-sm" aria-hidden="true">🏆</span>
-        <p className="text-[10px] font-black uppercase tracking-[0.18em] sm:text-[11px]">VOUPESCAR SCORE</p>
-      </div>
-
-      <div className={`${compactMobile ? "grid-cols-[112px_1fr] gap-3 sm:grid-cols-[170px_1fr] sm:gap-4" : "grid-cols-[140px_1fr] gap-3 sm:grid-cols-[170px_1fr] sm:gap-4"} grid items-center`}>
-        <svg
-          viewBox="0 0 240 168"
-          className="h-auto w-full drop-shadow-[0_10px_20px_rgba(132,204,22,0.14)]"
-          aria-label={`VouPescar Score ${score}, ${condition}`}
-          role="img"
-        >
-          <path d="M 34 128 A 86 86 0 0 1 58 67" fill="none" stroke="#ef2525" strokeLinecap="round" strokeWidth="18" />
-          <path d="M 64 61 A 86 86 0 0 1 116 34" fill="none" stroke="#f97316" strokeLinecap="round" strokeWidth="18" />
-          <path d="M 124 34 A 86 86 0 0 1 184 62" fill="none" stroke="#facc15" strokeLinecap="round" strokeWidth="18" />
-          <path d="M 190 69 A 86 86 0 0 1 206 128" fill="none" stroke="#22c55e" strokeLinecap="round" strokeWidth="18" />
-          <line
-            x1="120"
-            y1="126"
-            x2="120"
-            y2="52"
-            stroke="#f8fafc"
-            strokeLinecap="round"
-            strokeWidth="8"
-            transform={`rotate(${needleRotation} 120 126)`}
-          />
-          <circle cx="120" cy="126" r="9" fill="#facc15" />
-          <text x="120" y="92" textAnchor="middle" fill="#f8fafc" fontSize="48" fontWeight="900">
-            {score}
-          </text>
-          <text x="120" y="119" textAnchor="middle" fill="#86efac" fontSize="18" fontWeight="900">
-            {condition}
-          </text>
-        </svg>
-        <div className={`${compactMobile ? "pl-2" : "pl-3"} min-w-0 border-l border-white/10`}>
-          <p className="text-[9px] font-black uppercase tracking-[0.16em] text-lime-200/80 sm:text-[10px]">
-            Condição
-          </p>
-          <p className={`${compactMobile ? "mt-1 text-sm sm:text-lg" : "mt-1 text-base sm:text-lg"} font-black leading-tight text-white`}>{condition}</p>
-          <div className="mt-2 grid grid-cols-2 gap-1">
-            {["Fraco", "Regular", "Bom", "Excelente"].map((label) => (
-              <span
-                key={label}
-                className={`rounded-sm border px-1.5 py-1 text-center text-[8px] font-black uppercase tracking-[0.06em] sm:text-[9px] ${
-                  label === condition
-                    ? "border-lime-300/50 bg-lime-300/18 text-lime-100"
-                    : "border-white/10 bg-black/18 text-zinc-400"
-                }`}
-              >
-                {label}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {partial && (
-        <p className={`${compactMobile ? "mt-1 px-2 py-1 text-[10px] sm:mt-2 sm:px-3 sm:py-1.5 sm:text-xs" : "mt-2 px-3 py-1.5 text-xs"} rounded-md border border-white/10 bg-black/18 text-center font-bold text-zinc-300`}>
-          Score baseado em dados parciais
-        </p>
-      )}
-    </div>
-  );
-}
-
 function readStoredPersonalPlaces() {
   try {
     const savedPlaces = window.localStorage.getItem(PERSONAL_PLACES_STORAGE_KEY);
@@ -1060,15 +959,6 @@ export default function Map() {
   } | null>(null);
   const [shareFeedback, setShareFeedback] = useState<{ captureId: number; message: string } | null>(null);
   const [shareOptionsCaptureId, setShareOptionsCaptureId] = useState<number | null>(null);
-  const [selectedLocation, setSelectedLocation] = useState<{
-    name: string;
-    lat: number;
-    lng: number;
-    personalPlaceId?: number;
-    note?: string;
-    visibility?: PlaceVisibility;
-    conditions: LocationConditions;
-  } | null>(null);
   const [formData, setFormData] = useState(createEmptyFormData);
   const [placeFormData, setPlaceFormData] = useState(createEmptyPlaceFormData);
   const [pendingPlace, setPendingPlace] = useState<{ lat: number; lng: number } | null>(null);
@@ -1082,7 +972,6 @@ export default function Map() {
   const iconSize = MARKER_ICON_SIZE;
   const measurementTotalMeters = getMeasurementTotalMeters(measurementPoints);
   const popupPriorityOpen =
-    Boolean(selectedLocation) ||
     Boolean(selectedCapture) ||
     Boolean(selectedCaptureSpot) ||
     spotPopupOpen ||
@@ -1092,8 +981,7 @@ export default function Map() {
     Boolean(pendingPlace) ||
     capturesPanelOpen ||
     Boolean(selectedCapture) ||
-    Boolean(selectedCaptureSpot) ||
-    Boolean(selectedLocation);
+    Boolean(selectedCaptureSpot);
 
   useEffect(() => {
     function getEventElement(target: EventTarget | null) {
@@ -1155,7 +1043,6 @@ export default function Map() {
     setCapturesPanelOpen(false);
     setPendingCapture(null);
     setPendingPlace(null);
-    setSelectedLocation(null);
     setSelectedCapture(null);
     setSelectedCaptureSpot(null);
     setShareOptionsCaptureId(null);
@@ -1363,105 +1250,9 @@ export default function Map() {
     return () => window.clearTimeout(timeoutId);
   }, [storageFeedback]);
 
-  function parseConditionNumber(value: string) {
-    const match = value.match(/-?\d+([.,]\d+)?/);
-
-    if (!match) {
-      return null;
-    }
-
-    const parsedValue = Number(match[0].replace(",", "."));
-
-    return Number.isFinite(parsedValue) ? parsedValue : null;
-  }
-
-  function getScoreLabel(score: number) {
-    if (score <= 30) return "Condição fraca";
-    if (score <= 55) return "Condição regular";
-    if (score <= 75) return "Boa condição";
-    if (score <= 90) return "Ótima condição";
-    return "Excelente condição";
-  }
-
-  function calculateFishCastScore(conditions: LocationConditions): FishCastScore {
-    const scores: { value: number; weight: number }[] = [];
-    const expectedSignals = 7;
-
-    const pressure = parseConditionNumber(conditions.pressao);
-    if (pressure !== null) {
-      const pressureScore = Math.max(0, 100 - Math.abs(pressure - 1018) * 7);
-      scores.push({ value: pressureScore, weight: 1.3 });
-    }
-
-    const weather = conditions.clima.toLowerCase();
-    if (!weather.includes("indispon")) {
-      let weatherScore = 62;
-      if (weather.includes("calmo") || weather.includes("ensolarado") || weather.includes("parcial")) weatherScore = 84;
-      if (weather.includes("nublado") || weather.includes("encoberto") || weather.includes("brisa")) weatherScore = 72;
-      if (weather.includes("vent")) weatherScore = 54;
-      if (weather.includes("chuv")) weatherScore = 46;
-      scores.push({ value: weatherScore, weight: 1 });
-    }
-
-    const airTemperature = parseConditionNumber(conditions.temperatura);
-    if (airTemperature !== null) {
-      const airScore = Math.max(0, 100 - Math.abs(airTemperature - 24) * 6);
-      scores.push({ value: airScore, weight: 0.9 });
-    }
-
-    const waterTemperature = parseConditionNumber(conditions.tempAgua);
-    if (waterTemperature !== null) {
-      const waterScore = Math.max(0, 100 - Math.abs(waterTemperature - 23) * 7);
-      scores.push({ value: waterScore, weight: 1.15 });
-    }
-
-    const tide = conditions.mare.toLowerCase();
-    if (!tide.includes("indispon")) {
-      let tideScore = 64;
-      if (tide.includes("alta") || tide.includes("média")) tideScore = 78;
-      if (tide.includes("baixa")) tideScore = 56;
-      scores.push({ value: tideScore, weight: 0.85 });
-    }
-
-    const moon = conditions.lua.toLowerCase();
-    if (!moon.includes("indispon")) {
-      let moonScore = 62;
-      if (moon.includes("cheia") || moon.includes("nova")) moonScore = 78;
-      if (moon.includes("crescente") || moon.includes("minguante")) moonScore = 68;
-      scores.push({ value: moonScore, weight: 0.7 });
-    }
-
-    const wind = conditions.clima.toLowerCase();
-    if (wind.includes("vento") || wind.includes("brisa") || wind.includes("calmo")) {
-      let windScore = 72;
-      if (wind.includes("calmo") || wind.includes("brisa")) windScore = 86;
-      if (wind.includes("vent")) windScore = 48;
-      scores.push({ value: windScore, weight: 0.6 });
-    }
-
-    if (!scores.length) {
-      return {
-        value: 0,
-        label: "Condição fraca",
-        partial: true,
-      };
-    }
-
-    const totalWeight = scores.reduce((sum, score) => sum + score.weight, 0);
-    const weightedScore = scores.reduce((sum, score) => sum + score.value * score.weight, 0) / totalWeight;
-    const value = Math.max(0, Math.min(100, Math.round(weightedScore)));
-
-    return {
-      value,
-      label: getScoreLabel(value),
-      partial: scores.length < expectedSignals,
-    };
-  }
-
   function handleMapClick(lat: number, lng: number) {
     setSelectedCapture(null);
     setShareOptionsCaptureId(null);
-    setSelectedLocation(null);
     setOfficialFreeSpotDataPlace({
       id: "selected-map-point",
       name: "Ponto selecionado",
@@ -1584,101 +1375,6 @@ export default function Map() {
       : getNearestPersonalPlace(capture.lat, capture.lng);
 
     return place?.name?.trim() || "Ponto sem nome";
-  }
-
-  function getPressurePresentation(value: string) {
-    const pressure = parseConditionNumber(value);
-
-    if (pressure === null) {
-      return {
-        badge: "Indisponível",
-        description: "Sem leitura suficiente para interpretar a pressão.",
-      };
-    }
-
-    if (pressure < 1005) {
-      return {
-        badge: "Instável",
-        description: "Pressão baixa pode deixar a atividade irregular.",
-      };
-    }
-
-    if (pressure <= 1010) {
-      return {
-        badge: "Regular",
-        description: "Pressão em transição pede atenção ao comportamento.",
-      };
-    }
-
-    if (pressure <= 1018) {
-      return {
-        badge: "Boa",
-        description: "Pressão estável favorece atividade dos peixes.",
-      };
-    }
-
-    return {
-      badge: "Alta",
-      description: "Pressão alta pode concentrar os peixes em pontos fundos.",
-    };
-  }
-
-  function getSpotConditionRows(conditions: LocationConditions) {
-    const pressure = getPressurePresentation(conditions.pressao);
-    const tideDirection = conditions.mare.toLowerCase().includes("indispon")
-      ? ""
-      : " (estável)";
-
-    return [
-      {
-        icon: "☁",
-        label: "Clima",
-        value: conditions.clima,
-        description: "Luz reduzida favorece ataques.",
-        badge: conditions.clima.toLowerCase().includes("chuv") ? "Regular" : "Favorável",
-        badgeIcon: "●",
-      },
-      {
-        icon: "↗",
-        label: "Pressão",
-        value: conditions.pressao,
-        description: pressure.description,
-        badge: pressure.badge,
-        badgeIcon: pressure.badge === "Boa" ? "👍" : "●",
-      },
-      {
-        icon: "♨",
-        label: "Temperatura do ar",
-        value: conditions.temperatura,
-        description: "Faixa confortável.",
-        badge: "Ideal",
-        badgeIcon: "●",
-      },
-      {
-        icon: "💧",
-        label: "Temperatura da água",
-        value: conditions.tempAgua,
-        description: "Temperatura ideal para peixes.",
-        badge: conditions.tempAgua.toLowerCase().includes("indispon") ? "Parcial" : "Excelente",
-        badgeIcon: "★",
-      },
-      {
-        icon: "◐",
-        label: "Lua",
-        value: conditions.lua,
-        description: "Boa atividade alimentar.",
-        badge: "Boa",
-        badgeIcon: "👍",
-      },
-      {
-        icon: "≋",
-        label: "Maré",
-        value: `${conditions.mare}${tideDirection}`,
-        description: "Movimento favorece alimentação e deslocamento.",
-        badge: conditions.mare.toLowerCase().includes("indispon") ? "Parcial" : "Favorável",
-        badgeIcon: "●",
-      },
-    ];
   }
 
   function formatSpotHistoryDate(value?: string) {
@@ -1889,7 +1585,6 @@ export default function Map() {
 
   function addCaptureAtPersonalPlace(place: PersonalPlace) {
     setPendingCapture({ lat: place.lat, lng: place.lng, placeId: place.id });
-    setSelectedLocation(null);
     setSelectedCapture(null);
     setCaptureMode(false);
     setPlaceMode(false);
@@ -1898,7 +1593,6 @@ export default function Map() {
 
   function addPersonalPlace(lat: number, lng: number) {
     setPendingPlace({ lat, lng });
-    setSelectedLocation(null);
   }
 
   function savePersonalPlace() {
@@ -1964,7 +1658,6 @@ export default function Map() {
     }
 
     setPersonalPlaces((prev) => prev.filter((place) => place.id !== id));
-    setSelectedLocation((current) => (current?.personalPlaceId === id ? null : current));
     setSelectedCapture((current) =>
       current && captureIdsToDelete.includes(current.id) ? null : current
     );
@@ -2006,7 +1699,6 @@ export default function Map() {
   }
 
   function openCaptureDetails(capture: Capture) {
-    setSelectedLocation(null);
     setSelectedCaptureSpot(null);
     setCapturesPanelOpen(false);
     setShareOptionsCaptureId(null);
@@ -2021,7 +1713,6 @@ export default function Map() {
   function openCaptureLinkedLocation(capture: Capture) {
     setCapturesPanelOpen(false);
     setSelectedCapture(null);
-    setSelectedLocation(null);
     setSelectedCaptureSpot(null);
     setCapturePopupOpen(false);
     setSpotPopupOpen(false);
@@ -2042,7 +1733,6 @@ export default function Map() {
   function openCaptureMarker(capture: Capture) {
     const spotCaptures = getCapturesForCaptureSpot(capture);
 
-    setSelectedLocation(null);
     setCapturesPanelOpen(false);
     setCapturePopupOpen(false);
     setSpotPopupOpen(false);
@@ -2193,7 +1883,6 @@ export default function Map() {
             setPlaceMode(false);
             setMeasurementMode(false);
             setMeasurementPoints([]);
-            setSelectedLocation(null);
             setSelectedCapture(null);
             setSelectedCaptureSpot(null);
             setShareOptionsCaptureId(null);
@@ -2621,204 +2310,6 @@ export default function Map() {
         </div>
       )}
 
-      {selectedLocation && (
-        <div
-          className="map-control-overlay fixed bottom-2 left-1/2 top-2 z-[7000] w-[calc(100vw-16px)] max-w-[900px] -translate-x-1/2 sm:bottom-6 sm:top-6 sm:w-[calc(100vw-24px)]"
-        >
-          {(() => {
-            const fishCastScore = calculateFishCastScore(selectedLocation.conditions);
-            const conditionRows = getSpotConditionRows(selectedLocation.conditions);
-            const selectedPersonalPlace = selectedLocation.personalPlaceId
-              ? personalPlaces.find((item) => item.id === selectedLocation.personalPlaceId)
-              : null;
-            const selectedPersonalPlaceCaptures = selectedLocation.personalPlaceId
-              ? getCapturesForPlace(selectedLocation.personalPlaceId)
-              : [];
-
-            return (
-              <div
-                className={`relative flex w-full flex-col overflow-hidden rounded-md border border-cyan-300/18 bg-[#020a14]/97 p-3 text-left text-white shadow-[0_24px_70px_rgba(0,0,0,0.58),0_0_34px_rgba(34,211,238,0.18)] backdrop-blur-xl sm:p-5 ${
-                  selectedLocation.personalPlaceId
-                    ? "h-[calc(100dvh-16px)] max-h-[calc(100dvh-16px)] sm:h-[calc(100vh-48px)] sm:max-h-[calc(100vh-48px)]"
-                    : "h-full max-h-full"
-                }`}
-                onClick={stopPanelEvent}
-                onPointerDown={stopPanelEvent}
-              >
-                <div className="mb-2 shrink-0 border-b border-white/10 pb-2 sm:mb-5 sm:pb-4">
-                    <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-start gap-3">
-                    <div className="min-w-0">
-                      <p className="text-[11px] font-black uppercase tracking-[0.22em] text-emerald-200">Detalhe do lugar</p>
-                      <h2 className="mt-1 text-3xl font-black leading-none text-white sm:text-5xl">{selectedLocation.name}</h2>
-                    </div>
-                    <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
-                      <CoordinatesBadge lat={selectedLocation.lat} lng={selectedLocation.lng} />
-                      {selectedLocation.visibility === "private" && (
-                        <span className="rounded-md border border-cyan-200/20 bg-cyan-300/12 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-cyan-100">
-                          Privado
-                        </span>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => {
-                        setSelectedLocation(null);
-                        setShareOptionsCaptureId(null);
-                      }}
-                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-emerald-300/45 bg-black/70 text-2xl font-black text-white shadow-[0_0_18px_rgba(16,185,129,0.22)] backdrop-blur-md transition hover:bg-black/85 sm:h-12 sm:w-12"
-                      aria-label="Fechar detalhe do lugar"
-                    >
-                      ×
-                    </button>
-                  </div>
-                </div>
-
-                {selectedLocation.note && (
-                  <p className="mb-2 shrink-0 rounded-sm border border-emerald-300/15 bg-emerald-300/[0.05] p-3 text-sm font-bold leading-relaxed text-zinc-200 sm:mb-4">
-                    {selectedLocation.note}
-                  </p>
-                )}
-
-                <VouPescarScoreGauge
-                  score={fishCastScore.value}
-                  partial={fishCastScore.partial}
-                  compactMobile={Boolean(selectedLocation.personalPlaceId)}
-                />
-
-                <div className={`mb-1.5 rounded-md border border-emerald-300/25 bg-[linear-gradient(135deg,rgba(6,78,59,0.34),rgba(2,6,23,0.44))] p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] sm:mb-4 sm:p-4 ${!selectedLocation.personalPlaceId || selectedPersonalPlaceCaptures.length === 0 ? "flex min-h-0 flex-1 flex-col" : "shrink-0"}`}>
-                  <h3 className="mb-1.5 flex items-center gap-2 border-b border-emerald-300/18 pb-1 text-[11px] font-black uppercase tracking-[0.12em] text-emerald-200 sm:mb-3 sm:pb-2 sm:text-base sm:tracking-[0.18em]">
-                    <span>☁</span>
-                    Condições atuais
-                  </h3>
-                  <div className={`grid grid-cols-3 gap-1 sm:grid-cols-2 sm:gap-2.5 lg:grid-cols-3 ${!selectedLocation.personalPlaceId || selectedPersonalPlaceCaptures.length === 0 ? "min-h-0 flex-1 auto-rows-fr" : ""}`}>
-                    {conditionRows.map((condition) => (
-                      <div
-                        key={condition.label}
-                        className="grid grid-cols-[24px_1fr] items-center gap-1.5 rounded-sm border border-emerald-200/14 bg-black/28 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:grid-cols-[52px_1fr] sm:gap-3 sm:p-4"
-                      >
-                        <div className="flex h-6 w-6 items-center justify-center rounded-full border border-cyan-300/30 bg-cyan-300/10 text-sm sm:h-12 sm:w-12 sm:text-3xl">
-                          {condition.icon}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="truncate text-[8px] font-black uppercase tracking-[0.06em] text-emerald-200 sm:text-xs sm:tracking-[0.16em]">
-                            {condition.label}
-                          </p>
-                          <p className="truncate text-base font-black leading-tight text-white sm:mt-1 sm:text-2xl">{condition.value}</p>
-                          <p className="hidden sm:mt-1 sm:line-clamp-2 sm:block sm:text-xs sm:font-bold sm:leading-snug sm:text-zinc-300">
-                            {condition.description}
-                          </p>
-                        </div>
-                        <span className="col-span-2 max-w-full justify-self-start truncate rounded-full bg-emerald-400/18 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.04em] text-lime-200 sm:px-3 sm:py-1 sm:text-[10px] sm:tracking-[0.08em]">
-                          {condition.badgeIcon} {condition.badge}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {selectedLocation.personalPlaceId && (() => {
-                  const place = selectedPersonalPlace;
-                  const placeCaptures = selectedPersonalPlaceCaptures;
-
-                  if (!place) {
-                    return null;
-                  }
-
-                  return (
-                    <div className="flex min-h-0 flex-1 flex-col gap-2 sm:gap-3">
-                      <div className={`min-h-0 ${placeCaptures.length >= 4 ? "max-h-[clamp(252px,31vh,288px)] overflow-hidden" : "overflow-visible"}`}>
-                        {placeCaptures.length === 0 ? (
-                          <p className="text-sm font-bold text-zinc-400">
-                            Nenhuma captura vinculada ainda.
-                          </p>
-                        ) : (
-                          <div className={`space-y-2 pr-1 ${placeCaptures.length >= 4 ? "h-full overflow-y-auto" : "overflow-visible"}`}>
-                            {[...placeCaptures].reverse().map((capture) => (
-                              <article
-                                key={`place-capture-${capture.id}`}
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  openCaptureDetails(capture);
-                                }}
-                                className="flex cursor-pointer gap-3 rounded-sm border border-white/10 bg-white/[0.055] p-3 shadow-sm transition hover:border-emerald-300/25 hover:bg-white/[0.09]"
-                                role="button"
-                                tabIndex={0}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter" || e.key === " ") {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    openCaptureDetails(capture);
-                                  }
-                                }}
-                              >
-                                <div className="h-16 w-24 shrink-0 overflow-hidden rounded-sm border border-white/10 bg-black/30">
-                                  {capture.photo ? (
-                                    <img
-                                      src={capture.photo}
-                                      alt="Foto da captura"
-                                      className="h-full w-full object-cover"
-                                    />
-                                  ) : (
-                                    <div className="h-full w-full bg-[radial-gradient(circle_at_50%_25%,rgba(34,197,94,0.42),transparent_44%),linear-gradient(135deg,#052e1c,#020617)]" />
-                                  )}
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <h3 className="truncate text-sm font-black text-white">
-                                    {capture.species || "Espécie não informada"}
-                                  </h3>
-                                  <p className="mt-2 truncate text-xs font-black text-cyan-100/85">
-                                    {capture.size ? `${capture.size} cm` : "Tam. --"} • {capture.weight ? `${capture.weight} kg` : "Peso --"}
-                                  </p>
-                                  <p className="mt-1 truncate text-xs font-bold text-zinc-400">
-                                    {formatCaptureDate(capture.capturedAt)}
-                                  </p>
-                                </div>
-                              </article>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="mt-auto grid shrink-0 grid-cols-2 gap-3 border-t border-white/10 bg-[#020a14]/98 pt-3 pb-[calc(18px+env(safe-area-inset-bottom))] sm:pb-0">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            addCaptureAtPersonalPlace(place);
-                          }}
-                          className="inline-flex min-h-[68px] w-full items-center justify-center gap-3 rounded-md border border-emerald-300/60 bg-emerald-500/24 px-4 py-4 text-base font-black text-emerald-50 shadow-[0_0_24px_rgba(16,185,129,0.16),inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:bg-emerald-500/32 sm:min-h-[72px] sm:px-6 sm:text-lg"
-                        >
-                          <svg aria-hidden="true" viewBox="0 0 24 24" className="h-6 w-6 shrink-0" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2">
-                            <path d="M12 5v14" />
-                            <path d="M5 12h14" />
-                          </svg>
-                          <span>Captura</span>
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deletePersonalPlace(selectedLocation.personalPlaceId as number);
-                          }}
-                          className="inline-flex min-h-[68px] w-full items-center justify-center gap-3 rounded-md border border-red-400/65 bg-red-500/22 px-4 py-4 text-base font-black text-red-50 shadow-[0_0_24px_rgba(239,68,68,0.12),inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:bg-red-500/30 sm:min-h-[72px] sm:px-6 sm:text-lg"
-                        >
-                          <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2">
-                            <path d="M3 6h18" />
-                            <path d="M8 6V4h8v2" />
-                            <path d="M19 6l-1 14H6L5 6" />
-                            <path d="M10 11v5" />
-                            <path d="M14 11v5" />
-                          </svg>
-                          <span>Apagar Lugar</span>
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-            );
-          })()}
-        </div>
-      )}
-
       {selectedCaptureSpot && (
         <CaptureSpotPanelPreview
           lat={selectedCaptureSpot.lat}
@@ -3189,7 +2680,6 @@ export default function Map() {
                     setShareOptionsCaptureId(null);
                     setPlaceCapturesPreviewPlaceId(place.id);
                     setPlaceCapturesPreviewOpen(true);
-                    setSelectedLocation(null);
                   },
                 }}
               />
@@ -3266,7 +2756,6 @@ export default function Map() {
                     setSelectedCapture(null);
                     setSelectedCaptureSpot(null);
                     setShareOptionsCaptureId(null);
-                    setSelectedLocation(null);
                     setOfficialFreeSpotDataPlace({
                       id: spot.id,
                       name: spot.name,
