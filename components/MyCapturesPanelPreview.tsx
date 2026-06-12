@@ -2,7 +2,7 @@
 
 import type React from 'react';
 
-type PreviewCapture = {
+export type MyCapturesPanelCapture = {
   id: string;
   title: string;
   place: string;
@@ -17,20 +17,23 @@ type PreviewCapture = {
 type MyCapturesPanelPreviewProps = {
   onClose?: () => void;
   onOpenCapture?: (captureId: string) => void;
-  captures?: PreviewCapture[];
+  captures?: MyCapturesPanelCapture[];
+  summaryTotal?: number;
+  summaryBestWeight?: string;
+  summaryLastCapture?: string;
 };
 
 type IconProps = {
   className?: string;
 };
 
-const previewCaptures: PreviewCapture[] = [
+const previewCaptures: MyCapturesPanelCapture[] = [
   {
     id: '86',
     title: 'Captura #86',
     place: 'Ponto sem nome',
-    weight: '—',
-    size: '—',
+    weight: '\u2014',
+    size: '\u2014',
     date: '12/06/2026',
     time: '0h04',
     kind: 'peva',
@@ -39,8 +42,8 @@ const previewCaptures: PreviewCapture[] = [
     id: '85',
     title: 'Captura #85',
     place: 'Ponto sem nome',
-    weight: '—',
-    size: '—',
+    weight: '\u2014',
+    size: '\u2014',
     date: '12/06/2026',
     time: '0h03',
     kind: 'flecha',
@@ -49,8 +52,8 @@ const previewCaptures: PreviewCapture[] = [
     id: '84',
     title: 'teste',
     place: 'Ponto sem nome',
-    weight: '—',
-    size: '—',
+    weight: '\u2014',
+    size: '\u2014',
     date: '12/06/2026',
     time: '0h02',
     kind: 'generic',
@@ -59,8 +62,8 @@ const previewCaptures: PreviewCapture[] = [
     id: '83',
     title: 'Captura #83',
     place: 'Ponto sem nome',
-    weight: '—',
-    size: '—',
+    weight: '\u2014',
+    size: '\u2014',
     date: '12/06/2026',
     time: '0h02',
     kind: 'sargo',
@@ -69,8 +72,8 @@ const previewCaptures: PreviewCapture[] = [
     id: '82',
     title: 'Captura #82',
     place: 'Ponto sem nome',
-    weight: '—',
-    size: '—',
+    weight: '\u2014',
+    size: '\u2014',
     date: '12/06/2026',
     time: '0h01',
     kind: 'peva',
@@ -203,7 +206,7 @@ function CardShell({
   return <div className={`vpMyCapturesCard ${className}`}>{children}</div>;
 }
 
-function FishThumb({ kind }: { kind: PreviewCapture['kind'] }) {
+function FishThumb({ kind }: { kind: MyCapturesPanelCapture['kind'] }) {
   const isSargo = kind === 'sargo';
   const isFlecha = kind === 'flecha';
   const isGeneric = kind === 'generic';
@@ -258,7 +261,17 @@ function FishThumb({ kind }: { kind: PreviewCapture['kind'] }) {
   );
 }
 
-function MyCapturesHeader() {
+function MyCapturesHeader({
+  total,
+  bestWeight,
+  lastCapture,
+}: {
+  total: number;
+  bestWeight: string;
+  lastCapture: string;
+}) {
+  const captureLabel = total === 1 ? '1 captura' : `${total} capturas`;
+
   return (
     <CardShell className="vpMyCapturesHeaderCard">
       <div className="vpMyCapturesTrophyIcon">
@@ -266,12 +279,12 @@ function MyCapturesHeader() {
       </div>
 
       <div className="vpMyCapturesHeaderText">
-        <span>{'Meu diário de pesca'}</span>
+        <span>{'Meu di\u00E1rio de pesca'}</span>
         <strong>Minhas Capturas</strong>
         <p>Toque para localizar no mapa.</p>
         <div className="vpMyCapturesSummaryLine">
-          <span>{'86 capturas • Maior 1111.0 kg'}</span>
-          <span>{'Última hoje • 0h04'}</span>
+          <span>{`${captureLabel} \u2022 Maior ${bestWeight}`}</span>
+          <span>{`\u00DAltima ${lastCapture}`}</span>
         </div>
       </div>
     </CardShell>
@@ -282,10 +295,10 @@ function CaptureCard({
   capture,
   onOpenCapture,
 }: {
-  capture: PreviewCapture;
+  capture: MyCapturesPanelCapture;
   onOpenCapture?: (captureId: string) => void;
 }) {
-  const bullet = '•';
+  const bullet = '\u2022';
 
   return (
     <article
@@ -358,7 +371,7 @@ function CapturesList({
   captures,
   onOpenCapture,
 }: {
-  captures: PreviewCapture[];
+  captures: MyCapturesPanelCapture[];
   onOpenCapture?: (captureId: string) => void;
 }) {
   return (
@@ -385,8 +398,14 @@ export default function MyCapturesPanelPreview({
   onClose,
   onOpenCapture,
   captures,
+  summaryTotal,
+  summaryBestWeight,
+  summaryLastCapture,
 }: MyCapturesPanelPreviewProps) {
   const panelCaptures = captures ?? previewCaptures;
+  const total = typeof summaryTotal === 'number' ? summaryTotal : panelCaptures.length;
+  const bestWeight = summaryBestWeight || '--';
+  const lastCapture = summaryLastCapture || '--';
 
   return (
     <section className="vpMyCapturesPreview" aria-label="Preview Minhas Capturas">
@@ -401,7 +420,7 @@ export default function MyCapturesPanelPreview({
         </button>
 
         <main className="vpMyCapturesPanelShell">
-          <MyCapturesHeader />
+          <MyCapturesHeader total={total} bestWeight={bestWeight} lastCapture={lastCapture} />
           <CapturesList captures={panelCaptures} onOpenCapture={onOpenCapture} />
         </main>
       </div>
