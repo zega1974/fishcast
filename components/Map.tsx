@@ -20,6 +20,7 @@ import { useEffect, useRef, useState } from "react";
 
 import OfficialFreePanelPreview from "@/components/OfficialFreePanelPreview";
 import AddCapturePanel from "@/components/AddCapturePanel";
+import AddPlacePanel from "@/components/AddPlacePanel";
 import CaptureSpotPanelPreview from "@/components/CaptureSpotPanelPreview";
 import PlaceCapturesPanelPreview from "@/components/PlaceCapturesPanelPreview";
 import PremiumPanelPreview, { PreviewIcon, type PreviewIconName } from "@/components/PremiumPanelPreview";
@@ -2151,101 +2152,15 @@ export default function Map() {
         />
       )}
       {pendingPlace && (
-    <section
-      className="map-control-overlay fixed inset-0 z-[3000] h-[100dvh] w-screen overflow-hidden bg-[radial-gradient(circle_at_50%_8%,rgba(14,116,144,0.17),transparent_34%),radial-gradient(circle_at_50%_24%,rgba(30,42,56,0.5),transparent_44%),repeating-linear-gradient(90deg,rgba(35,82,148,0.075)_0px,rgba(35,82,148,0.075)_1px,transparent_1px,transparent_56px),linear-gradient(180deg,#07101a_0%,#050a0f_100%)] text-white md:flex md:items-center md:justify-center md:bg-[radial-gradient(circle_at_50%_12%,rgba(14,165,233,0.12),transparent_38%),radial-gradient(circle_at_50%_50%,rgba(15,23,42,0.2),transparent_58%),rgba(2,8,15,0.58)] md:p-6 md:backdrop-blur-[2px]"
-      aria-label="Adicionar Lugar"
-      onClick={stopPanelEvent}
-      onPointerDown={stopPanelEvent}
-    >
-      <div className="relative mx-auto flex h-[100dvh] w-[min(100vw,460px)] md:h-[min(72dvh,560px)] md:max-h-[calc(100dvh-96px)] md:w-[min(86vw,680px)]">
-        <button
-          type="button"
-          onClick={cancelPersonalPlace}
-          className="fixed right-[max(16px,env(safe-area-inset-right))] top-[max(14px,env(safe-area-inset-top))] z-[3100] flex h-11 w-11 items-center justify-center rounded-[16px] border border-white/[0.13] bg-white/[0.035] text-2xl font-black leading-none text-white/90 shadow-[0_10px_30px_rgba(0,0,0,0.28)] backdrop-blur-xl transition hover:bg-white/[0.06] md:absolute md:-right-[54px] md:-top-[34px] md:h-11 md:w-11 md:rounded-[15px]"
-          aria-label="Fechar adicionar lugar"
-        >
-          ×
-        </button>
-
-        <main className="flex h-full w-full min-h-0 flex-col gap-[7px] px-3 pb-[max(10px,env(safe-area-inset-bottom))] pt-[max(10px,env(safe-area-inset-top))] md:gap-3 md:overflow-hidden md:rounded-[28px] md:border md:border-slate-300/[0.14] md:bg-[#030a12]/80 md:p-3.5 md:shadow-[0_24px_80px_rgba(0,0,0,0.34)] md:backdrop-blur-md">
-          <header className="shrink-0 rounded-[18px] border border-slate-400/20 bg-[linear-gradient(135deg,rgba(23,31,42,0.88),rgba(10,16,23,0.94))] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_14px_34px_rgba(0,0,0,0.18)] backdrop-blur-xl md:min-h-[92px] md:p-4">
-            <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 md:grid-cols-[auto_minmax(0,1fr)_auto] md:gap-4">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-sky-500/12 text-2xl shadow-[0_0_22px_rgba(14,165,233,0.18)] md:h-[52px] md:w-[52px]">
-                📍
-              </div>
-
-              <div className="min-w-0">
-                <p className="text-[11px] font-bold uppercase leading-none tracking-[0.08em] text-slate-200/70 md:text-xs">
-                  Novo ponto salvo
-                </p>
-                <h2 className="mt-1 truncate text-[clamp(22px,6vw,27px)] font-bold leading-tight tracking-[-0.025em] text-sky-300 md:text-[27px]">
-                  Adicionar Lugar
-                </h2>
-                <p className="mt-1 truncate text-sm font-semibold text-slate-300/75">
-                  Salve um novo ponto no mapa.
-                </p>
-              </div>
-
-              <div className="col-span-2 mt-2 md:col-span-1 md:mt-0">
-                <CoordinatesBadge lat={pendingPlace.lat} lng={pendingPlace.lng} precision={8} />
-              </div>
-            </div>
-          </header>
-
-          <section className="flex min-h-0 flex-1 flex-col rounded-[18px] border border-slate-400/20 bg-[linear-gradient(135deg,rgba(23,31,42,0.88),rgba(10,16,23,0.94))] shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_14px_34px_rgba(0,0,0,0.18)] backdrop-blur-xl">
-            <div className="min-h-0 flex-1 overflow-y-auto p-3 [scrollbar-color:rgba(125,211,252,0.45)_rgba(15,23,42,0.55)] [scrollbar-width:thin] md:p-4">
-              <div className="rounded-2xl border border-slate-400/16 bg-black/25 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] md:p-4">
-                <div className="grid gap-4">
-                  <div>
-                    <label className="block text-[11px] font-black uppercase tracking-[0.18em] text-sky-100/70">
-                      Nome do lugar
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Ex: Canal do Robalo"
-                      value={placeFormData.name}
-                      onChange={(event) => setPlaceFormData({ ...placeFormData, name: event.target.value })}
-                      className="mt-2 min-h-12 w-full rounded-2xl border border-sky-300/20 bg-slate-950/45 px-4 py-3 text-base font-bold text-white placeholder-slate-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),inset_0_-12px_20px_rgba(0,0,0,0.22),0_10px_24px_rgba(0,0,0,0.18)] focus:border-sky-300/70 focus:outline-none focus:ring-2 focus:ring-sky-400/15"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-black uppercase tracking-[0.18em] text-sky-100/70">
-                      Observações
-                    </label>
-                    <textarea
-                      placeholder="Notas opcionais sobre o lugar..."
-                      value={placeFormData.note}
-                      onChange={(event) => setPlaceFormData({ ...placeFormData, note: event.target.value })}
-                      className="mt-2 min-h-[150px] w-full resize-none rounded-2xl border border-sky-300/20 bg-slate-950/45 px-4 py-3 text-base font-semibold leading-relaxed text-white placeholder-slate-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),inset_0_-12px_20px_rgba(0,0,0,0.22),0_10px_24px_rgba(0,0,0,0.18)] focus:border-sky-300/70 focus:outline-none focus:ring-2 focus:ring-sky-400/15 md:min-h-[170px]"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <footer className="grid shrink-0 grid-cols-1 gap-2 border-t border-white/10 bg-[#020712]/95 p-2.5 pb-[max(10px,env(safe-area-inset-bottom))] md:grid-cols-2 md:gap-3 md:p-2.5">
-              <button
-                type="button"
-                onClick={savePersonalPlace}
-                className="inline-flex min-h-[54px] w-full items-center justify-center rounded-[14px] border border-sky-300/45 bg-[linear-gradient(135deg,rgba(37,99,235,0.96),rgba(29,78,216,0.9))] px-4 py-3 text-center text-base font-black text-white shadow-[0_0_28px_rgba(37,99,235,0.28),inset_0_1px_0_rgba(255,255,255,0.16)] transition hover:bg-sky-500 md:min-h-[56px]"
-              >
-                Confirmar aqui
-              </button>
-              <button
-                type="button"
-                onClick={cancelPersonalPlace}
-                className="inline-flex min-h-[54px] w-full items-center justify-center rounded-[14px] border border-white/14 bg-black/32 px-4 py-3 text-center text-base font-black text-slate-100 shadow-[0_14px_30px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:border-white/24 hover:bg-black/45 md:min-h-[56px]"
-              >
-                Cancelar
-              </button>
-            </footer>
-          </section>
-        </main>
-      </div>
-    </section>
-  )}
-
+        <AddPlacePanel
+          lat={pendingPlace.lat}
+          lng={pendingPlace.lng}
+          formData={placeFormData}
+          onFormDataChange={setPlaceFormData}
+          onSave={savePersonalPlace}
+          onCancel={cancelPersonalPlace}
+        />
+      )}
       {selectedCaptureSpot && (
         <CaptureSpotPanelPreview
           lat={selectedCaptureSpot.lat}
