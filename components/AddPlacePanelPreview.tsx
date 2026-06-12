@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 type IconProps = {
   className?: string;
@@ -67,6 +67,31 @@ function FieldShell({
 export default function AddPlacePanelPreview() {
   const [placeName, setPlaceName] = useState('');
   const [notes, setNotes] = useState('');
+  const [isMobileKeyboardOpen, setIsMobileKeyboardOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.visualViewport) {
+      return;
+    }
+
+    const viewport = window.visualViewport;
+    const initialHeight = viewport.height;
+
+    const updateKeyboardState = () => {
+      const heightDifference = initialHeight - viewport.height;
+      setIsMobileKeyboardOpen(heightDifference > 120);
+    };
+
+    updateKeyboardState();
+
+    viewport.addEventListener('resize', updateKeyboardState);
+    viewport.addEventListener('scroll', updateKeyboardState);
+
+    return () => {
+      viewport.removeEventListener('resize', updateKeyboardState);
+      viewport.removeEventListener('scroll', updateKeyboardState);
+    };
+  }, []);
 
   const lat = -25.851809;
   const lng = -48.289032;
@@ -82,7 +107,9 @@ export default function AddPlacePanelPreview() {
           <CloseIcon />
         </button>
 
-        <main className="vpAddPlacePanelShell">
+        <main
+          className={`vpAddPlacePanelShell${isMobileKeyboardOpen ? ' vpAddPlacePanelShellKeyboardOpen' : ''}`}
+        >
           <header className="vpAddPlaceHeader">
             <div className="vpAddPlaceHeaderText">
               <span>Meu ponto de pesca</span>
@@ -465,7 +492,7 @@ export default function AddPlacePanelPreview() {
         }
 
         @media (max-width: 767px) {
-          .vpAddPlacePanelShell:focus-within {
+          .vpAddPlacePanelShellKeyboardOpen {
             overflow-y: auto;
             overflow-x: hidden;
             overscroll-behavior: contain;
@@ -475,13 +502,13 @@ export default function AddPlacePanelPreview() {
             scroll-padding-bottom: 340px;
           }
 
-          .vpAddPlacePanelShell:focus-within .vpAddPlaceFormCard {
+          .vpAddPlacePanelShellKeyboardOpen .vpAddPlaceFormCard {
             flex: 0 0 auto;
             min-height: auto;
             overflow: visible;
           }
 
-          .vpAddPlacePanelShell:focus-within .vpAddPlaceGrid {
+          .vpAddPlacePanelShellKeyboardOpen .vpAddPlaceGrid {
             padding-bottom: 12px;
           }
         }
