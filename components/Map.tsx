@@ -19,6 +19,7 @@ import L from "leaflet";
 import { useEffect, useRef, useState } from "react";
 
 import OfficialFreePanelPreview from "@/components/OfficialFreePanelPreview";
+import AddCapturePanel from "@/components/AddCapturePanel";
 import CaptureSpotPanelPreview from "@/components/CaptureSpotPanelPreview";
 import PlaceCapturesPanelPreview from "@/components/PlaceCapturesPanelPreview";
 import PremiumPanelPreview, { PreviewIcon, type PreviewIconName } from "@/components/PremiumPanelPreview";
@@ -1378,40 +1379,39 @@ export default function Map() {
   }
 
   function formatSpotHistoryDate(value?: string) {
-    if (!value) {
-      return "—";
-    }
-
-    const date = new Date(value);
-
-    if (Number.isNaN(date.getTime())) {
-      return "—";
-    }
-
-    const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const startOfDate = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
-    const time = new Intl.DateTimeFormat("pt-BR", {
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(date);
-
-    if (startOfDate === startOfToday) {
-      return `Hoje, ${time}`;
-    }
-
-    if (startOfDate === startOfToday - 24 * 60 * 60 * 1000) {
-      return `Ontem, ${time}`;
-    }
-
-    return new Intl.DateTimeFormat("pt-BR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(date);
+  if (!value) {
+    return "—";
   }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "—";
+  }
+
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const startOfDate = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  const hour = date.getHours();
+  const minutes = date.getMinutes();
+  const time = minutes === 0 ? `${hour}h` : `${hour}h${String(minutes).padStart(2, "0")}`;
+
+  if (startOfDate === startOfToday) {
+    return `Hoje • ${time}`;
+  }
+
+  if (startOfDate === startOfToday - 24 * 60 * 60 * 1000) {
+    return `Ontem • ${time}`;
+  }
+
+  const datePart = new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+  }).format(date);
+
+  return `${datePart} • ${time}`;
+}
 
   function getLastSpotCaptureDate(spotCaptures: Capture[]) {
     const latestCapture = spotCaptures.reduce<Capture | null>((latest, capture) => {
@@ -1441,6 +1441,67 @@ export default function Map() {
     }
 
     return `${Math.max(...weights).toFixed(1)} kg`;
+  }
+
+  function deriveWeightParts(weight: string) {
+    const normalizedWeight = String(weight || "").replace(",", ".").trim();
+
+    if (!normalizedWeight) {
+      return { kg: "", grams: "" };
+    }
+
+    const parsedWeight = Number.parseFloat(normalizedWeight);
+
+    if (!Number.isFinite(parsedWeight) || parsedWeight < 0) {
+      return { kg: "", grams: "" };
+    }
+
+    const wholeKg = Math.floor(parsedWeight);
+    const grams = Math.round((parsedWeight - wholeKg) * 1000);
+
+    if (grams <= 0) {
+      return {
+        kg: wholeKg > 0 ? String(wholeKg) : "",
+        grams: "",
+      };
+    }
+
+    if (grams >= 1000) {
+      return {
+        kg: String(wholeKg + 1),
+        grams: "",
+      };
+    }
+
+    return {
+      kg: wholeKg > 0 ? String(wholeKg) : "",
+      grams: String(grams),
+    };
+  }
+
+  function updateWeightFromParts(nextKg: string, nextGrams: string) {
+    const cleanKg = nextKg.replace(/[^\d]/g, "");
+    const cleanGrams = nextGrams.replace(/[^\d]/g, "").slice(0, 3);
+
+    const hasKg = cleanKg.length > 0;
+    const hasGrams = cleanGrams.length > 0;
+
+    if (!hasKg && !hasGrams) {
+      setFormData({ ...formData, weight: "" });
+      return;
+    }
+
+    const kgValue = hasKg ? Number.parseInt(cleanKg, 10) : 0;
+    const gramsValue = hasGrams
+      ? Math.min(Number.parseInt(cleanGrams, 10), 999)
+      : 0;
+
+    const totalWeight = kgValue + gramsValue / 1000;
+    const nextWeight = gramsValue > 0
+      ? String(Number(totalWeight.toFixed(3)))
+      : String(kgValue);
+
+    setFormData({ ...formData, weight: nextWeight });
   }
 
   function getNearestPersonalPlace(lat: number, lng: number) {
@@ -1756,6 +1817,7 @@ export default function Map() {
   const selectedCapturePlaceLabel = selectedCaptureView
     ? getCapturePlaceLabel(selectedCaptureView)
     : "";
+  const weightParts = deriveWeightParts(formData.weight);
 
   return (
     <div className="relative w-full h-full">
@@ -1931,384 +1993,258 @@ export default function Map() {
       )}
 
       {capturesPanelOpen && (
-        <aside
-          className="map-control-overlay fixed bottom-2 left-1/2 top-2 z-[2200] flex w-[calc(100vw-16px)] max-w-[900px] -translate-x-1/2 flex-col overflow-hidden rounded-md border border-cyan-300/18 bg-[#020a14]/97 text-white shadow-[0_28px_90px_rgba(0,0,0,0.62),0_0_42px_rgba(34,211,238,0.18)] backdrop-blur-xl sm:bottom-6 sm:top-6 sm:w-[calc(100vw-24px)]"
-          onClick={stopPanelEvent}
-          onPointerDown={stopPanelEvent}
+    <section
+      className="map-control-overlay fixed inset-0 z-[2200] h-[100dvh] w-screen overflow-hidden bg-[radial-gradient(circle_at_50%_8%,rgba(14,116,144,0.17),transparent_34%),radial-gradient(circle_at_50%_24%,rgba(30,42,56,0.5),transparent_44%),repeating-linear-gradient(90deg,rgba(35,82,148,0.075)_0px,rgba(35,82,148,0.075)_1px,transparent_1px,transparent_56px),linear-gradient(180deg,#07101a_0%,#050a0f_100%)] text-white md:flex md:items-center md:justify-center md:bg-[radial-gradient(circle_at_50%_12%,rgba(14,165,233,0.12),transparent_38%),radial-gradient(circle_at_50%_50%,rgba(15,23,42,0.2),transparent_58%),rgba(2,8,15,0.58)] md:p-6 md:backdrop-blur-[2px]"
+      aria-label="Minhas Capturas"
+      onClick={stopPanelEvent}
+      onPointerDown={stopPanelEvent}
+    >
+      <div className="relative mx-auto flex h-[100dvh] w-[min(100vw,460px)] md:h-[min(78dvh,680px)] md:max-h-[calc(100dvh-96px)] md:w-[min(86vw,760px)]">
+        <button
+          type="button"
+          onClick={() => setCapturesPanelOpen(false)}
+          className="fixed right-[max(16px,env(safe-area-inset-right))] top-[max(14px,env(safe-area-inset-top))] z-[2300] flex h-11 w-11 items-center justify-center rounded-[16px] border border-white/[0.13] bg-white/[0.035] text-2xl font-black leading-none text-white/90 shadow-[0_10px_30px_rgba(0,0,0,0.28)] backdrop-blur-xl transition hover:bg-white/[0.06] md:absolute md:-right-[54px] md:-top-[34px] md:h-11 md:w-11 md:rounded-[15px]"
+          aria-label="Fechar minhas capturas"
         >
-          <div className="shrink-0 border-b border-white/10 p-4 sm:p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-[11px] font-black uppercase tracking-[0.22em] text-emerald-200">
-                  Diário local
-                </p>
-                <h2 className="mt-1 text-3xl font-black leading-none text-white sm:text-5xl">Minhas capturas</h2>
+          ×
+        </button>
+
+        <main className="flex h-full w-full min-h-0 flex-col gap-[7px] px-3 pb-[max(10px,env(safe-area-inset-bottom))] pt-[max(10px,env(safe-area-inset-top))] md:gap-3 md:overflow-hidden md:rounded-[28px] md:border md:border-slate-300/[0.14] md:bg-[#030a12]/80 md:p-3.5 md:shadow-[0_24px_80px_rgba(0,0,0,0.34)] md:backdrop-blur-md">
+          <header className="shrink-0 rounded-[18px] border border-slate-400/20 bg-[linear-gradient(135deg,rgba(23,31,42,0.88),rgba(10,16,23,0.94))] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_14px_34px_rgba(0,0,0,0.18)] backdrop-blur-xl md:min-h-[92px] md:p-4">
+            <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 md:grid-cols-[auto_minmax(0,1fr)_auto] md:gap-4">
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-sky-500/12 text-2xl shadow-[0_0_22px_rgba(14,165,233,0.18)] md:h-[52px] md:w-[52px]">
+                🏆
               </div>
-              <button
-                onClick={() => setCapturesPanelOpen(false)}
-                className="flex h-12 w-12 items-center justify-center rounded-md border border-emerald-300/35 bg-black/65 text-2xl font-black text-white shadow-[0_0_18px_rgba(16,185,129,0.18)] transition hover:bg-black/80"
-                aria-label="Fechar minhas capturas"
-              >
-                ×
-              </button>
+
+              <div className="min-w-0">
+                <p className="text-[11px] font-bold uppercase leading-none tracking-[0.08em] text-slate-200/70 md:text-xs">
+                  Meu diário de pesca
+                </p>
+                <h2 className="mt-1 truncate text-[clamp(22px,6vw,27px)] font-bold leading-tight tracking-[-0.025em] text-sky-300 md:text-[27px]">
+                  Minhas Capturas
+                </h2>
+                <p className="mt-1 truncate text-sm font-semibold text-slate-300/75">
+                  Toque em uma captura para localizar o ícone no mapa.
+                </p>
+              </div>
+
+              <div className="col-span-2 mt-2 grid grid-cols-3 gap-2 md:col-span-1 md:mt-0 md:min-w-[260px]">
+                <div className="rounded-2xl border border-sky-300/14 bg-black/24 px-3 py-2 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+                  <p className="text-[9px] font-black uppercase tracking-[0.16em] text-sky-100/60">Total</p>
+                  <p className="mt-1 text-xl font-black text-white md:text-2xl">{captures.length}</p>
+                </div>
+                <div className="rounded-2xl border border-amber-200/14 bg-black/24 px-3 py-2 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+                  <p className="text-[9px] font-black uppercase tracking-[0.16em] text-amber-100/60">Maior</p>
+                  <p className="mt-1 truncate text-base font-black text-white md:text-xl">{getBestWeight()}</p>
+                </div>
+                <div className="rounded-2xl border border-sky-300/14 bg-black/24 px-3 py-2 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+                  <p className="text-[9px] font-black uppercase tracking-[0.16em] text-sky-100/60">Última</p>
+                  <p className="mt-1 truncate text-sm font-black text-white md:text-base">{getLastSpotCaptureDate(captures)}</p>
+                </div>
+              </div>
+            </div>
+          </header>
+
+          <section className="flex min-h-0 flex-1 flex-col gap-2 rounded-[18px] border border-slate-400/20 bg-[linear-gradient(135deg,rgba(23,31,42,0.88),rgba(10,16,23,0.94))] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_14px_34px_rgba(0,0,0,0.18)] backdrop-blur-xl md:p-3">
+            <div className="flex shrink-0 items-center justify-between gap-3 px-0.5">
+              <h3 className="flex items-center gap-2 text-[13px] font-black uppercase tracking-[0.095em] text-slate-200/80 md:text-[15px]">
+                <span className="text-sky-300">▦</span>
+                Todas as capturas
+              </h3>
+              <span className="rounded-full border border-sky-200/12 bg-sky-300/8 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-sky-100/70">
+                Cards clicáveis
+              </span>
             </div>
 
-            <div className="mt-4 grid grid-cols-3 gap-2 rounded-sm border border-yellow-300/20 bg-yellow-300/5 p-2 sm:gap-3 sm:p-3">
-              <div className="rounded-sm border border-emerald-300/15 bg-black/25 p-2.5 sm:p-4">
-                <p className={infoLabelClass}>Total</p>
-                <p className="mt-1 text-2xl font-black sm:text-4xl">{captures.length}</p>
-              </div>
-              <div className="rounded-sm border border-emerald-300/15 bg-black/25 p-2.5 sm:p-4">
-                <p className={infoLabelClass}>Maior</p>
-                <p className="mt-1 text-xl font-black sm:text-3xl">{getBestWeight()}</p>
-              </div>
-              <div className="rounded-sm border border-emerald-300/15 bg-black/25 p-2.5 sm:p-4">
-                <p className={infoLabelClass}>Última captura</p>
-                <p className="mt-1 text-base font-black leading-tight sm:text-2xl">
-                  {getLastSpotCaptureDate(captures)}
-                </p>
-              </div>
-            </div>
-          </div>
+            <div className="min-h-0 flex-1 overflow-y-auto pr-0.5 [scrollbar-color:rgba(125,211,252,0.45)_rgba(15,23,42,0.55)] [scrollbar-width:thin]">
+              {captures.length === 0 ? (
+                <div className="flex h-full min-h-[180px] flex-col items-center justify-center rounded-2xl border border-dashed border-slate-400/25 bg-black/25 p-6 text-center">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-3xl border border-sky-200/16 bg-black/35 text-3xl shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+                    🐟
+                  </div>
+                  <p className="mt-4 text-base font-black text-white">Nenhuma captura salva ainda.</p>
+                  <p className="mt-2 max-w-[22rem] text-sm font-semibold leading-relaxed text-slate-400">
+                    Use o botão de captura, toque no mapa e salve os detalhes do peixe.
+                  </p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2 md:gap-2.5">
+                  {[...captures].reverse().map((capture, reverseIndex) => {
+                    const originalIndex = captures.length - 1 - reverseIndex;
 
-          <div className={`min-h-0 flex-1 p-3 sm:p-4 ${captures.length >= 4 ? "overflow-y-auto" : "overflow-visible"}`}>
-            {captures.length === 0 ? (
-                <div className="flex h-full min-h-0 flex-col items-center justify-center rounded-md border border-dashed border-emerald-300/25 bg-emerald-300/[0.05] p-5 text-center">
-                <p className="text-sm font-bold text-emerald-100">Nenhuma captura salva ainda.</p>
-                <p className="mt-2 text-xs leading-relaxed text-zinc-400">
-                  Use o botão de captura, toque no mapa e salve os detalhes do peixe.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {[...captures].reverse().map((capture, reverseIndex) => {
-                  const originalIndex = captures.length - 1 - reverseIndex;
-
-                  return (
-                    <article
-                      key={`capture-panel-${capture.id}`}
-                      onClick={() => openCaptureLinkedLocation(capture)}
-                      className="flex cursor-pointer gap-3 rounded-sm border border-white/10 bg-white/[0.06] p-3 transition hover:border-emerald-300/25 hover:bg-white/[0.09]"
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          openCaptureLinkedLocation(capture);
-                        }
-                      }}
-                    >
-                      <div className="h-16 w-24 shrink-0 overflow-hidden rounded-sm border border-white/10 bg-black/30">
-                        {capture.photo ? (
-                          <img
-                            src={capture.photo}
-                            alt="Foto da captura"
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <div className="h-full w-full bg-[radial-gradient(circle_at_50%_25%,rgba(34,197,94,0.36),transparent_42%),linear-gradient(135deg,#052e1c,#020617_58%,#000)]" />
-                        )}
-                      </div>
-
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <h3 className="truncate text-sm font-black">
-                              {getCaptureTitle(capture, originalIndex)}
-                            </h3>
-                            <p className="mt-2 truncate text-xs font-black text-cyan-100/85">
-                              {"\uD83D\uDCCD"} {getCapturePlaceLabel(capture)}
-                            </p>
-                            <p className="mt-1 text-xs font-bold text-zinc-300">
-                              {capture.size ? `${capture.size} cm` : "Tam. --"} • {capture.weight ? `${capture.weight} kg` : "Peso --"}
-                            </p>
-                          </div>
+                    return (
+                      <article
+                        key={`capture-panel-${capture.id}`}
+                        onClick={() => openCaptureLinkedLocation(capture)}
+                        className="group grid min-h-[100px] cursor-pointer grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-2xl border border-slate-400/16 bg-black/30 p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_10px_22px_rgba(0,0,0,0.16)] transition hover:border-sky-300/30 hover:bg-black/40 md:min-h-[112px] md:gap-4 md:rounded-[18px] md:px-3.5"
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            openCaptureLinkedLocation(capture);
+                          }
+                        }}
+                      >
+                        <div className="relative h-[70px] w-[104px] shrink-0 overflow-hidden rounded-[15px] border border-sky-300/20 bg-slate-950 shadow-[0_0_22px_rgba(56,189,248,0.10)] md:h-[86px] md:w-[132px] md:rounded-2xl">
+                          {capture.photo ? (
+                            <img
+                              src={capture.photo}
+                              alt="Foto da captura"
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_25%_35%,rgba(14,165,233,0.36),transparent_36%),linear-gradient(135deg,rgba(12,74,110,0.82),rgba(2,6,23,0.95))] text-3xl">
+                              🐟
+                            </div>
+                          )}
+                          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-7 bg-gradient-to-t from-slate-950/80 to-transparent" />
                         </div>
 
-                        <p className="mt-3 text-xs font-bold leading-relaxed text-zinc-400">
-                          {formatCaptureDate(capture.capturedAt)}
-                        </p>
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </aside>
-      )}
+                        <div className="min-w-0">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <h3 className="truncate text-lg font-black leading-tight tracking-[-0.025em] text-white md:text-[22px]">
+                                {getCaptureTitle(capture, originalIndex)}
+                              </h3>
+                              <p className="mt-1 truncate text-xs font-black text-sky-100/80 md:text-sm">
+                                {"\uD83D\uDCCD"} {getCapturePlaceLabel(capture)}
+                              </p>
+                            </div>
+
+                            <span className="mt-1 text-2xl font-black leading-none text-sky-100/45 transition group-hover:translate-x-0.5 group-hover:text-sky-100/80">
+                              ›
+                            </span>
+                          </div>
+
+                          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-[13px] font-black text-slate-100 md:text-[15px]">
+                            <span>{capture.size ? `${capture.size} cm` : "Tam. --"}</span>
+                            <span>{capture.weight ? `${capture.weight} kg` : "Peso --"}</span>
+                          </div>
+
+                          <p className="mt-2 text-xs font-bold leading-relaxed text-slate-400">
+                            {formatCaptureDate(capture.capturedAt)}
+                          </p>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </section>
+        </main>
+      </div>
+    </section>
+  )}
 
       {pendingCapture && (
-        <div className="fixed inset-0 z-[3000] bg-black/80">
-          <div
-            className="fixed bottom-2 left-1/2 top-2 flex w-[calc(100vw-16px)] max-w-[640px] -translate-x-1/2 flex-col overflow-hidden rounded-md border border-cyan-300/18 bg-[#020a14]/97 text-white shadow-[0_24px_80px_rgba(0,0,0,0.62),0_0_34px_rgba(34,211,238,0.18)] backdrop-blur-xl sm:bottom-6 sm:top-6"
-            onClick={stopPanelEvent}
-            onPointerDown={stopPanelEvent}
-          >
-            <button
-              onClick={cancelCapture}
-              className="hidden"
-              aria-label="Fechar adicionar captura"
-            >
-              ×
-            </button>
-            <div className="shrink-0 border-b border-white/10 p-3 sm:p-5">
-              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
-              <div className="min-w-0">
-                <p className="text-[11px] font-black uppercase tracking-[0.22em] text-emerald-200">Adicionar captura</p>
-                <h2 className="mt-1 text-3xl font-black leading-none text-white">Detalhes da captura</h2>
-              </div>
-              <div className="hidden sm:block">
-                <CoordinatesBadge lat={pendingCapture.lat} lng={pendingCapture.lng} precision={8} />
-              </div>
-              <button
-                onClick={cancelCapture}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-emerald-300/45 bg-black/70 text-2xl font-black text-white shadow-[0_0_18px_rgba(16,185,129,0.22)] backdrop-blur-md transition hover:bg-black/85 sm:h-12 sm:w-12"
-                aria-label="Fechar adicionar captura"
-              >
-                ×
-              </button>
-              </div>
-            </div>
-            
-            <div className="grid min-h-0 flex-1 grid-rows-[auto_auto_auto_auto_auto_minmax(0,1fr)] gap-2 overflow-hidden p-3 sm:gap-4 sm:p-5">
-              <div>
-                  <label className="text-sm font-black uppercase tracking-[0.12em] text-emerald-200">Espécie</label>
-                <input
-                  type="text"
-                  placeholder="Ex: Tilápia"
-                  value={formData.species}
-                  onChange={(e) => setFormData({ ...formData, species: e.target.value })}
-                  className="mt-1 min-h-10 w-full rounded-sm border border-cyan-300/18 bg-black/25 px-3 py-2 text-white placeholder-zinc-500 focus:border-cyan-300 focus:outline-none sm:min-h-12 sm:px-4 sm:py-3"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                   <label className="text-sm font-black uppercase tracking-[0.12em] text-emerald-200">Peso (kg)</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    placeholder="2.5"
-                    value={formData.weight}
-                    onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
-                    className="mt-1 min-h-10 w-full rounded-sm border border-cyan-300/18 bg-black/25 px-3 py-2 text-white placeholder-zinc-500 focus:border-cyan-300 focus:outline-none sm:min-h-12 sm:px-4 sm:py-3"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-black uppercase tracking-[0.12em] text-emerald-200">Tamanho (cm)</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    placeholder="30"
-                    value={formData.size}
-                    onChange={(e) => setFormData({ ...formData, size: e.target.value })}
-                    className="mt-1 min-h-10 w-full rounded-sm border border-cyan-300/18 bg-black/25 px-3 py-2 text-white placeholder-zinc-500 focus:border-cyan-300 focus:outline-none sm:min-h-12 sm:px-4 sm:py-3"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-sm font-black uppercase tracking-[0.12em] text-emerald-200">Isca</label>
-                <input
-                  type="text"
-                  placeholder="Ex: Minhoca, Ração"
-                  value={formData.bait}
-                  onChange={(e) => setFormData({ ...formData, bait: e.target.value })}
-                  className="mt-1 min-h-10 w-full rounded-sm border border-cyan-300/18 bg-black/25 px-3 py-2 text-white placeholder-zinc-500 focus:border-cyan-300 focus:outline-none sm:min-h-12 sm:px-4 sm:py-3"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-sm font-black uppercase tracking-[0.12em] text-emerald-200">Data</label>
-                  <input
-                    type="date"
-                    value={formData.capturedDate}
-                    onChange={(e) => setFormData({ ...formData, capturedDate: e.target.value })}
-                    className="mt-1 min-h-10 w-full rounded-sm border border-cyan-300/18 bg-black/25 px-3 py-2 text-white placeholder-zinc-500 focus:border-cyan-300 focus:outline-none sm:min-h-12 sm:px-4 sm:py-3"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-black uppercase tracking-[0.12em] text-emerald-200">Hora</label>
-                  <input
-                    type="time"
-                    value={formData.capturedTime}
-                    onChange={(e) => setFormData({ ...formData, capturedTime: e.target.value })}
-                    className="mt-1 min-h-10 w-full rounded-sm border border-cyan-300/18 bg-black/25 px-3 py-2 text-white placeholder-zinc-500 focus:border-cyan-300 focus:outline-none sm:min-h-12 sm:px-4 sm:py-3"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-sm font-black uppercase tracking-[0.12em] text-emerald-200">Foto</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-
-                    if (!file) {
-                      return;
-                    }
-
-                    const reader = new FileReader();
-
-                    reader.onload = (event) => {
-                      setFormData({
-                        ...formData,
-                        photo: String(event.target?.result || ""),
-                      });
-                    };
-
-                    reader.readAsDataURL(file);
-                  }}
-                  className="mt-1 min-h-10 w-full rounded-sm border border-cyan-300/18 bg-black/25 px-3 py-2 text-white file:cursor-pointer file:rounded-sm file:border-0 file:bg-emerald-600 file:px-3 file:py-1 file:text-white hover:file:bg-emerald-700 focus:border-cyan-300 focus:outline-none sm:min-h-12 sm:px-4 sm:py-3 sm:file:py-1.5"
-                />
-                {formData.photo && (
-                  <p className="mt-1 text-xs font-bold text-emerald-300">
-                    Foto adicionada ao marcador da captura.
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="text-sm font-black uppercase tracking-[0.12em] text-emerald-200">Comentário</label>
-                <textarea
-                  placeholder="Notas sobre a captura..."
-                  value={formData.comment}
-                  onChange={(e) => setFormData({ ...formData, comment: e.target.value })}
-                  className="mt-1 h-full min-h-0 w-full resize-none rounded-sm border border-cyan-300/18 bg-black/25 px-3 py-2 text-white placeholder-zinc-500 focus:border-cyan-300 focus:outline-none sm:px-4 sm:py-3"
-                />
-              </div>
-
-              <div className="hidden">
-                <button
-                  onClick={saveCapture}
-                  className="inline-flex min-h-[68px] w-full items-center justify-center rounded-md border border-emerald-300/60 bg-emerald-500/24 px-4 py-4 text-center text-base font-black text-emerald-50 shadow-[0_0_24px_rgba(16,185,129,0.16),inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:bg-emerald-500/32 sm:min-h-[72px]"
-                >
-                  Confirmar captura aqui
-                </button>
-                <button
-                  onClick={cancelCapture}
-                  className="inline-flex min-h-[68px] w-full items-center justify-center rounded-md border border-red-400/65 bg-red-500/22 px-4 py-4 text-center text-base font-black text-red-50 shadow-[0_0_24px_rgba(239,68,68,0.12),inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:bg-red-500/30 sm:min-h-[72px]"
-                >
-                  Cancelar
-                </button>
-              </div>
-            </div>
-            <div className="grid shrink-0 grid-cols-1 gap-3 border-t border-white/10 bg-[#020a14]/98 p-4 pb-[calc(16px+env(safe-area-inset-bottom))] sm:grid-cols-2 sm:p-4">
-              <button
-                onClick={saveCapture}
-                className="inline-flex min-h-[58px] w-full items-center justify-center rounded-md border border-emerald-300/60 bg-emerald-500/24 px-4 py-3 text-center text-base font-black text-emerald-50 shadow-[0_0_24px_rgba(16,185,129,0.16),inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:bg-emerald-500/32 sm:min-h-[72px] sm:py-4"
-              >
-                Confirmar captura aqui
-              </button>
-              <button
-                onClick={cancelCapture}
-                className="inline-flex min-h-[58px] w-full items-center justify-center rounded-md border border-red-400/65 bg-red-500/22 px-4 py-3 text-center text-base font-black text-red-50 shadow-[0_0_24px_rgba(239,68,68,0.12),inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:bg-red-500/30 sm:min-h-[72px] sm:py-4"
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </div>
+        <AddCapturePanel
+          lat={pendingCapture.lat}
+          lng={pendingCapture.lng}
+          formData={formData}
+          weightParts={weightParts}
+          onFormDataChange={setFormData}
+          onWeightPartsChange={updateWeightFromParts}
+          onSave={saveCapture}
+          onCancel={cancelCapture}
+        />
       )}
-
       {pendingPlace && (
-        <div className="fixed inset-0 z-[3000] bg-black/80">
-          <div
-            className="fixed bottom-2 left-1/2 top-2 flex w-[calc(100vw-16px)] max-w-[640px] -translate-x-1/2 flex-col overflow-hidden rounded-md border border-cyan-300/18 bg-[#020a14]/97 text-white shadow-[0_24px_80px_rgba(0,0,0,0.62),0_0_34px_rgba(34,211,238,0.18)] backdrop-blur-xl sm:bottom-6 sm:top-6"
-            onClick={stopPanelEvent}
-            onPointerDown={stopPanelEvent}
-          >
-            <button
-              onClick={cancelPersonalPlace}
-              className="hidden"
-              aria-label="Fechar meu lugar"
-            >
-              ×
-            </button>
-            <div className="shrink-0 border-b border-white/10 p-3 sm:p-5">
-              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
-              <div className="min-w-0">
-                <p className="text-[11px] font-black uppercase tracking-[0.22em] text-emerald-200">Meus Lugares</p>
-                <h2 className="mt-1 text-3xl font-black leading-none text-white">Meu lugar</h2>
+    <section
+      className="map-control-overlay fixed inset-0 z-[3000] h-[100dvh] w-screen overflow-hidden bg-[radial-gradient(circle_at_50%_8%,rgba(14,116,144,0.17),transparent_34%),radial-gradient(circle_at_50%_24%,rgba(30,42,56,0.5),transparent_44%),repeating-linear-gradient(90deg,rgba(35,82,148,0.075)_0px,rgba(35,82,148,0.075)_1px,transparent_1px,transparent_56px),linear-gradient(180deg,#07101a_0%,#050a0f_100%)] text-white md:flex md:items-center md:justify-center md:bg-[radial-gradient(circle_at_50%_12%,rgba(14,165,233,0.12),transparent_38%),radial-gradient(circle_at_50%_50%,rgba(15,23,42,0.2),transparent_58%),rgba(2,8,15,0.58)] md:p-6 md:backdrop-blur-[2px]"
+      aria-label="Adicionar Lugar"
+      onClick={stopPanelEvent}
+      onPointerDown={stopPanelEvent}
+    >
+      <div className="relative mx-auto flex h-[100dvh] w-[min(100vw,460px)] md:h-[min(72dvh,560px)] md:max-h-[calc(100dvh-96px)] md:w-[min(86vw,680px)]">
+        <button
+          type="button"
+          onClick={cancelPersonalPlace}
+          className="fixed right-[max(16px,env(safe-area-inset-right))] top-[max(14px,env(safe-area-inset-top))] z-[3100] flex h-11 w-11 items-center justify-center rounded-[16px] border border-white/[0.13] bg-white/[0.035] text-2xl font-black leading-none text-white/90 shadow-[0_10px_30px_rgba(0,0,0,0.28)] backdrop-blur-xl transition hover:bg-white/[0.06] md:absolute md:-right-[54px] md:-top-[34px] md:h-11 md:w-11 md:rounded-[15px]"
+          aria-label="Fechar adicionar lugar"
+        >
+          ×
+        </button>
+
+        <main className="flex h-full w-full min-h-0 flex-col gap-[7px] px-3 pb-[max(10px,env(safe-area-inset-bottom))] pt-[max(10px,env(safe-area-inset-top))] md:gap-3 md:overflow-hidden md:rounded-[28px] md:border md:border-slate-300/[0.14] md:bg-[#030a12]/80 md:p-3.5 md:shadow-[0_24px_80px_rgba(0,0,0,0.34)] md:backdrop-blur-md">
+          <header className="shrink-0 rounded-[18px] border border-slate-400/20 bg-[linear-gradient(135deg,rgba(23,31,42,0.88),rgba(10,16,23,0.94))] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_14px_34px_rgba(0,0,0,0.18)] backdrop-blur-xl md:min-h-[92px] md:p-4">
+            <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 md:grid-cols-[auto_minmax(0,1fr)_auto] md:gap-4">
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-sky-500/12 text-2xl shadow-[0_0_22px_rgba(14,165,233,0.18)] md:h-[52px] md:w-[52px]">
+                📍
               </div>
-              <div className="hidden sm:block">
+
+              <div className="min-w-0">
+                <p className="text-[11px] font-bold uppercase leading-none tracking-[0.08em] text-slate-200/70 md:text-xs">
+                  Novo ponto salvo
+                </p>
+                <h2 className="mt-1 truncate text-[clamp(22px,6vw,27px)] font-bold leading-tight tracking-[-0.025em] text-sky-300 md:text-[27px]">
+                  Adicionar Lugar
+                </h2>
+                <p className="mt-1 truncate text-sm font-semibold text-slate-300/75">
+                  Salve um novo ponto no mapa.
+                </p>
+              </div>
+
+              <div className="col-span-2 mt-2 md:col-span-1 md:mt-0">
                 <CoordinatesBadge lat={pendingPlace.lat} lng={pendingPlace.lng} precision={8} />
               </div>
-              <button
-                onClick={cancelPersonalPlace}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-emerald-300/45 bg-black/70 text-2xl font-black text-white shadow-[0_0_18px_rgba(16,185,129,0.22)] backdrop-blur-md transition hover:bg-black/85 sm:h-12 sm:w-12"
-                aria-label="Fechar meu lugar"
-              >
-                ×
-              </button>
+            </div>
+          </header>
+
+          <section className="flex min-h-0 flex-1 flex-col rounded-[18px] border border-slate-400/20 bg-[linear-gradient(135deg,rgba(23,31,42,0.88),rgba(10,16,23,0.94))] shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_14px_34px_rgba(0,0,0,0.18)] backdrop-blur-xl">
+            <div className="min-h-0 flex-1 overflow-y-auto p-3 [scrollbar-color:rgba(125,211,252,0.45)_rgba(15,23,42,0.55)] [scrollbar-width:thin] md:p-4">
+              <div className="rounded-2xl border border-slate-400/16 bg-black/25 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] md:p-4">
+                <div className="grid gap-4">
+                  <div>
+                    <label className="block text-[11px] font-black uppercase tracking-[0.18em] text-sky-100/70">
+                      Nome do lugar
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Canal do Robalo"
+                      value={placeFormData.name}
+                      onChange={(event) => setPlaceFormData({ ...placeFormData, name: event.target.value })}
+                      className="mt-2 min-h-12 w-full rounded-2xl border border-sky-300/20 bg-slate-950/45 px-4 py-3 text-base font-bold text-white placeholder-slate-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),inset_0_-12px_20px_rgba(0,0,0,0.22),0_10px_24px_rgba(0,0,0,0.18)] focus:border-sky-300/70 focus:outline-none focus:ring-2 focus:ring-sky-400/15"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-black uppercase tracking-[0.18em] text-sky-100/70">
+                      Observações
+                    </label>
+                    <textarea
+                      placeholder="Notas opcionais sobre o lugar..."
+                      value={placeFormData.note}
+                      onChange={(event) => setPlaceFormData({ ...placeFormData, note: event.target.value })}
+                      className="mt-2 min-h-[150px] w-full resize-none rounded-2xl border border-sky-300/20 bg-slate-950/45 px-4 py-3 text-base font-semibold leading-relaxed text-white placeholder-slate-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),inset_0_-12px_20px_rgba(0,0,0,0.22),0_10px_24px_rgba(0,0,0,0.18)] focus:border-sky-300/70 focus:outline-none focus:ring-2 focus:ring-sky-400/15 md:min-h-[170px]"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
-            <p className="shrink-0 px-4 pt-3 text-center text-xs font-black uppercase tracking-[0.14em] text-cyan-200/70 sm:px-5 sm:pt-4">
-              Privado por padrão
-            </p>
 
-            <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)_auto] gap-3 overflow-hidden p-3 sm:gap-4 sm:p-5">
-              <div>
-                <label className="text-sm font-black uppercase tracking-[0.12em] text-emerald-200">Nome</label>
-                <input
-                  type="text"
-                  placeholder="Ex: Canal bom de robalo"
-                  value={placeFormData.name}
-                  onChange={(e) => setPlaceFormData({ ...placeFormData, name: e.target.value })}
-                  className="mt-1 min-h-10 w-full rounded-sm border border-cyan-300/18 bg-black/25 px-3 py-2 text-white placeholder-zinc-500 focus:border-cyan-300 focus:outline-none sm:min-h-12 sm:px-4 sm:py-3"
-                />
-              </div>
-
-              <div>
-                <label className="text-sm font-black uppercase tracking-[0.12em] text-emerald-200">Observação</label>
-                <textarea
-                  placeholder="Notas opcionais sobre o lugar..."
-                  value={placeFormData.note}
-                  onChange={(e) => setPlaceFormData({ ...placeFormData, note: e.target.value })}
-                  className="mt-1 h-full min-h-0 w-full resize-none rounded-sm border border-cyan-300/18 bg-black/25 px-3 py-2 text-white placeholder-zinc-500 focus:border-cyan-300 focus:outline-none sm:px-4 sm:py-3"
-                />
-              </div>
-
-              <div className="rounded-sm border border-emerald-300/15 bg-emerald-300/[0.05] p-4 text-xs font-bold leading-relaxed text-zinc-300">
-                Este lugar fica salvo apenas para você. Compartilhamento entra depois sem mudar seus pontos atuais.
-              </div>
-
-              <div className="hidden">
-                <button
-                  onClick={savePersonalPlace}
-                  className="inline-flex min-h-[68px] w-full items-center justify-center rounded-md border border-emerald-300/60 bg-emerald-500/24 px-4 py-4 text-center text-base font-black text-emerald-50 shadow-[0_0_24px_rgba(16,185,129,0.16),inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:bg-emerald-500/32 sm:min-h-[72px]"
-                >
-                  Confirmar aqui
-                </button>
-                <button
-                  onClick={cancelPersonalPlace}
-                  className="inline-flex min-h-[68px] w-full items-center justify-center rounded-md border border-red-400/65 bg-red-500/22 px-4 py-4 text-center text-base font-black text-red-50 shadow-[0_0_24px_rgba(239,68,68,0.12),inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:bg-red-500/30 sm:min-h-[72px]"
-                >
-                  Cancelar
-                </button>
-              </div>
-            </div>
-            <div className="grid shrink-0 grid-cols-2 gap-3 border-t border-white/10 bg-[#020a14]/98 p-3 sm:p-4">
+            <footer className="grid shrink-0 grid-cols-1 gap-2 border-t border-white/10 bg-[#020712]/95 p-2.5 pb-[max(10px,env(safe-area-inset-bottom))] md:grid-cols-2 md:gap-3 md:p-2.5">
               <button
+                type="button"
                 onClick={savePersonalPlace}
-                className="inline-flex min-h-[68px] w-full items-center justify-center rounded-md border border-emerald-300/60 bg-emerald-500/24 px-4 py-4 text-center text-base font-black text-emerald-50 shadow-[0_0_24px_rgba(16,185,129,0.16),inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:bg-emerald-500/32 sm:min-h-[72px]"
+                className="inline-flex min-h-[54px] w-full items-center justify-center rounded-[14px] border border-sky-300/45 bg-[linear-gradient(135deg,rgba(37,99,235,0.96),rgba(29,78,216,0.9))] px-4 py-3 text-center text-base font-black text-white shadow-[0_0_28px_rgba(37,99,235,0.28),inset_0_1px_0_rgba(255,255,255,0.16)] transition hover:bg-sky-500 md:min-h-[56px]"
               >
                 Confirmar aqui
               </button>
               <button
+                type="button"
                 onClick={cancelPersonalPlace}
-                className="inline-flex min-h-[68px] w-full items-center justify-center rounded-md border border-red-400/65 bg-red-500/22 px-4 py-4 text-center text-base font-black text-red-50 shadow-[0_0_24px_rgba(239,68,68,0.12),inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:bg-red-500/30 sm:min-h-[72px]"
+                className="inline-flex min-h-[54px] w-full items-center justify-center rounded-[14px] border border-white/14 bg-black/32 px-4 py-3 text-center text-base font-black text-slate-100 shadow-[0_14px_30px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:border-white/24 hover:bg-black/45 md:min-h-[56px]"
               >
                 Cancelar
               </button>
-            </div>
-          </div>
-        </div>
-      )}
+            </footer>
+          </section>
+        </main>
+      </div>
+    </section>
+  )}
 
       {selectedCaptureSpot && (
         <CaptureSpotPanelPreview
