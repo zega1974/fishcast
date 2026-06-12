@@ -331,7 +331,7 @@ function SelectedPointCard({
         aria-live="polite"
       >
         <CopyIcon />
-        <span>{copied ? "Copiado!" : "Copiar"}</span>
+        <span>{copied ? "Copiado!" : "Copiar coordenadas"}</span>
       </button>
     </CardShell>
   );
