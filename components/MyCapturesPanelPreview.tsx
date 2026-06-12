@@ -29,8 +29,8 @@ const previewCaptures: PreviewCapture[] = [
     id: '86',
     title: 'Captura #86',
     place: 'Ponto sem nome',
-    weight: '\u2014',
-    size: '\u2014',
+    weight: '—',
+    size: '—',
     date: '12/06/2026',
     time: '0h04',
     kind: 'peva',
@@ -39,8 +39,8 @@ const previewCaptures: PreviewCapture[] = [
     id: '85',
     title: 'Captura #85',
     place: 'Ponto sem nome',
-    weight: '\u2014',
-    size: '\u2014',
+    weight: '—',
+    size: '—',
     date: '12/06/2026',
     time: '0h03',
     kind: 'flecha',
@@ -49,8 +49,8 @@ const previewCaptures: PreviewCapture[] = [
     id: '84',
     title: 'teste',
     place: 'Ponto sem nome',
-    weight: '\u2014',
-    size: '\u2014',
+    weight: '—',
+    size: '—',
     date: '12/06/2026',
     time: '0h02',
     kind: 'generic',
@@ -59,8 +59,8 @@ const previewCaptures: PreviewCapture[] = [
     id: '83',
     title: 'Captura #83',
     place: 'Ponto sem nome',
-    weight: '\u2014',
-    size: '\u2014',
+    weight: '—',
+    size: '—',
     date: '12/06/2026',
     time: '0h02',
     kind: 'sargo',
@@ -69,8 +69,8 @@ const previewCaptures: PreviewCapture[] = [
     id: '82',
     title: 'Captura #82',
     place: 'Ponto sem nome',
-    weight: '\u2014',
-    size: '\u2014',
+    weight: '—',
+    size: '—',
     date: '12/06/2026',
     time: '0h01',
     kind: 'peva',
@@ -148,6 +148,29 @@ function CalendarIcon(props: IconProps) {
       <path d="M16 6v8" />
       <path d="M32 6v8" />
       <path d="M8 20h32" />
+    </SvgBase>
+  );
+}
+
+function ScaleIcon(props: IconProps) {
+  return (
+    <SvgBase {...props}>
+      <path d="M24 8v30" />
+      <path d="M14 16h20" />
+      <path d="M14 16l-6 12h12l-6-12Z" />
+      <path d="M34 16l-6 12h12l-6-12Z" />
+      <path d="M16 40h16" />
+    </SvgBase>
+  );
+}
+
+function RulerIcon(props: IconProps) {
+  return (
+    <SvgBase {...props}>
+      <path d="M10 35 35 10l6 6-25 25-6-6Z" />
+      <path d="m18 31-4-4" />
+      <path d="m24 25-3-3" />
+      <path d="m30 19-4-4" />
     </SvgBase>
   );
 }
@@ -243,12 +266,12 @@ function MyCapturesHeader() {
       </div>
 
       <div className="vpMyCapturesHeaderText">
-        <span>{'Meu di\u00E1rio de pesca'}</span>
+        <span>{'Meu diário de pesca'}</span>
         <strong>Minhas Capturas</strong>
         <p>Toque para localizar no mapa.</p>
         <div className="vpMyCapturesSummaryLine">
-          <span>{'86 capturas \u2022 Maior 1111.0 kg'}</span>
-          <span>{'\u00DAltima hoje \u2022 0h04'}</span>
+          <span>{'86 capturas • Maior 1111.0 kg'}</span>
+          <span>{'Última hoje • 0h04'}</span>
         </div>
       </div>
     </CardShell>
@@ -262,7 +285,7 @@ function CaptureCard({
   capture: PreviewCapture;
   onOpenCapture?: (captureId: string) => void;
 }) {
-  const bullet = '\u2022';
+  const bullet = '•';
 
   return (
     <article
@@ -302,16 +325,24 @@ function CaptureCard({
           <span>{capture.place}</span>
         </div>
 
-        <div className="vpMyCapturesMeasureLine">
-          <span>{`Tam. ${capture.size}`}</span>
-          <em>{bullet}</em>
-          <span>{`Peso ${capture.weight}`}</span>
-        </div>
+        <div className="vpMyCapturesMetaLine">
+          <span className="vpMyCapturesMetaItem">
+            <ScaleIcon />
+            <b>Peso</b>
+            <span>{capture.weight}</span>
+          </span>
 
-        <div className="vpMyCapturesDateLine">
-          <CalendarIcon />
-          <span>
-            {capture.date} {bullet} {capture.time}
+          <span className="vpMyCapturesMetaItem">
+            <RulerIcon />
+            <b>Tam.</b>
+            <span>{capture.size}</span>
+          </span>
+
+          <span className="vpMyCapturesMetaItem vpMyCapturesDateItem">
+            <CalendarIcon />
+            <span>
+              {capture.date} {bullet} {capture.time}
+            </span>
           </span>
         </div>
       </div>
@@ -597,7 +628,7 @@ export default function MyCapturesPanelPreview({
 
         .vpMyCapturesCaptureCard {
           position: relative;
-          min-height: 118px;
+          min-height: 124px;
           border-radius: 16px;
           border: 1px solid rgba(148, 163, 184, 0.16);
           background: rgba(3, 10, 20, 0.46);
@@ -605,7 +636,7 @@ export default function MyCapturesPanelPreview({
           grid-template-columns: auto minmax(0, 1fr) auto;
           align-items: center;
           gap: 13px;
-          padding: 9px 10px;
+          padding: 10px 11px;
           box-sizing: border-box;
           box-shadow:
             inset 0 1px 0 rgba(255, 255, 255, 0.035),
@@ -661,34 +692,29 @@ export default function MyCapturesPanelPreview({
           min-width: 0;
           display: flex;
           flex-direction: column;
-          gap: 6px;
+          gap: 7px;
         }
 
         .vpMyCapturesCaptureText > strong {
           color: #ffffff;
-          font-size: clamp(18px, 4.65vw, 22px);
-          line-height: 1.05;
-          font-weight: 780;
-          letter-spacing: -0.025em;
+          font-size: clamp(21px, 5.5vw, 25px);
+          line-height: 1.02;
+          font-weight: 830;
+          letter-spacing: -0.04em;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
         }
 
-        .vpMyCapturesPlaceLine,
-        .vpMyCapturesMeasureLine,
-        .vpMyCapturesDateLine {
+        .vpMyCapturesPlaceLine {
           min-width: 0;
           display: flex;
           align-items: center;
           gap: 6px;
-          line-height: 1;
-        }
-
-        .vpMyCapturesPlaceLine {
-          color: rgba(226, 232, 240, 0.84);
-          font-size: clamp(12px, 3.2vw, 14px);
-          font-weight: 720;
+          color: rgba(226, 232, 240, 0.86);
+          font-size: clamp(13px, 3.4vw, 15px);
+          line-height: 1.08;
+          font-weight: 730;
         }
 
         .vpMyCapturesPlaceLine svg {
@@ -705,30 +731,46 @@ export default function MyCapturesPanelPreview({
           text-overflow: ellipsis;
         }
 
-        .vpMyCapturesMeasureLine {
-          color: rgba(248, 250, 252, 0.94);
-          font-size: clamp(13px, 3.35vw, 15px);
-          font-weight: 760;
+        .vpMyCapturesMetaLine {
+          min-width: 0;
+          display: flex;
+          align-items: center;
           flex-wrap: wrap;
-          row-gap: 4px;
+          gap: 8px 16px;
+          color: rgba(248, 250, 252, 0.94);
+          font-size: clamp(13px, 3.3vw, 15px);
+          line-height: 1.1;
+          font-weight: 760;
         }
 
-        .vpMyCapturesMeasureLine em {
-          font-style: normal;
-          color: rgba(226, 232, 240, 0.55);
+        .vpMyCapturesMetaItem {
+          min-width: 0;
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          white-space: nowrap;
         }
 
-        .vpMyCapturesDateLine {
-          color: rgba(226, 232, 240, 0.72);
-          font-size: clamp(11px, 3vw, 13px);
-          font-weight: 620;
-        }
-
-        .vpMyCapturesDateLine svg {
+        .vpMyCapturesMetaItem svg {
           width: 15px;
           height: 15px;
           color: #7dd3fc;
           flex: 0 0 auto;
+        }
+
+        .vpMyCapturesMetaItem b {
+          color: rgba(248, 250, 252, 0.96);
+          font-weight: 820;
+        }
+
+        .vpMyCapturesMetaItem span {
+          min-width: 0;
+          color: rgba(226, 232, 240, 0.82);
+          font-weight: 720;
+        }
+
+        .vpMyCapturesDateItem {
+          color: rgba(226, 232, 240, 0.8);
         }
 
         .vpMyCapturesChevron {
@@ -749,7 +791,7 @@ export default function MyCapturesPanelPreview({
         .vpMyCapturesTrophyIcon svg,
         .vpMyCapturesSectionLabel svg,
         .vpMyCapturesPlaceLine svg,
-        .vpMyCapturesDateLine svg,
+        .vpMyCapturesMetaItem svg,
         .vpMyCapturesChevron svg,
         .vpMyCapturesCloseButton svg {
           fill: none;
@@ -822,9 +864,9 @@ export default function MyCapturesPanelPreview({
           }
 
           .vpMyCapturesCaptureCard {
-            min-height: 146px;
+            min-height: 152px;
             gap: 12px;
-            padding: 11px 10px;
+            padding: 12px 10px;
           }
 
           .vpMyCapturesFishThumb {
@@ -834,7 +876,25 @@ export default function MyCapturesPanelPreview({
           }
 
           .vpMyCapturesCaptureText {
-            gap: 7px;
+            gap: 8px;
+          }
+
+          .vpMyCapturesCaptureText > strong {
+            font-size: 24px;
+          }
+
+          .vpMyCapturesPlaceLine {
+            font-size: 14.5px;
+          }
+
+          .vpMyCapturesMetaLine {
+            gap: 7px 14px;
+            font-size: 14.5px;
+          }
+
+          .vpMyCapturesMetaItem svg {
+            width: 15px;
+            height: 15px;
           }
 
           .vpMyCapturesChevron {
@@ -882,12 +942,34 @@ export default function MyCapturesPanelPreview({
           }
 
           .vpMyCapturesCaptureCard {
-            min-height: 134px;
+            min-height: 140px;
           }
 
           .vpMyCapturesFishThumb {
             width: 104px;
             height: 74px;
+          }
+
+          .vpMyCapturesCaptureText {
+            gap: 7px;
+          }
+
+          .vpMyCapturesCaptureText > strong {
+            font-size: 21px;
+          }
+
+          .vpMyCapturesPlaceLine {
+            font-size: 13px;
+          }
+
+          .vpMyCapturesMetaLine {
+            gap: 6px 11px;
+            font-size: 13px;
+          }
+
+          .vpMyCapturesMetaItem svg {
+            width: 14px;
+            height: 14px;
           }
         }
 
@@ -1020,20 +1102,26 @@ export default function MyCapturesPanelPreview({
             border-radius: 16px;
           }
 
+          .vpMyCapturesCaptureText {
+            gap: 7px;
+          }
+
           .vpMyCapturesCaptureText > strong {
-            font-size: 22px;
+            font-size: 24px;
           }
 
           .vpMyCapturesPlaceLine {
-            font-size: 14px;
-          }
-
-          .vpMyCapturesMeasureLine {
             font-size: 15px;
           }
 
-          .vpMyCapturesDateLine {
-            font-size: 13px;
+          .vpMyCapturesMetaLine {
+            font-size: 15px;
+            gap: 8px 18px;
+          }
+
+          .vpMyCapturesMetaItem svg {
+            width: 15px;
+            height: 15px;
           }
         }
       `}</style>
