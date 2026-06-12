@@ -291,6 +291,20 @@ function MyCapturesHeader({
   );
 }
 
+function getMetaText(label: string, value: string) {
+  const cleanValue = value.trim();
+
+  if (!cleanValue || cleanValue === '\u2014' || cleanValue === '--') {
+    return `${label} --`;
+  }
+
+  if (cleanValue.toLowerCase().startsWith(label.toLowerCase())) {
+    return cleanValue;
+  }
+
+  return cleanValue;
+}
+
 function CaptureCard({
   capture,
   onOpenCapture,
@@ -341,21 +355,17 @@ function CaptureCard({
         <div className="vpMyCapturesMetaLine">
           <span className="vpMyCapturesMetaItem">
             <ScaleIcon />
-            <b>Peso</b>
-            <span>{capture.weight}</span>
+            {getMetaText('Peso', capture.weight)}
           </span>
 
           <span className="vpMyCapturesMetaItem">
             <RulerIcon />
-            <b>Tam.</b>
-            <span>{capture.size}</span>
+            {getMetaText('Tam.', capture.size)}
           </span>
 
           <span className="vpMyCapturesMetaItem vpMyCapturesDateItem">
             <CalendarIcon />
-            <span>
-              {capture.date} {bullet} {capture.time}
-            </span>
+            {capture.date} {bullet} {capture.time}
           </span>
         </div>
       </div>
@@ -711,15 +721,15 @@ export default function MyCapturesPanelPreview({
           min-width: 0;
           display: flex;
           flex-direction: column;
-          gap: 7px;
+          gap: 12px;
         }
 
         .vpMyCapturesCaptureText > strong {
           color: #ffffff;
-          font-size: clamp(21px, 5.5vw, 25px);
-          line-height: 1.02;
-          font-weight: 830;
-          letter-spacing: -0.04em;
+          font-size: clamp(18px, 4.65vw, 22px);
+          line-height: 1.05;
+          font-weight: 760;
+          letter-spacing: -0.025em;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -730,10 +740,11 @@ export default function MyCapturesPanelPreview({
           display: flex;
           align-items: center;
           gap: 6px;
-          color: rgba(226, 232, 240, 0.86);
-          font-size: clamp(13px, 3.4vw, 15px);
-          line-height: 1.08;
-          font-weight: 730;
+          color: rgba(226, 232, 240, 0.78);
+          font-size: clamp(12px, 3.1vw, 14px);
+          line-height: 1;
+          font-weight: 660;
+          margin-top: -4px;
         }
 
         .vpMyCapturesPlaceLine svg {
@@ -755,41 +766,31 @@ export default function MyCapturesPanelPreview({
           display: flex;
           align-items: center;
           flex-wrap: wrap;
-          gap: 8px 16px;
-          color: rgba(248, 250, 252, 0.94);
+          column-gap: 18px;
+          row-gap: 6px;
+          color: rgba(248, 250, 252, 0.92);
           font-size: clamp(13px, 3.3vw, 15px);
-          line-height: 1.1;
-          font-weight: 760;
+          line-height: 1;
+          font-weight: 680;
         }
 
         .vpMyCapturesMetaItem {
           min-width: 0;
           display: inline-flex;
           align-items: center;
-          gap: 5px;
+          gap: 6px;
           white-space: nowrap;
         }
 
         .vpMyCapturesMetaItem svg {
-          width: 15px;
-          height: 15px;
+          width: 17px;
+          height: 17px;
           color: #7dd3fc;
           flex: 0 0 auto;
         }
 
-        .vpMyCapturesMetaItem b {
-          color: rgba(248, 250, 252, 0.96);
-          font-weight: 820;
-        }
-
-        .vpMyCapturesMetaItem span {
-          min-width: 0;
-          color: rgba(226, 232, 240, 0.82);
-          font-weight: 720;
-        }
-
         .vpMyCapturesDateItem {
-          color: rgba(226, 232, 240, 0.8);
+          color: rgba(226, 232, 240, 0.83);
         }
 
         .vpMyCapturesChevron {
@@ -895,25 +896,27 @@ export default function MyCapturesPanelPreview({
           }
 
           .vpMyCapturesCaptureText {
-            gap: 8px;
+            gap: 11px;
           }
 
           .vpMyCapturesCaptureText > strong {
-            font-size: 24px;
+            font-size: 22px;
           }
 
           .vpMyCapturesPlaceLine {
-            font-size: 14.5px;
+            font-size: 13.5px;
+            margin-top: -3px;
           }
 
           .vpMyCapturesMetaLine {
-            gap: 7px 14px;
-            font-size: 14.5px;
+            column-gap: 12px;
+            row-gap: 6px;
+            font-size: 14px;
           }
 
           .vpMyCapturesMetaItem svg {
-            width: 15px;
-            height: 15px;
+            width: 16px;
+            height: 16px;
           }
 
           .vpMyCapturesChevron {
@@ -970,20 +973,22 @@ export default function MyCapturesPanelPreview({
           }
 
           .vpMyCapturesCaptureText {
-            gap: 7px;
+            gap: 9px;
           }
 
           .vpMyCapturesCaptureText > strong {
-            font-size: 21px;
+            font-size: 20px;
           }
 
           .vpMyCapturesPlaceLine {
-            font-size: 13px;
+            font-size: 12.5px;
+            margin-top: -2px;
           }
 
           .vpMyCapturesMetaLine {
-            gap: 6px 11px;
-            font-size: 13px;
+            column-gap: 10px;
+            row-gap: 5px;
+            font-size: 12.5px;
           }
 
           .vpMyCapturesMetaItem svg {
@@ -1122,25 +1127,27 @@ export default function MyCapturesPanelPreview({
           }
 
           .vpMyCapturesCaptureText {
-            gap: 7px;
+            gap: 12px;
           }
 
           .vpMyCapturesCaptureText > strong {
-            font-size: 24px;
+            font-size: 22px;
           }
 
           .vpMyCapturesPlaceLine {
-            font-size: 15px;
+            font-size: 14px;
+            margin-top: -4px;
           }
 
           .vpMyCapturesMetaLine {
+            column-gap: 26px;
+            row-gap: 6px;
             font-size: 15px;
-            gap: 8px 18px;
           }
 
           .vpMyCapturesMetaItem svg {
-            width: 15px;
-            height: 15px;
+            width: 17px;
+            height: 17px;
           }
         }
       `}</style>
