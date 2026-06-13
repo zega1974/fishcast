@@ -1,16 +1,75 @@
 'use client';
 
-import { type ReactNode } from 'react';
+/* eslint-disable @next/next/no-img-element */
+
+import type React from 'react';
+import { useEffect, useState } from 'react';
+import type { Capture, CaptureShareMode } from '@/components/captures/types';
 
 type IconProps = {
   className?: string;
 };
 
+type CaptureDetailPanelPreviewProps = {
+  capture?: Capture | null;
+  placeLabel?: string | null;
+  coordinatesText?: string | null;
+  formattedDate?: string | null;
+  shareFeedback?: string | null;
+  shareOptionsOpen?: boolean;
+  onClose?: () => void;
+  onToggleShareOptions?: () => void;
+  onShare?: (shareMode: CaptureShareMode) => void;
+  onDelete?: () => void;
+};
+
+type PhotoOrientation = 'unknown' | 'portrait' | 'landscape' | 'square';
+
+type PhotoMetrics = {
+  orientation: PhotoOrientation;
+  aspectRatio: string;
+  ratioNumber: string;
+};
+
+function getPhotoOrientation(width: number, height: number): PhotoOrientation {
+  if (!width || !height) {
+    return 'unknown';
+  }
+
+  const ratio = width / height;
+
+  if (ratio > 1.12) {
+    return 'landscape';
+  }
+
+  if (ratio < 0.88) {
+    return 'portrait';
+  }
+
+  return 'square';
+}
+
+function getPhotoMetrics(width: number, height: number): PhotoMetrics {
+  if (!width || !height) {
+    return {
+      orientation: 'unknown',
+      aspectRatio: '4 / 3',
+      ratioNumber: '1.333333',
+    };
+  }
+
+  return {
+    orientation: getPhotoOrientation(width, height),
+    aspectRatio: `${width} / ${height}`,
+    ratioNumber: `${width / height}`,
+  };
+}
+
 function SvgBase({
   children,
   className = '',
 }: {
-  children: ReactNode;
+  children: React.ReactNode;
   className?: string;
 }) {
   return (
@@ -50,8 +109,8 @@ function PinIcon(props: IconProps) {
 function CopyIcon(props: IconProps) {
   return (
     <SvgBase {...props}>
-      <rect x="16" y="16" width="20" height="20" rx="4" />
-      <path d="M12 28H10a4 4 0 0 1-4-4V10a4 4 0 0 1 4-4h14a4 4 0 0 1 4 4v2" />
+      <rect x="17" y="12" width="19" height="25" rx="3" />
+      <path d="M12 30V16a4 4 0 0 1 4-4h12" />
     </SvgBase>
   );
 }
@@ -59,10 +118,9 @@ function CopyIcon(props: IconProps) {
 function WeightIcon(props: IconProps) {
   return (
     <SvgBase {...props}>
-      <path d="M16 17h16l4 24H12l4-24Z" />
-      <path d="M18 17a6 6 0 0 1 12 0" />
-      <path d="M24 26v8" />
-      <path d="M20 30h8" />
+      <path d="M16 18h16l2.8 20H13.2L16 18Z" />
+      <path d="M19 18a5 5 0 0 1 10 0" />
+      <path d="M24 26v6" />
     </SvgBase>
   );
 }
@@ -70,10 +128,10 @@ function WeightIcon(props: IconProps) {
 function RulerIcon(props: IconProps) {
   return (
     <SvgBase {...props}>
-      <path d="M9 32 32 9l7 7-23 23-7-7Z" />
-      <path d="M17 28l-3-3" />
-      <path d="M22 23l-3-3" />
-      <path d="M27 18l-3-3" />
+      <path d="M8 34 34 8l6 6-26 26-6-6Z" />
+      <path d="M16 32l-3-3" />
+      <path d="M22 26l-3-3" />
+      <path d="M28 20l-3-3" />
     </SvgBase>
   );
 }
@@ -92,12 +150,10 @@ function LureIcon(props: IconProps) {
 function CalendarIcon(props: IconProps) {
   return (
     <SvgBase {...props}>
-      <rect x="9" y="12" width="30" height="28" rx="4" />
-      <path d="M16 8v8" />
-      <path d="M32 8v8" />
-      <path d="M9 21h30" />
-      <path d="M17 29h4" />
-      <path d="M27 29h4" />
+      <rect x="8" y="10" width="32" height="30" rx="6" />
+      <path d="M16 6v8" />
+      <path d="M32 6v8" />
+      <path d="M8 20h32" />
     </SvgBase>
   );
 }
@@ -128,12 +184,84 @@ function ShareIcon(props: IconProps) {
 function TrashIcon(props: IconProps) {
   return (
     <SvgBase {...props}>
-      <path d="M13 15h22" />
-      <path d="M19 15V9h10v6" />
-      <path d="M17 20l1 20h12l1-20" />
-      <path d="M22 24v11" />
-      <path d="M27 24v11" />
+      <path d="M12 14h24" />
+      <path d="M20 22v12" />
+      <path d="M28 22v12" />
+      <path d="M16 14l2 26h12l2-26" />
+      <path d="M20 14v-4h8v4" />
     </SvgBase>
+  );
+}
+
+function CardShell({
+  children,
+  className = '',
+  ...props
+}: {
+  children: React.ReactNode;
+  className?: string;
+} & React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={`vpCaptureDetailCard ${className}`} {...props}>
+      {children}
+    </div>
+  );
+}
+
+async function copyTextWithFallback(text: string) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    // tenta fallback abaixo
+  }
+
+  try {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.top = '-9999px';
+    textarea.style.left = '-9999px';
+    textarea.style.opacity = '0';
+
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+
+    const copied = document.execCommand('copy');
+    document.body.removeChild(textarea);
+
+    return copied;
+  } catch {
+    return false;
+  }
+}
+
+function CaptureCopyButton({ coordinates }: { coordinates: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const copyCoords = async () => {
+    const success = await copyTextWithFallback(coordinates);
+
+    if (success) {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    }
+  };
+
+  return (
+    <button
+      className={`vpCaptureDetailCopyButton ${copied ? 'isCopied' : ''}`}
+      type="button"
+      onClick={copyCoords}
+      aria-live="polite"
+    >
+      <CopyIcon />
+      <span>{copied ? 'Copiado!' : 'Copiar'}</span>
+    </button>
   );
 }
 
@@ -145,7 +273,7 @@ function StatCard({
 }: {
   label: string;
   value: string;
-  icon: ReactNode;
+  icon: React.ReactNode;
   className?: string;
 }) {
   return (
@@ -159,85 +287,195 @@ function StatCard({
   );
 }
 
-export default function CaptureDetailPanelPreview() {
+function CaptureHeaderCard({
+  species,
+  placeLabel,
+  coordinates,
+}: {
+  species: string;
+  placeLabel: string;
+  coordinates: string;
+}) {
+  return (
+    <CardShell className="vpCaptureDetailHeaderCard">
+      <div className="vpCaptureDetailPinIcon">
+        <PinIcon />
+      </div>
+
+      <div className="vpCaptureDetailHeaderText">
+        <span>Minha captura</span>
+        <strong>{species}</strong>
+
+        <div className="vpCaptureDetailPlaceLine">
+          <small>{placeLabel}</small>
+        </div>
+
+        <div className="vpCaptureDetailCoordinatesRow">
+          <small>{coordinates}</small>
+          <CaptureCopyButton coordinates={coordinates} />
+        </div>
+      </div>
+    </CardShell>
+  );
+}
+
+export default function CaptureDetailPanelPreview({
+  capture,
+  placeLabel,
+  coordinatesText,
+  formattedDate,
+  shareFeedback,
+  shareOptionsOpen = false,
+  onClose,
+  onToggleShareOptions,
+  onShare,
+  onDelete,
+}: CaptureDetailPanelPreviewProps) {
+  const [photoMetrics, setPhotoMetrics] = useState<PhotoMetrics>({
+    orientation: 'unknown',
+    aspectRatio: '4 / 3',
+    ratioNumber: '1.333333',
+  });
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPhotoMetrics({
+      orientation: 'unknown',
+      aspectRatio: '4 / 3',
+      ratioNumber: '1.333333',
+    });
+  }, [capture?.photo]);
+
+  const species = capture ? capture.species || 'Espécie não informada' : 'Robalo';
+  const weight = capture ? (capture.weight ? `${capture.weight} kg` : '--') : '12 kg';
+  const size = capture ? (capture.size ? `${capture.size} cm` : '--') : '103 cm';
+  const bait = capture ? capture.bait || '--' : 'Meia água';
+  const comment = capture
+    ? capture.comment || 'Sem observações adicionadas.'
+    : 'Sem observações adicionadas.';
+  const capturePlaceLabel = placeLabel || 'Ponto sem nome';
+  const captureCoordinatesText = coordinatesText || '-26.096255, -47.971802';
+  const captureFormattedDate = formattedDate || '23/02/2026 - 15h30';
+  const photoOrientationClass =
+    photoMetrics.orientation === 'portrait'
+      ? 'isPortrait'
+      : photoMetrics.orientation === 'landscape'
+        ? 'isLandscape'
+        : photoMetrics.orientation === 'square'
+          ? 'isSquare'
+          : 'isUnknown';
+  const photoCardStyle = {
+    '--vp-capture-photo-ratio': photoMetrics.aspectRatio,
+    '--vp-capture-photo-factor': photoMetrics.ratioNumber,
+  } as React.CSSProperties;
+
   return (
     <section className="vpCaptureDetailPreview map-control-overlay" aria-label="Minha Captura">
       <div className="vpCaptureDetailPanelFrame">
         <button
           className="vpCaptureDetailCloseButton"
           type="button"
-          aria-label="Fechar minha captura"
+          aria-label="Fechar"
+          onClick={onClose}
         >
           <CloseIcon />
         </button>
 
         <main className="vpCaptureDetailPanelShell">
-          <header className="vpCaptureDetailHeader">
-            <div className="vpCaptureDetailTitleBlock">
-              <span>Minha captura</span>
-              <strong>Robalo</strong>
-            </div>
+          <CaptureHeaderCard
+            species={species}
+            placeLabel={capturePlaceLabel}
+            coordinates={captureCoordinatesText}
+          />
 
-            <div className="vpCaptureDetailLocationLine">
-              <div className="vpCaptureDetailPlace">
-                <PinIcon />
-                <span>Ponto sem nome</span>
+          <div className={`vpCaptureDetailBodyScroll ${photoOrientationClass}`}>
+            <CardShell
+              className={`vpCaptureDetailPhotoCard ${photoOrientationClass}`}
+              aria-label="Foto da captura"
+              style={photoCardStyle}
+            >
+              {capture?.photo ? (
+                <div className="vpCaptureDetailPhotoRealFrame">
+                  <img
+                    className="vpCaptureDetailPhotoBlur"
+                    src={capture.photo}
+                    alt=""
+                    aria-hidden="true"
+                  />
+                  <img
+                    className="vpCaptureDetailPhotoImage"
+                    src={capture.photo}
+                    alt="Foto da captura"
+                    onLoad={(event) => {
+                      const image = event.currentTarget;
+                      setPhotoMetrics(getPhotoMetrics(image.naturalWidth, image.naturalHeight));
+                    }}
+                  />
+                </div>
+              ) : (
+                <div className="vpCaptureDetailPhotoMock">
+                  <div className="vpCaptureDetailPhotoSky" />
+                  <div className="vpCaptureDetailPhotoGrass" />
+                  <div className="vpCaptureDetailPhotoPerson" />
+                  <div className="vpCaptureDetailPhotoFish" />
+                  <div className="vpCaptureDetailPhotoFishLine" />
+                  <span>{capture ? 'Sem foto salva' : 'Foto da captura'}</span>
+                </div>
+              )}
+            </CardShell>
+
+            <CardShell className="vpCaptureDetailInfoArea" aria-label="Dados da captura">
+              <div className="vpCaptureDetailStatsGrid">
+                <StatCard label="Peso" value={weight} icon={<WeightIcon />} />
+                <StatCard label="Tamanho" value={size} icon={<RulerIcon />} />
+                <StatCard
+                  label="Isca"
+                  value={bait}
+                  icon={<LureIcon />}
+                  className="vpCaptureDetailFull"
+                />
+                <StatCard
+                  label="Data / hora"
+                  value={captureFormattedDate}
+                  icon={<CalendarIcon />}
+                  className="vpCaptureDetailFull"
+                />
+                <StatCard
+                  label="Observações"
+                  value={comment}
+                  icon={<NotesIcon />}
+                  className="vpCaptureDetailFull"
+                />
               </div>
+            </CardShell>
+          </div>
 
-              <div className="vpCaptureDetailCoordinates" aria-label="Coordenadas">
-                <CopyIcon />
-                <span>-26.096255, -47.971802</span>
-              </div>
-            </div>
-          </header>
-
-          <section className="vpCaptureDetailPhotoCard" aria-label="Foto da captura">
-            <div className="vpCaptureDetailPhotoMock">
-              <div className="vpCaptureDetailPhotoSky" />
-              <div className="vpCaptureDetailPhotoGrass" />
-              <div className="vpCaptureDetailPhotoPerson" />
-              <div className="vpCaptureDetailPhotoFish" />
-              <div className="vpCaptureDetailPhotoFishLine" />
-              <span>Foto da captura</span>
-            </div>
-          </section>
-
-          <section className="vpCaptureDetailInfoArea" aria-label="Dados da captura">
-            <div className="vpCaptureDetailStatsGrid">
-              <StatCard label="Peso" value="12 kg" icon={<WeightIcon />} />
-              <StatCard label="Tamanho" value="103 cm" icon={<RulerIcon />} />
-              <StatCard
-                label="Isca"
-                value="Meia água"
-                icon={<LureIcon />}
-                className="vpCaptureDetailFull"
-              />
-              <StatCard
-                label="Data / hora"
-                value="23/02/2026 - 15h30"
-                icon={<CalendarIcon />}
-                className="vpCaptureDetailFull"
-              />
-              <StatCard
-                label="Observações"
-                value="Sem observações adicionadas."
-                icon={<NotesIcon />}
-                className="vpCaptureDetailFull"
-              />
-            </div>
-          </section>
-
-          <footer className="vpCaptureDetailFooter">
-            <button className="vpCaptureDetailShareButton" type="button">
+          <div className="vpCaptureDetailFooter">
+            <button
+              className="vpCaptureDetailShareButton"
+              type="button"
+              onClick={onToggleShareOptions}
+            >
               <ShareIcon />
-              Compartilhar
+              <span>{shareFeedback || 'Compartilhar'}</span>
             </button>
 
-            <button className="vpCaptureDetailDeleteButton" type="button">
+            <button className="vpCaptureDetailDeleteButton" type="button" onClick={onDelete}>
               <TrashIcon />
-              Apagar
+              <span>Apagar</span>
             </button>
-          </footer>
+
+            {shareOptionsOpen && (
+              <div className="vpCaptureDetailShareOptions">
+                <button type="button" onClick={() => onShare?.('secret')}>
+                  Secreto
+                </button>
+                <button type="button" onClick={() => onShare?.('complete')}>
+                  Completo
+                </button>
+              </div>
+            )}
+          </div>
         </main>
       </div>
 
@@ -252,10 +490,16 @@ export default function CaptureDetailPanelPreview() {
           color: #f8fafc;
           pointer-events: auto;
           background:
-            radial-gradient(circle at 50% 8%, rgba(14, 165, 233, 0.14), transparent 34%),
-            radial-gradient(circle at 50% 42%, rgba(15, 23, 42, 0.28), transparent 58%),
-            rgba(2, 8, 15, 0.7);
-          backdrop-filter: blur(2px);
+            radial-gradient(circle at 50% 8%, rgba(14, 116, 144, 0.17), transparent 34%),
+            radial-gradient(circle at 50% 24%, rgba(30, 42, 56, 0.5), transparent 44%),
+            repeating-linear-gradient(
+              90deg,
+              rgba(35, 82, 148, 0.075) 0px,
+              rgba(35, 82, 148, 0.075) 1px,
+              transparent 1px,
+              transparent 56px
+            ),
+            linear-gradient(180deg, #07101a 0%, #050a0f 100%);
           font-family:
             Inter,
             ui-sans-serif,
@@ -264,27 +508,6 @@ export default function CaptureDetailPanelPreview() {
             BlinkMacSystemFont,
             "Segoe UI",
             sans-serif;
-        }
-
-        .vpCaptureDetailPreview::before {
-          content: "";
-          position: absolute;
-          inset: 0;
-          background:
-            linear-gradient(115deg, rgba(15, 23, 42, 0.3), rgba(8, 47, 73, 0.18)),
-            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cg fill='none' stroke='%2338bdf8' stroke-opacity='.09' stroke-width='1'%3E%3Cpath d='M0 40c38-20 74 20 112-1 28-15 42-12 68 4'/%3E%3Cpath d='M-10 92c36-12 67 9 105-5 31-11 56-6 91 14'/%3E%3Cpath d='M0 146c42-18 76 18 118-2 28-14 42-10 64 5'/%3E%3C/g%3E%3C/svg%3E");
-          opacity: 0.38;
-          pointer-events: none;
-        }
-
-        .vpCaptureDetailPanelFrame {
-          position: relative;
-          z-index: 1;
-          width: min(100vw, 480px);
-          height: 100dvh;
-          max-height: 100dvh;
-          margin: 0 auto;
-          overflow: hidden;
         }
 
         .vpCaptureDetailCloseButton {
@@ -296,8 +519,8 @@ export default function CaptureDetailPanelPreview() {
           height: 44px;
           border: 1px solid rgba(255, 255, 255, 0.13);
           border-radius: 16px;
-          background: rgba(255, 255, 255, 0.04);
-          color: rgba(255, 255, 255, 0.92);
+          background: rgba(255, 255, 255, 0.035);
+          color: rgba(255, 255, 255, 0.9);
           box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
           backdrop-filter: blur(12px);
           display: flex;
@@ -312,21 +535,20 @@ export default function CaptureDetailPanelPreview() {
         }
 
         .vpCaptureDetailPanelShell {
-          width: 100%;
+          width: min(100vw, 460px);
           height: 100dvh;
-          min-height: 0;
-          max-height: 100dvh;
-          padding: max(12px, env(safe-area-inset-top)) 12px max(10px, env(safe-area-inset-bottom));
+          margin: 0 auto;
+          padding:
+            max(10px, env(safe-area-inset-top))
+            12px
+            max(22px, calc(env(safe-area-inset-bottom) + 18px));
           box-sizing: border-box;
           display: flex;
           flex-direction: column;
-          gap: 10px;
-          overflow: hidden;
+          gap: 7px;
         }
 
-        .vpCaptureDetailHeader,
-        .vpCaptureDetailPhotoCard,
-        .vpCaptureDetailInfoArea,
+        .vpCaptureDetailCard,
         .vpCaptureDetailFooter {
           background: linear-gradient(135deg, rgba(23, 31, 42, 0.88), rgba(10, 16, 23, 0.94));
           border: 1px solid rgba(148, 163, 184, 0.2);
@@ -336,123 +558,212 @@ export default function CaptureDetailPanelPreview() {
           backdrop-filter: blur(14px);
         }
 
-        .vpCaptureDetailHeader {
+        .vpCaptureDetailHeaderCard {
           flex: 0 0 auto;
           border-radius: 18px;
-          padding: 14px 64px 14px 16px;
+          min-height: 112px;
+          display: grid;
+          grid-template-columns: auto minmax(0, 1fr);
+          align-items: center;
+          gap: 14px;
+          padding: 14px 15px;
           box-sizing: border-box;
         }
 
-        .vpCaptureDetailTitleBlock {
-          min-width: 0;
-        }
-
-        .vpCaptureDetailTitleBlock span {
-          display: block;
-          color: rgba(226, 232, 240, 0.82);
-          font-size: 11px;
-          line-height: 1;
-          letter-spacing: 0.16em;
-          text-transform: uppercase;
-          font-weight: 840;
-        }
-
-        .vpCaptureDetailTitleBlock strong {
-          display: block;
-          margin-top: 8px;
+        .vpCaptureDetailPinIcon {
+          width: 52px;
+          height: 52px;
+          border-radius: 999px;
           color: #38bdf8;
-          font-size: clamp(34px, 9.2vw, 46px);
-          line-height: 0.92;
-          font-weight: 900;
-        }
-
-        .vpCaptureDetailLocationLine {
-          margin-top: 14px;
-          display: grid;
-          grid-template-columns: minmax(0, 1fr) auto;
-          align-items: center;
-          gap: 10px;
-        }
-
-        .vpCaptureDetailPlace {
-          min-width: 0;
           display: flex;
           align-items: center;
-          gap: 9px;
-          color: rgba(248, 250, 252, 0.92);
-          font-size: 16px;
-          line-height: 1.1;
+          justify-content: center;
+          background: rgba(14, 165, 233, 0.12);
+          box-shadow: 0 0 22px rgba(14, 165, 233, 0.18);
+        }
+
+        .vpCaptureDetailPinIcon svg {
+          width: 32px;
+          height: 32px;
+        }
+
+        .vpCaptureDetailHeaderText {
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .vpCaptureDetailHeaderText > span {
+          color: rgba(226, 232, 240, 0.72);
+          font-size: 11px;
+          line-height: 1;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
           font-weight: 720;
         }
 
-        .vpCaptureDetailPlace svg {
-          width: 20px;
-          height: 20px;
+        .vpCaptureDetailHeaderText > strong {
           color: #38bdf8;
-          flex: 0 0 auto;
-          filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.26));
-        }
-
-        .vpCaptureDetailPlace span {
-          min-width: 0;
+          font-size: clamp(24px, 6.7vw, 31px);
+          line-height: 1.04;
+          font-weight: 760;
+          white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
-          white-space: nowrap;
+          letter-spacing: -0.032em;
         }
 
-        .vpCaptureDetailCoordinates {
+        .vpCaptureDetailPlaceLine {
           min-width: 0;
-          min-height: 40px;
-          max-width: 100%;
-          border: 1px solid rgba(56, 189, 248, 0.34);
-          border-radius: 999px;
-          background: rgba(2, 6, 23, 0.34);
-          color: rgba(226, 246, 255, 0.96);
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          margin-top: 1px;
+        }
+
+        .vpCaptureDetailPlaceLine small {
+          min-width: 0;
+          color: rgba(226, 232, 240, 0.78);
+          font-size: clamp(13px, 3.35vw, 15px);
+          line-height: 1.18;
+          font-weight: 560;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .vpCaptureDetailCoordinatesRow {
+          min-width: 0;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          flex-wrap: wrap;
+          margin-top: 2px;
+        }
+
+        .vpCaptureDetailCoordinatesRow small {
+          color: rgba(226, 232, 240, 0.74);
+          font-size: clamp(12px, 3.15vw, 14px);
+          line-height: 1.1;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .vpCaptureDetailCopyButton {
+          border: 1px solid rgba(56, 189, 248, 0.36);
+          border-radius: 11px;
+          background: rgba(14, 165, 233, 0.08);
+          color: #7dd3fc;
+          height: 36px;
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          gap: 8px;
-          padding: 0 14px;
-          box-sizing: border-box;
-          box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.06),
-            0 0 24px rgba(14, 165, 233, 0.1);
+          gap: 6px;
+          padding: 0 10px;
+          font-size: 13px;
+          font-weight: 560;
+          cursor: pointer;
+          box-shadow: 0 0 16px rgba(14, 165, 233, 0.1);
+          white-space: nowrap;
+          transition:
+            border-color 160ms ease,
+            background 160ms ease,
+            color 160ms ease,
+            box-shadow 160ms ease;
         }
 
-        .vpCaptureDetailCoordinates svg {
+        .vpCaptureDetailCopyButton svg {
           width: 17px;
           height: 17px;
-          color: #67e8f9;
-          flex: 0 0 auto;
         }
 
-        .vpCaptureDetailCoordinates span {
-          font-size: 13px;
-          line-height: 1;
-          font-weight: 820;
-          white-space: nowrap;
+        .vpCaptureDetailCopyButton.isCopied {
+          border-color: rgba(34, 197, 94, 0.48);
+          background: rgba(34, 197, 94, 0.12);
+          color: #86efac;
+          box-shadow: 0 0 18px rgba(34, 197, 94, 0.14);
+        }
+
+        .vpCaptureDetailBodyScroll {
+          min-height: 0;
+          display: contents;
         }
 
         .vpCaptureDetailPhotoCard {
-          flex: 1 1 auto;
+          --vp-capture-photo-ratio: 4 / 3;
+          --vp-capture-photo-factor: 1.333333;
+          --vp-capture-photo-desktop-portrait-height: 430px;
+          --vp-capture-photo-mobile-portrait-height: 360px;
+          position: relative;
+          flex: 0 0 auto;
+          width: 100%;
+          height: auto;
           min-height: 0;
           border-radius: 18px;
           padding: 8px;
           box-sizing: border-box;
+          overflow: visible;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .vpCaptureDetailPhotoCard.isLandscape {
+          width: 100%;
+        }
+
+        .vpCaptureDetailPhotoCard.isPortrait {
+          width: min(
+            100%,
+            calc(var(--vp-capture-photo-desktop-portrait-height) * var(--vp-capture-photo-factor))
+          );
+          margin-left: auto;
+          margin-right: auto;
+        }
+
+        .vpCaptureDetailPhotoCard.isSquare,
+        .vpCaptureDetailPhotoCard.isUnknown {
+          width: min(100%, 360px);
+          margin-left: auto;
+          margin-right: auto;
+        }
+
+        .vpCaptureDetailPhotoMock,
+        .vpCaptureDetailPhotoRealFrame {
+          position: relative;
+          width: 100%;
+          height: auto;
+          aspect-ratio: var(--vp-capture-photo-ratio);
+          min-height: 0;
+          border-radius: 15px;
           overflow: hidden;
+          border: 1px solid rgba(125, 211, 252, 0.18);
+          background: #0f172a;
+          box-shadow: 0 0 22px rgba(56, 189, 248, 0.1);
+        }
+
+        .vpCaptureDetailPhotoBlur {
+          display: none;
+        }
+
+        .vpCaptureDetailPhotoImage {
+          position: relative;
+          z-index: 2;
+          display: block;
+          width: 100%;
+          height: 100%;
+          min-height: 0;
+          object-fit: contain;
+          object-position: center center;
+          background: #020617;
         }
 
         .vpCaptureDetailPhotoMock {
-          position: relative;
-          width: 100%;
-          height: 100%;
-          min-height: 300px;
-          border-radius: 14px;
-          overflow: hidden;
           background:
-            linear-gradient(180deg, #7dd3fc 0%, #bae6fd 34%, #38bdf8 34.5%, #0369a1 40%, #15803d 40.5%, #65a30d 100%);
-          border: 1px solid rgba(125, 211, 252, 0.18);
-          box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+            radial-gradient(circle at 25% 35%, rgba(14, 165, 233, 0.36), transparent 36%),
+            linear-gradient(135deg, rgba(12, 74, 110, 0.82), rgba(2, 6, 23, 0.95));
         }
 
         .vpCaptureDetailPhotoSky {
@@ -463,16 +774,16 @@ export default function CaptureDetailPanelPreview() {
             radial-gradient(circle at 33% 28%, rgba(255, 255, 255, 0.8) 0 8%, transparent 9%),
             radial-gradient(circle at 72% 22%, rgba(255, 255, 255, 0.78) 0 7%, transparent 8%),
             linear-gradient(180deg, #38bdf8 0%, #bae6fd 100%);
-          opacity: 0.92;
+          opacity: 0.65;
         }
 
         .vpCaptureDetailPhotoGrass {
           position: absolute;
           inset: 43% -10% -8%;
           background:
-            radial-gradient(circle at 76% 32%, rgba(21, 128, 61, 0.95), transparent 28%),
-            radial-gradient(circle at 20% 52%, rgba(132, 204, 22, 0.9), transparent 32%),
-            linear-gradient(135deg, #166534, #65a30d);
+            radial-gradient(circle at 76% 32%, rgba(21, 128, 61, 0.82), transparent 28%),
+            radial-gradient(circle at 20% 52%, rgba(132, 204, 22, 0.72), transparent 32%),
+            linear-gradient(135deg, #166534, #0f172a);
         }
 
         .vpCaptureDetailPhotoPerson {
@@ -575,16 +886,8 @@ export default function CaptureDetailPanelPreview() {
           overflow-y: auto;
           overscroll-behavior: contain;
           -webkit-overflow-scrolling: touch;
+          scrollbar-color: rgba(125, 211, 252, 0.45) rgba(15, 23, 42, 0.55);
           scrollbar-width: thin;
-        }
-
-        .vpCaptureDetailInfoArea::-webkit-scrollbar {
-          width: 4px;
-        }
-
-        .vpCaptureDetailInfoArea::-webkit-scrollbar-thumb {
-          background: rgba(56, 189, 248, 0.42);
-          border-radius: 999px;
         }
 
         .vpCaptureDetailStatsGrid {
@@ -596,12 +899,12 @@ export default function CaptureDetailPanelPreview() {
         .vpCaptureDetailStatCard {
           min-width: 0;
           min-height: 82px;
-          border: 1px solid rgba(56, 189, 248, 0.14);
-          border-radius: 14px;
-          background:
-            radial-gradient(circle at 0% 0%, rgba(56, 189, 248, 0.08), transparent 34%),
-            rgba(2, 6, 23, 0.32);
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(148, 163, 184, 0.16);
+          border-radius: 16px;
+          background: rgba(3, 10, 20, 0.46);
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.035),
+            0 10px 22px rgba(0, 0, 0, 0.16);
           padding: 12px;
           box-sizing: border-box;
           display: flex;
@@ -622,13 +925,13 @@ export default function CaptureDetailPanelPreview() {
           align-items: center;
           justify-content: center;
           background: rgba(14, 165, 233, 0.1);
-          color: #38bdf8;
-          box-shadow: 0 0 22px rgba(14, 165, 233, 0.09);
+          color: #7dd3fc;
+          box-shadow: 0 0 22px rgba(56, 189, 248, 0.1);
         }
 
         .vpCaptureDetailStatIcon svg {
-          width: 27px;
-          height: 27px;
+          width: 26px;
+          height: 26px;
         }
 
         .vpCaptureDetailStatText {
@@ -642,16 +945,17 @@ export default function CaptureDetailPanelPreview() {
           line-height: 1;
           letter-spacing: 0.12em;
           text-transform: uppercase;
-          font-weight: 880;
+          font-weight: 680;
         }
 
         .vpCaptureDetailStatText strong {
           display: block;
           margin-top: 8px;
           color: #ffffff;
-          font-size: 21px;
-          line-height: 1.05;
-          font-weight: 900;
+          font-size: clamp(17px, 4.25vw, 20px);
+          line-height: 1.08;
+          font-weight: 660;
+          letter-spacing: -0.018em;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
@@ -666,60 +970,83 @@ export default function CaptureDetailPanelPreview() {
           border-radius: 16px;
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 10px;
-          padding: 10px;
+          gap: 9px;
+          padding: 9px;
           box-sizing: border-box;
         }
 
         .vpCaptureDetailShareButton,
         .vpCaptureDetailDeleteButton {
-          min-height: 52px;
+          min-height: 54px;
           border-radius: 14px;
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          gap: 10px;
+          gap: 8px;
           padding: 0 12px;
-          font-size: 16px;
+          font-size: clamp(16px, 4.1vw, 18px);
           line-height: 1;
-          font-weight: 900;
+          font-weight: 680;
           cursor: pointer;
-          white-space: nowrap;
           border: 1px solid transparent;
           box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.13);
+          white-space: nowrap;
         }
 
         .vpCaptureDetailShareButton svg,
         .vpCaptureDetailDeleteButton svg {
-          width: 21px;
-          height: 21px;
+          width: 19px;
+          height: 19px;
           flex: 0 0 auto;
         }
 
         .vpCaptureDetailShareButton {
           color: #ffffff;
-          background: linear-gradient(135deg, rgba(5, 150, 105, 0.96), rgba(6, 95, 70, 0.96));
-          border-color: rgba(45, 212, 191, 0.38);
+          background: linear-gradient(135deg, rgba(37, 99, 235, 0.96), rgba(29, 78, 216, 0.9));
+          border-color: rgba(125, 211, 252, 0.42);
           box-shadow:
-            0 0 28px rgba(20, 184, 166, 0.17),
+            0 0 28px rgba(37, 99, 235, 0.28),
             inset 0 1px 0 rgba(255, 255, 255, 0.16);
         }
 
         .vpCaptureDetailDeleteButton {
           color: #fecaca;
-          background: linear-gradient(135deg, rgba(88, 19, 23, 0.78), rgba(42, 10, 16, 0.9));
+          background: linear-gradient(135deg, rgba(69, 10, 10, 0.82), rgba(35, 6, 13, 0.88));
           border-color: rgba(248, 113, 113, 0.42);
           box-shadow:
             0 0 24px rgba(239, 68, 68, 0.14),
             inset 0 1px 0 rgba(255, 255, 255, 0.08);
         }
 
-        .vpCaptureDetailCloseButton svg,
-        .vpCaptureDetailPlace svg,
-        .vpCaptureDetailCoordinates svg,
+        .vpCaptureDetailShareOptions {
+          grid-column: 1 / -1;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 8px;
+          border-radius: 13px;
+          border: 1px solid rgba(148, 163, 184, 0.16);
+          background: rgba(3, 10, 20, 0.46);
+          padding: 8px;
+        }
+
+        .vpCaptureDetailShareOptions button {
+          min-height: 44px;
+          border: 1px solid rgba(56, 189, 248, 0.28);
+          border-radius: 11px;
+          background: rgba(14, 165, 233, 0.08);
+          color: #7dd3fc;
+          font-size: 13px;
+          line-height: 1;
+          font-weight: 720;
+          cursor: pointer;
+        }
+
+        .vpCaptureDetailPinIcon svg,
+        .vpCaptureDetailCopyButton svg,
         .vpCaptureDetailStatIcon svg,
         .vpCaptureDetailShareButton svg,
-        .vpCaptureDetailDeleteButton svg {
+        .vpCaptureDetailDeleteButton svg,
+        .vpCaptureDetailCloseButton svg {
           fill: none;
           stroke: currentColor;
           stroke-width: 3;
@@ -728,84 +1055,462 @@ export default function CaptureDetailPanelPreview() {
         }
 
         @media (max-width: 767px) {
-          .vpCaptureDetailLocationLine {
-            grid-template-columns: 1fr;
-            align-items: stretch;
-            gap: 9px;
+          .vpCaptureDetailPreview {
+            height: 100svh;
+            min-height: 100svh;
+            max-height: 100svh;
+            overflow: hidden;
           }
 
-          .vpCaptureDetailPlace {
+          .vpCaptureDetailPanelFrame {
             width: 100%;
-            font-size: 16px;
+            height: 100%;
+            min-height: 0;
           }
 
-          .vpCaptureDetailPlace span {
-            white-space: normal;
-            overflow: visible;
-            text-overflow: clip;
-          }
-
-          .vpCaptureDetailCoordinates {
-            width: fit-content;
-            max-width: 100%;
-            justify-content: flex-start;
-            min-height: 34px;
-            padding: 0 11px;
-          }
-
-          .vpCaptureDetailCoordinates span {
-            font-size: 12.5px;
-          }
-        }
-
-        @media (max-width: 420px) {
           .vpCaptureDetailPanelShell {
-            gap: 7px;
-            padding-left: 10px;
-            padding-right: 10px;
+            width: min(100vw, 460px);
+            height: 100%;
+            min-height: 0;
+            max-height: 100svh;
+            padding:
+              max(10px, env(safe-area-inset-top))
+              10px
+              max(64px, calc(env(safe-area-inset-bottom) + 54px));
+            display: grid;
+            grid-template-rows: auto minmax(0, 1fr) auto;
+            gap: 8px;
+            overflow: hidden;
           }
 
-          .vpCaptureDetailHeader {
-            padding: 13px 60px 13px 15px;
+          .vpCaptureDetailHeaderCard {
+            grid-row: 1;
+            min-height: 106px;
+            gap: 12px;
+            padding: 12px 14px;
+            border-radius: 20px;
           }
 
-          .vpCaptureDetailTitleBlock strong {
-            font-size: clamp(32px, 10vw, 42px);
+          .vpCaptureDetailPinIcon {
+            width: 44px;
+            height: 44px;
           }
 
-          .vpCaptureDetailCoordinates span {
+          .vpCaptureDetailPinIcon svg {
+            width: 28px;
+            height: 28px;
+          }
+
+          .vpCaptureDetailHeaderText {
+            gap: 3px;
+          }
+
+          .vpCaptureDetailHeaderText > span {
+            font-size: 10.5px;
+          }
+
+          .vpCaptureDetailHeaderText > strong {
+            font-size: clamp(21px, 6.4vw, 27px);
+            max-width: calc(100vw - 148px);
+          }
+
+          .vpCaptureDetailPlaceLine small {
+            font-size: 14px;
+          }
+
+          .vpCaptureDetailCoordinatesRow {
+            gap: 9px;
+            margin-top: 3px;
+          }
+
+          .vpCaptureDetailCoordinatesRow small {
+            font-size: 13px;
+          }
+
+          .vpCaptureDetailCopyButton {
+            height: 34px;
+            padding: 0 10px;
             font-size: 12.5px;
           }
 
-          .vpCaptureDetailPhotoMock {
-            min-height: 260px;
+          .vpCaptureDetailBodyScroll {
+            grid-row: 2;
+            min-height: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding-bottom: 2px;
+          }
+
+          .vpCaptureDetailBodyScroll.isPortrait,
+          .vpCaptureDetailBodyScroll.isUnknown {
+            display: grid;
+            grid-template-columns: minmax(128px, 0.82fr) minmax(0, 1.18fr);
+            align-items: start;
+            gap: 8px;
+          }
+
+          .vpCaptureDetailPhotoCard {
+            --vp-capture-photo-mobile-portrait-height: min(330px, 40svh);
+            height: auto;
+            min-height: 0;
+            padding: 7px;
+            align-self: center;
+          }
+
+          .vpCaptureDetailPhotoCard.isLandscape {
+            width: 100%;
+            max-width: 100%;
+          }
+
+          .vpCaptureDetailPhotoCard.isPortrait {
+            width: min(
+              62vw,
+              230px,
+              calc(var(--vp-capture-photo-mobile-portrait-height) * var(--vp-capture-photo-factor))
+            );
+            max-width: 230px;
+          }
+
+          .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailPhotoCard,
+          .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailPhotoCard {
+            width: 100%;
+            max-width: 168px;
+            justify-self: end;
+            align-self: start;
+            margin-left: 0;
+            margin-right: 0;
+          }
+
+          .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailPhotoCard .vpCaptureDetailPhotoRealFrame,
+          .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailPhotoCard .vpCaptureDetailPhotoRealFrame {
+            width: 100%;
+            height: auto;
+            aspect-ratio: var(--vp-capture-photo-ratio);
+          }
+
+          .vpCaptureDetailPhotoCard.isSquare,
+          .vpCaptureDetailPhotoCard.isUnknown {
+            width: min(78vw, 292px);
+            max-width: 292px;
+          }
+
+          .vpCaptureDetailPhotoMock,
+          .vpCaptureDetailPhotoRealFrame,
+          .vpCaptureDetailPhotoImage {
+            min-height: 0;
           }
 
           .vpCaptureDetailInfoArea {
-            max-height: 39dvh;
+            min-height: 0;
+            max-height: none;
             padding: 8px;
+            overflow: visible;
+          }
+
+          .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailInfoArea,
+          .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailInfoArea {
+            width: 100%;
+            min-width: 0;
+            max-height: none;
+            padding: 6px;
+            align-self: start;
+            overflow: visible;
+          }
+
+          .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailStatsGrid,
+          .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailStatsGrid {
+            grid-template-columns: 1fr;
+            gap: 6px;
+            padding-bottom: 0;
+          }
+
+          .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailFull,
+          .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailFull {
+            grid-column: auto;
+          }
+
+          .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailStatCard,
+          .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailStatCard {
+            min-height: 52px;
+            padding: 7px 8px;
+            gap: 8px;
+            border-radius: 14px;
+          }
+
+          .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailStatIcon,
+          .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailStatIcon {
+            width: 32px;
+            height: 32px;
+            border-radius: 12px;
+          }
+
+          .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailStatIcon svg,
+          .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailStatIcon svg {
+            width: 19px;
+            height: 19px;
+          }
+
+          .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailStatText span,
+          .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailStatText span {
+            font-size: 9.3px;
+            letter-spacing: 0.095em;
+          }
+
+          .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailStatText strong,
+          .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailStatText strong {
+            margin-top: 5px;
+            font-size: 14px;
+            line-height: 1.08;
+          }
+
+          .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailFull .vpCaptureDetailStatText strong,
+          .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailFull .vpCaptureDetailStatText strong {
+            display: -webkit-box;
+            overflow: hidden;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            white-space: normal;
+          }
+
+          .vpCaptureDetailStatsGrid {
+            gap: 8px;
+            padding-bottom: 2px;
           }
 
           .vpCaptureDetailStatCard {
-            min-height: 76px;
-            padding: 10px;
-            gap: 10px;
-          }
-
-          .vpCaptureDetailStatIcon {
-            width: 42px;
-            height: 42px;
+            min-height: 64px;
+            padding: 8px 9px;
+            gap: 9px;
             border-radius: 15px;
           }
 
+          .vpCaptureDetailStatIcon {
+            width: 38px;
+            height: 38px;
+            border-radius: 14px;
+          }
+
+          .vpCaptureDetailStatIcon svg {
+            width: 23px;
+            height: 23px;
+          }
+
+          .vpCaptureDetailStatText span {
+            font-size: 10.5px;
+            letter-spacing: 0.115em;
+          }
+
           .vpCaptureDetailStatText strong {
-            font-size: 19px;
+            margin-top: 7px;
+            font-size: clamp(16px, 4vw, 18px);
+            line-height: 1.08;
+          }
+
+          .vpCaptureDetailFooter {
+            grid-row: 3;
+            min-height: 62px;
+            border-radius: 18px;
+            gap: 9px;
+            padding: 8px;
+            margin: 0;
+            align-self: end;
           }
 
           .vpCaptureDetailShareButton,
           .vpCaptureDetailDeleteButton {
-            min-height: 50px;
+            min-height: 46px;
             font-size: 15px;
+            padding: 0 8px;
+            border-radius: 14px;
+          }
+
+          .vpCaptureDetailShareButton svg,
+          .vpCaptureDetailDeleteButton svg {
+            width: 17px;
+            height: 17px;
+          }
+
+          /* MOBILE ONLY: ficha lateral para foto vertical/desconhecida */
+          .vpCaptureDetailBodyScroll.isPortrait,
+          .vpCaptureDetailBodyScroll.isUnknown {
+            display: grid;
+            grid-template-columns: minmax(128px, 0.82fr) minmax(0, 1.18fr);
+            align-items: start;
+            gap: 8px;
+          }
+
+          .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailPhotoCard,
+          .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailPhotoCard {
+            width: 100%;
+            max-width: 168px;
+            justify-self: end;
+            align-self: start;
+            margin-left: 0;
+            margin-right: 0;
+          }
+
+          .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailInfoArea,
+          .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailInfoArea {
+            width: 100%;
+            min-width: 0;
+            max-height: none;
+            padding: 6px;
+            align-self: start;
+            overflow: visible;
+          }
+
+          .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailStatsGrid,
+          .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailStatsGrid {
+            grid-template-columns: 1fr;
+            gap: 6px;
+            padding-bottom: 0;
+          }
+
+          .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailFull,
+          .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailFull {
+            grid-column: auto;
+          }
+
+          .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailStatCard,
+          .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailStatCard {
+            min-height: 52px;
+            padding: 7px 8px;
+            gap: 8px;
+            border-radius: 14px;
+          }
+
+          .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailStatIcon,
+          .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailStatIcon {
+            width: 32px;
+            height: 32px;
+            border-radius: 12px;
+          }
+
+          .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailStatIcon svg,
+          .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailStatIcon svg {
+            width: 19px;
+            height: 19px;
+          }
+
+          .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailStatText span,
+          .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailStatText span {
+            font-size: 9.3px;
+            letter-spacing: 0.095em;
+          }
+
+          .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailStatText strong,
+          .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailStatText strong {
+            margin-top: 5px;
+            font-size: 14px;
+            line-height: 1.08;
+          }
+
+          .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailFull .vpCaptureDetailStatText strong,
+          .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailFull .vpCaptureDetailStatText strong {
+            display: -webkit-box;
+            overflow: hidden;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            white-space: normal;
+          }
+
+          .vpCaptureDetailBodyScroll.isLandscape {
+            display: flex;
+            flex-direction: column;
+          }
+
+          /* MOBILE ONLY: ficha lateral definitiva para foto vertical */
+          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isPortrait,
+          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isUnknown {
+            display: grid !important;
+            grid-template-columns: minmax(142px, 0.88fr) minmax(0, 1.12fr);
+            align-items: start;
+            column-gap: 8px;
+            row-gap: 8px;
+          }
+
+          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailPhotoCard,
+          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailPhotoCard {
+            grid-column: 1;
+            grid-row: 1;
+            width: 100% !important;
+            max-width: 174px !important;
+            justify-self: end;
+            align-self: start;
+            margin: 0;
+          }
+
+          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailInfoArea,
+          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailInfoArea {
+            grid-column: 2;
+            grid-row: 1;
+            width: 100%;
+            min-width: 0;
+            max-height: none;
+            padding: 6px;
+            align-self: start;
+            overflow: visible;
+          }
+
+          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailStatsGrid,
+          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailStatsGrid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 6px;
+            padding-bottom: 0;
+          }
+
+          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailFull,
+          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailFull {
+            grid-column: auto;
+          }
+
+          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailStatCard,
+          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailStatCard {
+            min-height: 52px;
+            padding: 7px 8px;
+            gap: 8px;
+            border-radius: 14px;
+          }
+
+          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailStatIcon,
+          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailStatIcon {
+            width: 32px;
+            height: 32px;
+            border-radius: 12px;
+          }
+
+          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailStatIcon svg,
+          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailStatIcon svg {
+            width: 19px;
+            height: 19px;
+          }
+
+          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailStatText span,
+          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailStatText span {
+            font-size: 9.3px;
+            letter-spacing: 0.095em;
+          }
+
+          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailStatText strong,
+          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailStatText strong {
+            margin-top: 5px;
+            font-size: 14px;
+            line-height: 1.08;
+          }
+
+          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailFull .vpCaptureDetailStatText strong,
+          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailFull .vpCaptureDetailStatText strong {
+            display: -webkit-box;
+            overflow: hidden;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            white-space: normal;
           }
         }
 
@@ -817,20 +1522,20 @@ export default function CaptureDetailPanelPreview() {
             padding: 24px;
             box-sizing: border-box;
             background:
-              radial-gradient(circle at 50% 12%, rgba(34, 211, 238, 0.1), transparent 38%),
+              radial-gradient(circle at 50% 12%, rgba(14, 165, 233, 0.12), transparent 38%),
               radial-gradient(circle at 50% 50%, rgba(15, 23, 42, 0.2), transparent 58%),
               rgba(2, 8, 15, 0.58);
             backdrop-filter: blur(2px);
           }
 
           .vpCaptureDetailPanelFrame {
+            position: relative;
             width: min(88vw, 900px);
-            height: auto;
+            height: min(78dvh, 680px);
             max-height: calc(100dvh - 96px);
             display: flex;
             justify-content: center;
-            align-items: center;
-            overflow: visible;
+            align-items: stretch;
           }
 
           .vpCaptureDetailCloseButton {
@@ -845,7 +1550,7 @@ export default function CaptureDetailPanelPreview() {
 
           .vpCaptureDetailPanelShell {
             width: 100%;
-            height: auto;
+            height: 100%;
             max-height: calc(100dvh - 96px);
             padding: 14px;
             display: grid;
@@ -861,36 +1566,84 @@ export default function CaptureDetailPanelPreview() {
             box-sizing: border-box;
           }
 
-          .vpCaptureDetailHeader {
-            grid-column: 1 / -1;
-            padding: 22px 28px;
+          .vpCaptureDetailCard,
+          .vpCaptureDetailFooter {
+            background: rgba(10, 18, 30, 0.82);
+            border: 1px solid rgba(148, 163, 184, 0.18);
           }
 
-          .vpCaptureDetailTitleBlock span {
+          .vpCaptureDetailHeaderCard {
+            grid-column: 1 / -1;
+            min-height: 92px;
+            padding: 16px 18px;
+            border-radius: 18px;
+            gap: 16px;
+          }
+
+          .vpCaptureDetailPinIcon {
+            width: 52px;
+            height: 52px;
+          }
+
+          .vpCaptureDetailHeaderText > span {
             font-size: 12px;
           }
 
-          .vpCaptureDetailTitleBlock strong {
-            font-size: 48px;
+          .vpCaptureDetailHeaderText > strong {
+            font-size: 27px;
           }
 
-          .vpCaptureDetailLocationLine {
-            grid-template-columns: minmax(0, 1fr) auto;
+          .vpCaptureDetailPlaceLine small,
+          .vpCaptureDetailCoordinatesRow small {
+            font-size: 14px;
           }
 
-          .vpCaptureDetailPlace {
-            font-size: 16px;
+          .vpCaptureDetailBodyScroll {
+            display: contents;
           }
 
           .vpCaptureDetailPhotoCard {
+            --vp-capture-photo-desktop-portrait-height: min(430px, calc(100dvh - 250px));
             grid-column: 1;
             grid-row: 2 / 4;
-            min-height: 490px;
+            height: auto;
+            min-height: 0;
             padding: 10px;
+            align-self: start;
+            justify-self: center;
           }
 
-          .vpCaptureDetailPhotoMock {
-            min-height: 490px;
+          .vpCaptureDetailPhotoCard.isLandscape {
+            width: 100%;
+            max-width: 100%;
+          }
+
+          .vpCaptureDetailPhotoCard.isSquare {
+            width: min(100%, 410px);
+            max-width: 410px;
+          }
+
+          .vpCaptureDetailPhotoCard.isPortrait,
+          .vpCaptureDetailPhotoCard.isUnknown {
+            width: min(
+              100%,
+              250px,
+              calc(var(--vp-capture-photo-desktop-portrait-height) * var(--vp-capture-photo-factor))
+            );
+            max-width: 250px;
+          }
+
+          .vpCaptureDetailPhotoMock,
+          .vpCaptureDetailPhotoRealFrame,
+          .vpCaptureDetailPhotoImage {
+            min-height: 0;
+          }
+
+          .vpCaptureDetailPhotoCard.isLandscape .vpCaptureDetailPhotoImage,
+          .vpCaptureDetailPhotoCard.isSquare .vpCaptureDetailPhotoImage,
+          .vpCaptureDetailPhotoCard.isPortrait .vpCaptureDetailPhotoImage,
+          .vpCaptureDetailPhotoCard.isUnknown .vpCaptureDetailPhotoImage {
+            object-fit: contain;
           }
 
           .vpCaptureDetailInfoArea {
@@ -899,18 +1652,22 @@ export default function CaptureDetailPanelPreview() {
             max-height: none;
             min-height: 0;
             padding: 12px;
+            overflow-y: auto;
           }
 
           .vpCaptureDetailFooter {
             grid-column: 2;
             grid-row: 3;
+            border-radius: 18px;
+            gap: 14px;
             padding: 10px;
           }
 
           .vpCaptureDetailShareButton,
           .vpCaptureDetailDeleteButton {
             min-height: 56px;
-            font-size: 16px;
+            border-radius: 15px;
+            font-size: 18px;
           }
         }
       `}</style>

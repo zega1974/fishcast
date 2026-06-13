@@ -21,6 +21,7 @@ import { useEffect, useRef, useState } from "react";
 import OfficialFreePanelPreview from "@/components/OfficialFreePanelPreview";
 import AddCapturePanel from "@/components/AddCapturePanel";
 import AddPlacePanel from "@/components/AddPlacePanel";
+import CaptureDetailPanelPreview from "@/components/CaptureDetailPanelPreview";
 import CaptureSpotPanelPreview from "@/components/CaptureSpotPanelPreview";
 import PlaceCapturesPanelPreview from "@/components/PlaceCapturesPanelPreview";
 import MyCapturesPanelPreview, { type MyCapturesPanelCapture } from "@/components/MyCapturesPanelPreview";
@@ -105,9 +106,6 @@ const mapModes: { id: MapMode; label: string; iconName: PreviewIconName }[] = [
   { id: "nautical", label: "Náutico", iconName: "anchor" },
   { id: "night", label: "Noturno", iconName: "night" },
 ];
-
-const infoLabelClass =
-  "text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-200/80";
 
 const MARKER_ICON_SIZE = 52;
 const OFFICIAL_SPOT_MARKER_ICON_SIZE = 45;
@@ -599,10 +597,6 @@ function MeasurementLayer({ points }: { points: MeasurementPoint[] }) {
   );
 }
 
-function stopPanelEvent(event: { stopPropagation: () => void }) {
-  event.stopPropagation();
-}
-
 const paranaCenter: [number, number] = [-25.25, -51.15];
 const vouPescarDefaultBounds: L.LatLngBoundsExpression = [
   [-26.75, -54.75],
@@ -887,32 +881,6 @@ function HomeMapViewController({ personalPlaces }: { personalPlaces: PersonalPla
   }, [map, personalPlaces]);
 
   return null;
-}
-
-function CoordinatesBadge({
-  lat,
-  lng,
-  precision = 6,
-  label = "Coordenadas",
-}: {
-  lat: number;
-  lng: number;
-  precision?: number;
-  label?: string;
-}) {
-  return (
-    <div className="shrink-0 rounded-sm border border-cyan-200/16 bg-black/28 px-2.5 py-1.5 text-right shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-      <p className="text-[8px] font-black uppercase tracking-[0.12em] text-cyan-100/70 sm:text-[9px]">
-        {label}
-      </p>
-      <p className="mt-1 font-mono text-[10px] font-black leading-tight text-white sm:text-xs">
-        Lat {lat.toFixed(precision)}
-      </p>
-      <p className="font-mono text-[10px] font-black leading-tight text-white sm:text-xs">
-        Lng {lng.toFixed(precision)}
-      </p>
-    </div>
-  );
 }
 
 function readStoredPersonalPlaces() {
@@ -2103,159 +2071,34 @@ export default function Map() {
         />
       )}
       {selectedCaptureView && (
-        <div
-          className="map-control-overlay fixed inset-0 z-[7000] flex items-stretch justify-center bg-black/62 p-0 text-white backdrop-blur-[2px] sm:items-center sm:bg-black/45 sm:p-6"
-          onClick={stopPanelEvent}
-          onPointerDown={stopPanelEvent}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Minha captura"
-        >
-          <div
-            className="flex h-full w-full flex-col overflow-hidden border border-cyan-300/18 bg-[#020a14]/97 shadow-[0_24px_70px_rgba(0,0,0,0.62),0_0_34px_rgba(34,211,238,0.18)] backdrop-blur-xl sm:h-[min(760px,calc(100vh-96px))] sm:max-w-[520px] sm:rounded-2xl"
-            onClick={stopPanelEvent}
-            onPointerDown={stopPanelEvent}
-          >
-            <div className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3 border-b border-white/10 bg-black/18 px-3 pb-3 pt-3 sm:px-4 sm:pb-3 sm:pt-4">
-              <div className="min-w-0">
-                <p className="text-[11px] font-black uppercase tracking-[0.22em] text-emerald-200">
-                  Minha captura
-                </p>
-                <h2 className="mt-1 line-clamp-1 text-2xl font-black leading-tight text-white sm:text-3xl">
-                  {selectedCaptureView.species || "Espécie não informada"}
-                </h2>
-                <p className="mt-1 line-clamp-1 text-xs font-bold text-cyan-100/80 sm:text-sm">
-                  📍 {selectedCapturePlaceLabel}
-                </p>
-              </div>
-              <button
-                onClick={closeSelectedCapture}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-emerald-300/45 bg-black/70 text-2xl font-black text-white shadow-[0_0_18px_rgba(16,185,129,0.22)] backdrop-blur-md transition hover:bg-black/85 sm:h-12 sm:w-12"
-                aria-label="Fechar captura"
-              >
-                ×
-              </button>
-            </div>
-            <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 sm:px-4 sm:py-4">
-              <div className="space-y-3">
-                <div
-                  className={`flex items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-[#020617] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] ${
-                    shareOptionsCaptureId === selectedCaptureView.id
-                      ? "h-[clamp(150px,28vh,260px)] sm:h-[clamp(220px,38vh,360px)]"
-                      : "h-[clamp(220px,42vh,390px)] sm:h-[clamp(260px,48vh,430px)]"
-                  }`}
-                >
-                  {selectedCaptureView.photo ? (
-                    <img
-                      src={selectedCaptureView.photo}
-                      alt="Foto da captura"
-                      className="h-full w-full object-contain"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_50%_25%,rgba(34,197,94,0.36),transparent_42%),linear-gradient(135deg,#052e1c,#020617_58%,#000)] px-6 text-center">
-                      <p className="text-sm font-black uppercase tracking-[0.18em] text-emerald-100/75">
-                        Sem foto salva
-                      </p>
-                    </div>
-                  )}
-                </div>
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-stretch">
-                  <div className="rounded-xl border border-emerald-300/15 bg-black/25 p-3">
-                    <p className={infoLabelClass}>Local</p>
-                    <p className="mt-1 text-sm font-black leading-snug text-white sm:text-base">
-                      📍 {selectedCapturePlaceLabel}
-                    </p>
-                  </div>
-                  <CoordinatesBadge lat={selectedCaptureView.lat} lng={selectedCaptureView.lng} />
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="min-h-16 rounded-xl border border-emerald-300/15 bg-black/25 p-2.5">
-                    <p className={infoLabelClass}>Peso</p>
-                    <p className="mt-1 truncate text-sm font-black text-white">
-                      {selectedCaptureView.weight ? `${selectedCaptureView.weight} kg` : "--"}
-                    </p>
-                  </div>
-                  <div className="min-h-16 rounded-xl border border-emerald-300/15 bg-black/25 p-2.5">
-                    <p className={infoLabelClass}>Tamanho</p>
-                    <p className="mt-1 truncate text-sm font-black text-white">
-                      {selectedCaptureView.size ? `${selectedCaptureView.size} cm` : "--"}
-                    </p>
-                  </div>
-                  <div className="min-h-16 rounded-xl border border-emerald-300/15 bg-black/25 p-2.5">
-                    <p className={infoLabelClass}>Isca</p>
-                    <p className="mt-1 truncate text-sm font-black text-white">
-                      {selectedCaptureView.bait || "--"}
-                    </p>
-                  </div>
-                </div>
-                <div className="rounded-xl border border-emerald-300/15 bg-black/25 p-3">
-                  <p className={infoLabelClass}>Data/hora</p>
-                  <p className="mt-1 text-sm font-black leading-snug text-white sm:text-base">
-                    {formatCaptureDate(selectedCaptureView.capturedAt)}
-                  </p>
-                </div>
-                <div className="rounded-xl border border-emerald-300/15 bg-black/25 p-3">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-400">
-                    Observações
-                  </p>
-                  <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-relaxed text-zinc-200">
-                    {selectedCaptureView.comment || "Sem observações adicionadas."}
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className="shrink-0 border-t border-white/10 bg-[#020a14]/98 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 sm:px-4 sm:pb-4">
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShareOptionsCaptureId((current) =>
-                      current === selectedCaptureView.id ? null : selectedCaptureView.id
-                    );
-                  }}
-                  className="flex min-h-[54px] w-full items-center justify-center rounded-xl border border-emerald-300/35 bg-emerald-400/18 px-3 py-2 text-center text-sm font-black leading-tight text-emerald-100 shadow-[0_0_24px_rgba(16,185,129,0.14)] transition hover:bg-emerald-400/25 sm:min-h-16 sm:px-5 sm:py-4 sm:text-base"
-                >
-                  {shareFeedback?.captureId === selectedCaptureView.id ? shareFeedback.message : "Compartilhar"}
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const confirmed = window.confirm("Deseja realmente apagar esta captura?");
-                    if (!confirmed) {
-                      return;
-                    }
-                    deleteCapture(selectedCaptureView.id);
-                  }}
-                  className="flex min-h-[54px] w-full items-center justify-center rounded-xl border border-red-300/20 bg-red-500/15 px-3 py-2 text-center text-sm font-black leading-tight text-red-100 transition hover:bg-red-500/25 sm:min-h-16 sm:px-5 sm:py-4 sm:text-base"
-                >
-                  Apagar
-                </button>
-              </div>
-              {shareOptionsCaptureId === selectedCaptureView.id && (
-                <div className="mt-2 grid min-w-0 grid-cols-2 gap-2 rounded-xl border border-yellow-300/20 bg-yellow-300/5 p-2">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      void shareCapture(selectedCaptureView, "complete");
-                    }}
-                    className="flex min-h-[54px] w-full items-center justify-center whitespace-normal rounded-xl border border-emerald-300/25 bg-emerald-400/15 px-2 py-2 text-center text-[13px] font-black leading-tight text-emerald-100 transition hover:bg-emerald-400/25 sm:min-h-16 sm:px-5 sm:py-4 sm:text-base"
-                  >
-                    Compartilhar completo
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      void shareCapture(selectedCaptureView, "secret");
-                    }}
-                    className="flex min-h-[54px] w-full items-center justify-center whitespace-normal rounded-xl border border-cyan-300/25 bg-cyan-400/15 px-2 py-2 text-center text-[13px] font-black leading-tight text-cyan-100 transition hover:bg-cyan-400/25 sm:min-h-16 sm:px-5 sm:py-4 sm:text-base"
-                  >
-                    Compartilhar secreto
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <CaptureDetailPanelPreview
+          capture={selectedCaptureView}
+          placeLabel={selectedCapturePlaceLabel}
+          coordinatesText={`${selectedCaptureView.lat.toFixed(6)}, ${selectedCaptureView.lng.toFixed(6)}`}
+          formattedDate={formatCaptureDate(selectedCaptureView.capturedAt).replace(/^📅\s*/, "")}
+          shareFeedback={
+            shareFeedback?.captureId === selectedCaptureView.id ? shareFeedback.message : null
+          }
+          shareOptionsOpen={shareOptionsCaptureId === selectedCaptureView.id}
+          onClose={closeSelectedCapture}
+          onToggleShareOptions={() => {
+            setShareOptionsCaptureId((current) =>
+              current === selectedCaptureView.id ? null : selectedCaptureView.id
+            );
+          }}
+          onShare={(shareMode) => {
+            void shareCapture(selectedCaptureView, shareMode);
+          }}
+          onDelete={() => {
+            const confirmed = window.confirm("Deseja realmente apagar esta captura?");
+
+            if (!confirmed) {
+              return;
+            }
+
+            deleteCapture(selectedCaptureView.id);
+          }}
+        />
       )}
 
           <MapContainer
@@ -2526,5 +2369,3 @@ export default function Map() {
     </div>
   );
 }
-
-
