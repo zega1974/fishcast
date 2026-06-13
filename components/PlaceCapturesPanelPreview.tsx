@@ -23,6 +23,7 @@ type PlaceCapturesPanelPreviewProps = {
   place?: {
     id: number | string;
     name: string;
+    note?: string;
     coordinates: string;
   };
   captures?: PreviewCapture[];
@@ -325,13 +326,17 @@ function FishThumb({ kind }: { kind: PreviewCapture['kind'] }) {
 
 function PlaceHeaderCard({
   name,
+  note,
   coordinates,
   onOpenSpotData,
 }: {
   name: string;
+  note?: string;
   coordinates: string;
   onOpenSpotData?: () => void;
 }) {
+  const placeNote = note?.trim();
+
   return (
     <CardShell className="vpPlaceHeaderCard">
       <div className="vpPlaceHeaderDesktop">
@@ -347,6 +352,10 @@ function PlaceHeaderCard({
             <small>{coordinates}</small>
             <PlaceCopyButton coordinates={coordinates} />
           </div>
+
+          {placeNote ? (
+            <p className="vpPlaceNoteText">{placeNote}</p>
+          ) : null}
         </div>
 
         <button
@@ -373,6 +382,10 @@ function PlaceHeaderCard({
               <small>{coordinates}</small>
               <PlaceMobileCopyButton coordinates={coordinates} />
             </div>
+
+            {placeNote ? (
+              <p className="vpPlaceMobileNoteText">{placeNote}</p>
+            ) : null}
           </div>
         </div>
 
@@ -512,6 +525,7 @@ export default function PlaceCapturesPanelPreview({
   const panelPlace = place ?? {
     id: 'preview',
     name: 'Pontal de Matinhos',
+    note: '',
     coordinates: previewCoordinates,
   };
   const panelCaptures = captures ?? previewCaptures;
@@ -531,6 +545,7 @@ export default function PlaceCapturesPanelPreview({
         <main className="vpPlacePanelShell">
           <PlaceHeaderCard
             name={panelPlace.name}
+            note={panelPlace.note}
             coordinates={panelPlace.coordinates}
             onOpenSpotData={onOpenSpotData}
           />
@@ -694,6 +709,20 @@ export default function PlaceCapturesPanelPreview({
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
+        }
+
+        .vpPlaceNoteText {
+          margin: 5px 0 0;
+          max-width: min(420px, 100%);
+          color: rgba(226, 232, 240, 0.7);
+          font-size: 12.5px;
+          line-height: 1.35;
+          font-weight: 560;
+          letter-spacing: -0.01em;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
         }
 
         .vpPlaceCopyButton {
@@ -1249,6 +1278,19 @@ export default function PlaceCapturesPanelPreview({
             white-space: nowrap !important;
             overflow: hidden !important;
             text-overflow: ellipsis !important;
+          }
+
+          .vpPlaceMobileNoteText {
+            margin: 6px 0 0;
+            color: rgba(226, 232, 240, 0.72);
+            font-size: 13px;
+            line-height: 1.35;
+            font-weight: 560;
+            letter-spacing: -0.01em;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
           }
 
           .vpPlaceMobileCopyButton {
