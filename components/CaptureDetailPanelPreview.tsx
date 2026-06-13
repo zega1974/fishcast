@@ -4,7 +4,7 @@
 
 import type React from 'react';
 import { useEffect, useState } from 'react';
-import type { Capture, CaptureShareMode } from '@/components/captures/types';
+import type { Capture } from '@/components/captures/types';
 
 type IconProps = {
   className?: string;
@@ -16,10 +16,8 @@ type CaptureDetailPanelPreviewProps = {
   coordinatesText?: string | null;
   formattedDate?: string | null;
   shareFeedback?: string | null;
-  shareOptionsOpen?: boolean;
   onClose?: () => void;
   onToggleShareOptions?: () => void;
-  onShare?: (shareMode: CaptureShareMode) => void;
   onDelete?: () => void;
 };
 
@@ -325,10 +323,8 @@ export default function CaptureDetailPanelPreview({
   coordinatesText,
   formattedDate,
   shareFeedback,
-  shareOptionsOpen = false,
   onClose,
   onToggleShareOptions,
-  onShare,
   onDelete,
 }: CaptureDetailPanelPreviewProps) {
   const [photoMetrics, setPhotoMetrics] = useState<PhotoMetrics>({
@@ -506,17 +502,6 @@ export default function CaptureDetailPanelPreview({
               <TrashIcon />
               <span>Apagar</span>
             </button>
-
-            {shareOptionsOpen && (
-              <div className="vpCaptureDetailShareOptions">
-                <button type="button" onClick={() => onShare?.('secret')}>
-                  Secreto
-                </button>
-                <button type="button" onClick={() => onShare?.('complete')}>
-                  Completo
-                </button>
-              </div>
-            )}
           </div>
         </main>
 

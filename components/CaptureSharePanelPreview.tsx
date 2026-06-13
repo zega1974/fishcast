@@ -1,11 +1,16 @@
 ﻿'use client';
 
+/* eslint-disable @next/next/no-img-element */
+
 import type React from 'react';
 import { useState } from 'react';
-
-type CaptureShareMode = 'complete' | 'secret';
+import type { Capture, CaptureShareMode } from '@/components/captures/types';
 
 type CaptureSharePanelPreviewProps = {
+  capture?: Capture | null;
+  placeLabel?: string | null;
+  formattedDate?: string | null;
+  shareFeedback?: string | null;
   onClose?: () => void;
   onBack?: () => void;
   onGenerate?: (mode: CaptureShareMode) => void;
@@ -191,44 +196,62 @@ function FacebookIcon() {
   );
 }
 
-function CapturePhotoPreview() {
+function CapturePhotoPreview({ photoUrl, species }: { photoUrl?: string; species: string }) {
   return (
     <div className="vpSharePhotoPreview">
-      <div className="vpSharePhotoWater" />
-      <div className="vpSharePhotoFishBody">
-        <FishIcon />
-      </div>
-      <div className="vpSharePhotoGlow" />
+      {photoUrl ? (
+        <img className="vpSharePhotoImage" src={photoUrl} alt={`Foto da captura: ${species}`} />
+      ) : (
+        <>
+          <div className="vpSharePhotoWater" />
+          <div className="vpSharePhotoFishBody">
+            <FishIcon />
+          </div>
+          <div className="vpSharePhotoGlow" />
+        </>
+      )}
     </div>
   );
 }
 
-function CaptureSummaryCard() {
+function CaptureSummaryCard({
+  capture,
+  placeLabel,
+  formattedDate,
+}: {
+  capture?: Capture | null;
+  placeLabel?: string | null;
+  formattedDate?: string | null;
+}) {
+  const species = capture?.species?.trim() || 'Robalo';
+  const location = placeLabel?.trim() || 'Peva de Matinhos';
+  const dateText = formattedDate?.trim() || `${previewDate} \u2022 ${previewTime}`;
+  const size = capture?.size?.trim() ? `${capture.size.trim()} cm` : '82 cm';
+  const weight = capture?.weight?.trim() ? `${capture.weight.trim()} kg` : '6,2 kg';
+
   return (
     <section className="vpShareSummaryCard" aria-label="Resumo da captura">
-      <CapturePhotoPreview />
+      <CapturePhotoPreview photoUrl={capture?.photo || undefined} species={species} />
 
       <div className="vpShareSummaryText">
         <span>{'Captura'}</span>
-        <strong>Robalo</strong>
-        <p>Peva de Matinhos</p>
+        <strong>{species}</strong>
+        <p>{location}</p>
 
         <div className="vpShareSummaryDate">
           <CalendarIcon />
-          <small>
-            {previewDate} {'\u2022'} {previewTime}
-          </small>
+          <small>{dateText}</small>
         </div>
 
         <div className="vpShareSummaryStats">
           <div>
             <RulerIcon />
-            <b>82 cm</b>
+            <b>{size}</b>
           </div>
 
           <div>
             <WeightIcon />
-            <b>6,2 kg</b>
+            <b>{weight}</b>
           </div>
         </div>
       </div>
@@ -349,6 +372,10 @@ function ShareChannels() {
 }
 
 export default function CaptureSharePanelPreview({
+  capture,
+  placeLabel,
+  formattedDate,
+  shareFeedback,
   onClose,
   onBack,
   onGenerate,
@@ -389,7 +416,7 @@ export default function CaptureSharePanelPreview({
           </header>
 
           <div className="vpShareScroll">
-            <CaptureSummaryCard />
+            <CaptureSummaryCard capture={capture} placeLabel={placeLabel} formattedDate={formattedDate} />
 
             <ShareModeSelector shareMode={shareMode} onSelect={setShareMode} />
 
@@ -400,7 +427,7 @@ export default function CaptureSharePanelPreview({
               className="vpSharePreviewButton"
               onClick={() => onGenerate?.(shareMode)}
             >
-              <span>{'Ver pr\u00e9via'}</span>
+              <span>{shareFeedback || 'Ver pr\u00e9via'}</span>
               <EyeIcon />
             </button>
           </div>
@@ -550,6 +577,16 @@ export default function CaptureSharePanelPreview({
           border-radius: 15px;
           border: 1px solid rgba(56, 189, 248, 0.34);
           background: rgba(2, 8, 18, 0.62);
+        }
+
+        .vpSharePhotoImage {
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          object-position: center center;
+          display: block;
         }
 
         .vpSharePhotoWater {

@@ -22,6 +22,7 @@ import OfficialFreePanelPreview from "@/components/OfficialFreePanelPreview";
 import AddCapturePanel from "@/components/AddCapturePanel";
 import AddPlacePanel from "@/components/AddPlacePanel";
 import CaptureDetailPanelPreview from "@/components/CaptureDetailPanelPreview";
+import CaptureSharePanelPreview from "@/components/CaptureSharePanelPreview";
 import CaptureSpotPanelPreview from "@/components/CaptureSpotPanelPreview";
 import PlaceCapturesPanelPreview from "@/components/PlaceCapturesPanelPreview";
 import MyCapturesPanelPreview, { type MyCapturesPanelCapture } from "@/components/MyCapturesPanelPreview";
@@ -1321,6 +1322,7 @@ export default function Map() {
       place: {
         id: place.id,
         name: place.name,
+        note: place.note,
         coordinates: `${place.lat.toFixed(6)}, ${place.lng.toFixed(6)}`,
       },
       captures: getCapturesForPlace(place.id).map((capture, index) => {
@@ -2079,15 +2081,9 @@ export default function Map() {
           shareFeedback={
             shareFeedback?.captureId === selectedCaptureView.id ? shareFeedback.message : null
           }
-          shareOptionsOpen={shareOptionsCaptureId === selectedCaptureView.id}
           onClose={closeSelectedCapture}
           onToggleShareOptions={() => {
-            setShareOptionsCaptureId((current) =>
-              current === selectedCaptureView.id ? null : selectedCaptureView.id
-            );
-          }}
-          onShare={(shareMode) => {
-            void shareCapture(selectedCaptureView, shareMode);
+            setShareOptionsCaptureId(selectedCaptureView.id);
           }}
           onDelete={() => {
             const confirmed = window.confirm("Deseja realmente apagar esta captura?");
@@ -2097,6 +2093,21 @@ export default function Map() {
             }
 
             deleteCapture(selectedCaptureView.id);
+          }}
+        />
+      )}
+      {selectedCaptureView && shareOptionsCaptureId === selectedCaptureView.id && (
+        <CaptureSharePanelPreview
+          capture={selectedCaptureView}
+          placeLabel={selectedCapturePlaceLabel}
+          formattedDate={formatCaptureDate(selectedCaptureView.capturedAt).replace(/^📅\s*/, "")}
+          shareFeedback={
+            shareFeedback?.captureId === selectedCaptureView.id ? shareFeedback.message : null
+          }
+          onClose={() => setShareOptionsCaptureId(null)}
+          onBack={() => setShareOptionsCaptureId(null)}
+          onGenerate={(shareMode) => {
+            void shareCapture(selectedCaptureView, shareMode);
           }}
         />
       )}
