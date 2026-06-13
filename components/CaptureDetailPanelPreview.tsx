@@ -336,6 +336,8 @@ export default function CaptureDetailPanelPreview({
     aspectRatio: '4 / 3',
     ratioNumber: '1.333333',
   });
+  const [isPhotoViewerOpen, setIsPhotoViewerOpen] = useState(false);
+  const [photoViewerRotation, setPhotoViewerRotation] = useState(0);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -344,6 +346,8 @@ export default function CaptureDetailPanelPreview({
       aspectRatio: '4 / 3',
       ratioNumber: '1.333333',
     });
+    setIsPhotoViewerOpen(false);
+    setPhotoViewerRotation(0);
   }, [capture?.photo]);
 
   const species = capture ? capture.species || 'Espécie não informada' : 'Robalo';
@@ -369,6 +373,27 @@ export default function CaptureDetailPanelPreview({
     '--vp-capture-photo-factor': photoMetrics.ratioNumber,
   } as React.CSSProperties;
 
+  const openPhotoViewer = () => {
+    if (!capture?.photo) {
+      return;
+    }
+
+    const isMobileViewport = window.matchMedia('(max-width: 767px)').matches;
+
+    setPhotoViewerRotation(
+      isMobileViewport && photoMetrics.orientation === 'landscape' ? -90 : 0,
+    );
+
+    setIsPhotoViewerOpen(true);
+  };
+
+  const closePhotoViewer = () => {
+    setIsPhotoViewerOpen(false);
+    setPhotoViewerRotation(0);
+  };
+
+  const isPhotoViewerRotated = photoViewerRotation !== 0;
+
   return (
     <section className="vpCaptureDetailPreview map-control-overlay" aria-label="Minha Captura">
       <div className="vpCaptureDetailPanelFrame">
@@ -392,7 +417,19 @@ export default function CaptureDetailPanelPreview({
             <CardShell
               className={`vpCaptureDetailPhotoCard ${photoOrientationClass}`}
               aria-label="Foto da captura"
+              role={capture?.photo ? 'button' : undefined}
+              tabIndex={capture?.photo ? 0 : undefined}
               style={photoCardStyle}
+              onClick={() => {
+                openPhotoViewer();
+              }}
+              onKeyDown={(event) => {
+                if (!capture?.photo) return;
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  openPhotoViewer();
+                }
+              }}
             >
               {capture?.photo ? (
                 <div className="vpCaptureDetailPhotoRealFrame">
@@ -421,6 +458,11 @@ export default function CaptureDetailPanelPreview({
                   <div className="vpCaptureDetailPhotoFishLine" />
                   <span>{capture ? 'Sem foto salva' : 'Foto da captura'}</span>
                 </div>
+              )}
+              {capture?.photo && (
+                <span className="vpCaptureDetailPhotoHint" aria-hidden="true">
+                  Ampliar foto
+                </span>
               )}
             </CardShell>
 
@@ -477,6 +519,35 @@ export default function CaptureDetailPanelPreview({
             )}
           </div>
         </main>
+
+        {capture?.photo && isPhotoViewerOpen && (
+          <div
+            className="vpCaptureDetailPhotoViewer"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Foto da captura em tela cheia"
+            onClick={closePhotoViewer}
+          >
+            <button
+              className="vpCaptureDetailPhotoViewerClose"
+              type="button"
+              aria-label="Fechar foto"
+              onClick={closePhotoViewer}
+            >
+              <CloseIcon />
+            </button>
+
+            <img
+              className={`vpCaptureDetailPhotoViewerImage ${isPhotoViewerRotated ? 'isRotated' : ''}`}
+              src={capture.photo}
+              alt="Foto da captura em tela cheia"
+              onClick={(event) => event.stopPropagation()}
+              style={{
+                transform: `rotate(${photoViewerRotation}deg)`,
+              }}
+            />
+          </div>
+        )}
       </div>
 
       <style jsx global>{`
@@ -710,6 +781,33 @@ export default function CaptureDetailPanelPreview({
           justify-content: center;
         }
 
+        .vpCaptureDetailPhotoCard[role="button"] {
+          cursor: zoom-in;
+        }
+
+        .vpCaptureDetailPhotoHint {
+          position: absolute;
+          right: 13px;
+          bottom: 13px;
+          z-index: 6;
+          max-width: calc(100% - 26px);
+          padding: 6px 9px;
+          border-radius: 999px;
+          border: 1px solid rgba(125, 211, 252, 0.24);
+          background: rgba(2, 6, 23, 0.64);
+          color: rgba(226, 232, 240, 0.88);
+          box-shadow:
+            0 10px 24px rgba(0, 0, 0, 0.26),
+            inset 0 1px 0 rgba(255, 255, 255, 0.06);
+          backdrop-filter: blur(10px);
+          font-size: 10px;
+          line-height: 1;
+          font-weight: 720;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          pointer-events: none;
+        }
+
         .vpCaptureDetailPhotoCard.isLandscape {
           width: 100%;
         }
@@ -745,7 +843,7 @@ export default function CaptureDetailPanelPreview({
         }
 
         .vpCaptureDetailPhotoBlur {
-          display: none;
+          display: flex;
         }
 
         .vpCaptureDetailPhotoImage {
@@ -1041,6 +1139,70 @@ export default function CaptureDetailPanelPreview({
           cursor: pointer;
         }
 
+        .vpCaptureDetailPhotoViewer {
+          position: fixed;
+          inset: 0;
+          z-index: 100001;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding:
+            max(18px, env(safe-area-inset-top))
+            max(14px, env(safe-area-inset-right))
+            max(18px, env(safe-area-inset-bottom))
+            max(14px, env(safe-area-inset-left));
+          box-sizing: border-box;
+          background:
+            radial-gradient(circle at 50% 18%, rgba(14, 165, 233, 0.12), transparent 34%),
+            rgba(1, 6, 12, 0.94);
+          backdrop-filter: blur(10px);
+          overflow: hidden;
+        }
+
+        .vpCaptureDetailPhotoViewerImage {
+          display: block;
+          width: 100%;
+          height: 100%;
+          max-width: 100%;
+          max-height: 100%;
+          object-fit: contain;
+          object-position: center center;
+          border-radius: 18px;
+          box-shadow: 0 22px 70px rgba(0, 0, 0, 0.48);
+          transition: transform 180ms ease;
+        }
+
+        .vpCaptureDetailPhotoViewerImage.isRotated {
+          width: auto;
+          height: auto;
+          max-width: calc(100dvh - 32px);
+          max-height: calc(100vw - 32px);
+        }
+
+        .vpCaptureDetailPhotoViewerClose {
+          position: fixed;
+          top: max(14px, env(safe-area-inset-top));
+          right: max(16px, env(safe-area-inset-right));
+          z-index: 100002;
+          width: 46px;
+          height: 46px;
+          border: 1px solid rgba(255, 255, 255, 0.16);
+          border-radius: 16px;
+          background: rgba(15, 23, 42, 0.72);
+          color: rgba(255, 255, 255, 0.92);
+          box-shadow: 0 16px 40px rgba(0, 0, 0, 0.36);
+          backdrop-filter: blur(12px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+        }
+
+        .vpCaptureDetailPhotoViewerClose svg {
+          width: 25px;
+          height: 25px;
+        }
+
         .vpCaptureDetailPinIcon svg,
         .vpCaptureDetailCopyButton svg,
         .vpCaptureDetailStatIcon svg,
@@ -1055,6 +1217,13 @@ export default function CaptureDetailPanelPreview({
         }
 
         @media (max-width: 767px) {
+          .vpCaptureDetailPhotoHint {
+            right: 12px;
+            bottom: 12px;
+            padding: 5px 8px;
+            font-size: 9px;
+          }
+
           .vpCaptureDetailPreview {
             height: 100svh;
             min-height: 100svh;
@@ -1148,9 +1317,9 @@ export default function CaptureDetailPanelPreview({
 
           .vpCaptureDetailBodyScroll.isPortrait,
           .vpCaptureDetailBodyScroll.isUnknown {
-            display: grid;
-            grid-template-columns: minmax(128px, 0.82fr) minmax(0, 1.18fr);
-            align-items: start;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
             gap: 8px;
           }
 
@@ -1178,12 +1347,11 @@ export default function CaptureDetailPanelPreview({
 
           .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailPhotoCard,
           .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailPhotoCard {
-            width: 100%;
-            max-width: 168px;
-            justify-self: end;
-            align-self: start;
-            margin-left: 0;
-            margin-right: 0;
+            width: min(56vw, 218px);
+            max-width: 218px;
+            align-self: center;
+            margin-left: auto;
+            margin-right: auto;
           }
 
           .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailPhotoCard .vpCaptureDetailPhotoRealFrame,
@@ -1217,8 +1385,8 @@ export default function CaptureDetailPanelPreview({
             width: 100%;
             min-width: 0;
             max-height: none;
-            padding: 6px;
-            align-self: start;
+            padding: 8px;
+            align-self: stretch;
             overflow: visible;
           }
 
@@ -1338,20 +1506,19 @@ export default function CaptureDetailPanelPreview({
           /* MOBILE ONLY: ficha lateral para foto vertical/desconhecida */
           .vpCaptureDetailBodyScroll.isPortrait,
           .vpCaptureDetailBodyScroll.isUnknown {
-            display: grid;
-            grid-template-columns: minmax(128px, 0.82fr) minmax(0, 1.18fr);
-            align-items: start;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
             gap: 8px;
           }
 
           .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailPhotoCard,
           .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailPhotoCard {
-            width: 100%;
-            max-width: 168px;
-            justify-self: end;
-            align-self: start;
-            margin-left: 0;
-            margin-right: 0;
+            width: min(56vw, 218px);
+            max-width: 218px;
+            align-self: center;
+            margin-left: auto;
+            margin-right: auto;
           }
 
           .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailInfoArea,
@@ -1359,8 +1526,8 @@ export default function CaptureDetailPanelPreview({
             width: 100%;
             min-width: 0;
             max-height: none;
-            padding: 6px;
-            align-self: start;
+            padding: 8px;
+            align-self: stretch;
             overflow: visible;
           }
 
@@ -1423,94 +1590,26 @@ export default function CaptureDetailPanelPreview({
             display: flex;
             flex-direction: column;
           }
+        }
 
-          /* MOBILE ONLY: ficha lateral definitiva para foto vertical */
-          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isPortrait,
-          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isUnknown {
-            display: grid !important;
-            grid-template-columns: minmax(142px, 0.88fr) minmax(0, 1.12fr);
-            align-items: start;
-            column-gap: 8px;
-            row-gap: 8px;
+        @media (max-width: 767px) and (orientation: landscape) {
+          .vpCaptureDetailPhotoViewer {
+            padding:
+              max(8px, env(safe-area-inset-top))
+              max(8px, env(safe-area-inset-right))
+              max(8px, env(safe-area-inset-bottom))
+              max(8px, env(safe-area-inset-left));
           }
 
-          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailPhotoCard,
-          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailPhotoCard {
-            grid-column: 1;
-            grid-row: 1;
-            width: 100% !important;
-            max-width: 174px !important;
-            justify-self: end;
-            align-self: start;
-            margin: 0;
-          }
-
-          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailInfoArea,
-          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailInfoArea {
-            grid-column: 2;
-            grid-row: 1;
-            width: 100%;
-            min-width: 0;
-            max-height: none;
-            padding: 6px;
-            align-self: start;
-            overflow: visible;
-          }
-
-          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailStatsGrid,
-          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailStatsGrid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 6px;
-            padding-bottom: 0;
-          }
-
-          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailFull,
-          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailFull {
-            grid-column: auto;
-          }
-
-          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailStatCard,
-          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailStatCard {
-            min-height: 52px;
-            padding: 7px 8px;
-            gap: 8px;
+          .vpCaptureDetailPhotoViewerImage {
+            max-width: calc(100vw - 16px);
+            max-height: calc(100dvh - 16px);
             border-radius: 14px;
           }
 
-          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailStatIcon,
-          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailStatIcon {
-            width: 32px;
-            height: 32px;
-            border-radius: 12px;
-          }
-
-          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailStatIcon svg,
-          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailStatIcon svg {
-            width: 19px;
-            height: 19px;
-          }
-
-          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailStatText span,
-          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailStatText span {
-            font-size: 9.3px;
-            letter-spacing: 0.095em;
-          }
-
-          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailStatText strong,
-          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailStatText strong {
-            margin-top: 5px;
-            font-size: 14px;
-            line-height: 1.08;
-          }
-
-          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isPortrait .vpCaptureDetailFull .vpCaptureDetailStatText strong,
-          .vpCaptureDetailPanelShell .vpCaptureDetailBodyScroll.isUnknown .vpCaptureDetailFull .vpCaptureDetailStatText strong {
-            display: -webkit-box;
-            overflow: hidden;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            white-space: normal;
+          .vpCaptureDetailPhotoViewerClose {
+            top: max(8px, env(safe-area-inset-top));
+            right: max(8px, env(safe-area-inset-right));
           }
         }
 
