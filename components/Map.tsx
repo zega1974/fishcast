@@ -27,7 +27,7 @@ import CaptureSpotPanelPreview from "@/components/CaptureSpotPanelPreview";
 import PlaceCapturesPanelPreview from "@/components/PlaceCapturesPanelPreview";
 import MyCapturesPanelPreview, { type MyCapturesPanelCapture } from "@/components/MyCapturesPanelPreview";
 import PremiumPanelPreview, { PreviewIcon, type PreviewIconName } from "@/components/PremiumPanelPreview";
-import { shareCapture as shareCaptureFile } from "@/components/captures/sharing";
+import { previewCaptureShareImage } from "@/components/captures/sharing";
 import {
   deleteCapturePhoto,
   isCapturePhotoDataUrl,
@@ -1580,13 +1580,12 @@ export default function Map() {
   }
 
   async function shareCapture(capture: Capture, shareMode: CaptureShareMode) {
-    await shareCaptureFile({
+    await previewCaptureShareImage({
       capture,
       shareMode,
       formatCaptureDate,
       getCaptureLocationText,
       onFeedback: showShareFeedback,
-      onShareOptionsClose: () => setShareOptionsCaptureId(null),
     });
   }
 
