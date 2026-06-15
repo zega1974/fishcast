@@ -20,8 +20,50 @@ type IconProps = {
   className?: string;
 };
 
+type PhotoOrientation = 'unknown' | 'portrait' | 'landscape' | 'square';
+
+type PhotoMetrics = {
+  orientation: PhotoOrientation;
+  aspectRatio: string;
+  ratioNumber: string;
+};
+
 const previewDate = '19/05/2025';
 const previewTime = '08h15';
+
+function getPhotoOrientation(width: number, height: number): PhotoOrientation {
+  if (!width || !height) {
+    return 'unknown';
+  }
+
+  const ratio = width / height;
+
+  if (ratio > 1.12) {
+    return 'landscape';
+  }
+
+  if (ratio < 0.88) {
+    return 'portrait';
+  }
+
+  return 'square';
+}
+
+function getPhotoMetrics(width: number, height: number): PhotoMetrics {
+  if (!width || !height) {
+    return {
+      orientation: 'unknown',
+      aspectRatio: '4 / 3',
+      ratioNumber: '1.333333',
+    };
+  }
+
+  return {
+    orientation: getPhotoOrientation(width, height),
+    aspectRatio: `${width} / ${height}`,
+    ratioNumber: `${width / height}`,
+  };
+}
 
 function SvgBase({
   children,
@@ -143,64 +185,42 @@ function EyeIcon(props: IconProps) {
   );
 }
 
-function LinkIcon(props: IconProps) {
-  return (
-    <SvgBase {...props}>
-      <path d="M19.5 28.5 28.5 19.5" />
-      <path d="M18 18l-2.2 2.2a7 7 0 0 0 9.9 9.9L28 27.8" />
-      <path d="M30 30l2.2-2.2a7 7 0 0 0-9.9-9.9L20 20.2" />
-    </SvgBase>
-  );
-}
-
-function MoreIcon(props: IconProps) {
-  return (
-    <SvgBase {...props}>
-      <circle cx="14" cy="24" r="2.5" fill="currentColor" stroke="none" />
-      <circle cx="24" cy="24" r="2.5" fill="currentColor" stroke="none" />
-      <circle cx="34" cy="24" r="2.5" fill="currentColor" stroke="none" />
-    </SvgBase>
-  );
-}
-
-function WhatsAppIcon() {
-  return (
-    <span className="vpShareSocialIcon vpShareSocialIconWhatsapp" aria-hidden="true">
-      <svg viewBox="0 0 48 48">
-        <path d="M24 7.5A16.5 16.5 0 0 0 9.8 32.4L8 40l7.8-1.7A16.5 16.5 0 1 0 24 7.5Z" />
-        <path d="M17.6 16.5c.4-.9.8-.9 1.3-.9h1.1c.4 0 .8.1 1.1.8.4.9 1.4 3.2 1.5 3.4.1.3.2.6 0 .9-.2.4-.4.6-.7.9-.3.3-.6.7-.9.9-.3.3-.6.6-.3 1.1.3.6 1.4 2.3 3 3.7 2.1 1.8 3.8 2.4 4.4 2.7.6.3.9.2 1.2-.2.4-.4 1.4-1.6 1.7-2.2.4-.6.7-.5 1.2-.3.5.2 3.1 1.5 3.6 1.8.5.3.9.4 1 .6.1.2.1 1.7-.4 3.2-.5 1.5-2.9 2.8-4 2.9-1.1.1-2.5.5-8.3-1.9-7-2.9-11.4-10-11.8-10.5-.4-.5-2.8-3.7-2.8-7.1 0-3.4 1.8-5.1 2.4-5.8Z" />
-      </svg>
-    </span>
-  );
-}
-
-function InstagramIcon() {
-  return (
-    <span className="vpShareSocialIcon vpShareSocialIconInstagram" aria-hidden="true">
-      <svg viewBox="0 0 48 48">
-        <rect x="12" y="12" width="24" height="24" rx="7" />
-        <circle cx="24" cy="24" r="6.2" />
-        <circle cx="31.7" cy="16.6" r="1.8" />
-      </svg>
-    </span>
-  );
-}
-
-function FacebookIcon() {
-  return (
-    <span className="vpShareSocialIcon vpShareSocialIconFacebook" aria-hidden="true">
-      <svg viewBox="0 0 48 48">
-        <path d="M28.5 41V26.6h4.8l.8-5.7h-5.6v-3.6c0-1.6.5-2.8 2.9-2.8h3V9.4c-.5-.1-2.3-.2-4.4-.2-4.4 0-7.4 2.7-7.4 7.6v4.1h-5v5.7h5V41h5.9Z" />
-      </svg>
-    </span>
-  );
-}
-
 function CapturePhotoPreview({ photoUrl, species }: { photoUrl?: string; species: string }) {
+  const [photoMetrics, setPhotoMetrics] = useState<PhotoMetrics>({
+    orientation: 'unknown',
+    aspectRatio: '4 / 3',
+    ratioNumber: '1.333333',
+  });
+
+  const photoOrientationClass =
+    photoMetrics.orientation === 'portrait'
+      ? 'isPortrait'
+      : photoMetrics.orientation === 'landscape'
+        ? 'isLandscape'
+        : photoMetrics.orientation === 'square'
+          ? 'isSquare'
+          : 'isUnknown';
+
+  const photoStyle = {
+    '--vp-share-photo-ratio': photoMetrics.aspectRatio,
+    '--vp-share-photo-factor': photoMetrics.ratioNumber,
+  } as React.CSSProperties;
+
   return (
-    <div className="vpSharePhotoPreview">
+    <div
+      className={`vpSharePhotoPreview ${photoOrientationClass}`}
+      style={photoStyle}
+    >
       {photoUrl ? (
-        <img className="vpSharePhotoImage" src={photoUrl} alt={`Foto da captura: ${species}`} />
+        <img
+          className="vpSharePhotoImage"
+          src={photoUrl}
+          alt={`Foto da captura: ${species}`}
+          onLoad={(event) => {
+            const image = event.currentTarget;
+            setPhotoMetrics(getPhotoMetrics(image.naturalWidth, image.naturalHeight));
+          }}
+        />
       ) : (
         <>
           <div className="vpSharePhotoWater" />
@@ -245,13 +265,13 @@ function CaptureSummaryCard({
 
         <div className="vpShareSummaryStats">
           <div>
-            <RulerIcon />
-            <b>{size}</b>
+            <WeightIcon />
+            <b>{weight}</b>
           </div>
 
           <div>
-            <WeightIcon />
-            <b>{weight}</b>
+            <RulerIcon />
+            <b>{size}</b>
           </div>
         </div>
       </div>
@@ -326,51 +346,6 @@ function ShareModeSelector({
   );
 }
 
-function SocialButton({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <button type="button" className="vpShareSocialButton">
-      <span>{children}</span>
-      <small>{label}</small>
-    </button>
-  );
-}
-
-function ShareChannels() {
-  return (
-    <section className="vpShareChannels" aria-label="Compartilhar via">
-      <h2>Compartilhar via</h2>
-
-      <div className="vpShareSocialGrid">
-        <SocialButton label="WhatsApp">
-          <WhatsAppIcon />
-        </SocialButton>
-
-        <SocialButton label="Instagram">
-          <InstagramIcon />
-        </SocialButton>
-
-        <SocialButton label="Facebook">
-          <FacebookIcon />
-        </SocialButton>
-
-        <SocialButton label="Copiar link">
-          <LinkIcon />
-        </SocialButton>
-
-        <SocialButton label="Mais">
-          <MoreIcon />
-        </SocialButton>
-      </div>
-    </section>
-  );
-}
-
 export default function CaptureSharePanelPreview({
   capture,
   placeLabel,
@@ -410,7 +385,7 @@ export default function CaptureSharePanelPreview({
               <BackIcon />
             </button>
 
-            <h1>Compartilhar Captura</h1>
+            <span className="vpShareHeaderTitleSpacer" aria-hidden="true" />
 
             <span aria-hidden="true" />
           </header>
@@ -419,8 +394,6 @@ export default function CaptureSharePanelPreview({
             <CaptureSummaryCard capture={capture} placeLabel={placeLabel} formattedDate={formattedDate} />
 
             <ShareModeSelector shareMode={shareMode} onSelect={setShareMode} />
-
-            <ShareChannels />
 
             <button
               type="button"
@@ -510,13 +483,10 @@ export default function CaptureSharePanelPreview({
           color: rgba(248, 250, 252, 0.96);
         }
 
-        .vpShareHeader h1 {
-          margin: 0;
-          text-align: center;
-          font-size: 20px;
-          line-height: 1;
-          font-weight: 720;
-          letter-spacing: -0.02em;
+        .vpShareHeaderTitleSpacer {
+          display: block;
+          width: 100%;
+          height: 1px;
         }
 
         .vpShareBackButton {
@@ -525,11 +495,12 @@ export default function CaptureSharePanelPreview({
           border: 0;
           border-radius: 999px;
           background: transparent;
-          color: rgba(248, 250, 252, 0.9);
+          color: rgba(248, 250, 252, 0.94);
           display: flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
+          box-shadow: none;
         }
 
         .vpShareBackButton svg {
@@ -562,21 +533,37 @@ export default function CaptureSharePanelPreview({
         .vpShareSummaryCard {
           flex: 0 0 auto;
           display: grid;
-          grid-template-columns: 132px minmax(0, 1fr);
+          grid-template-columns: auto minmax(0, 1fr);
           gap: 12px;
-          align-items: stretch;
+          align-items: center;
           border-radius: 18px;
           padding: 10px;
           box-sizing: border-box;
         }
 
         .vpSharePhotoPreview {
+          --vp-share-photo-ratio: 4 / 3;
+          --vp-share-photo-factor: 1.333333;
           position: relative;
-          min-height: 132px;
+          width: 148px;
+          height: auto;
+          aspect-ratio: var(--vp-share-photo-ratio);
+          min-height: 0;
           overflow: hidden;
           border-radius: 15px;
           border: 1px solid rgba(56, 189, 248, 0.34);
-          background: rgba(2, 8, 18, 0.62);
+          background: #020617;
+          box-shadow: 0 0 22px rgba(56, 189, 248, 0.1);
+          align-self: center;
+        }
+
+        .vpSharePhotoPreview.isPortrait,
+        .vpSharePhotoPreview.isUnknown {
+          width: min(148px, calc(238px * var(--vp-share-photo-factor)));
+        }
+
+        .vpSharePhotoPreview.isSquare {
+          width: 148px;
         }
 
         .vpSharePhotoImage {
@@ -584,9 +571,10 @@ export default function CaptureSharePanelPreview({
           inset: 0;
           width: 100%;
           height: 100%;
-          object-fit: cover;
+          object-fit: contain;
           object-position: center center;
           display: block;
+          background: #020617;
         }
 
         .vpSharePhotoWater {
@@ -640,24 +628,30 @@ export default function CaptureSharePanelPreview({
         .vpShareSummaryText > strong {
           margin-top: 5px;
           color: #38bdf8;
-          font-size: 25px;
-          line-height: 1;
+          font-size: clamp(21px, 5.5vw, 25px);
+          line-height: 1.03;
           font-weight: 760;
           letter-spacing: -0.045em;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
+          white-space: normal;
+          overflow: visible;
+          text-overflow: clip;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
         }
 
         .vpShareSummaryText > p {
           margin: 6px 0 0;
           color: rgba(248, 250, 252, 0.88);
           font-size: 13px;
-          line-height: 1.1;
+          line-height: 1.15;
           font-weight: 640;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
+          white-space: normal;
+          overflow: visible;
+          text-overflow: clip;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
         }
 
         .vpShareSummaryDate {
@@ -971,18 +965,29 @@ export default function CaptureSharePanelPreview({
 
           .vpShareScroll {
             justify-content: flex-start;
-            gap: 14px;
+            gap: 16px;
             padding-bottom: max(16px, env(safe-area-inset-bottom));
           }
 
           .vpShareSummaryCard {
-            grid-template-columns: clamp(190px, 45vw, 320px) minmax(0, 1fr);
+            grid-template-columns: auto minmax(0, 1fr);
             gap: 18px;
             padding: 16px;
+            align-items: center;
           }
 
           .vpSharePhotoPreview {
-            min-height: clamp(190px, 45vw, 320px);
+            width: clamp(205px, 46vw, 330px);
+            min-height: 0;
+          }
+
+          .vpSharePhotoPreview.isPortrait,
+          .vpSharePhotoPreview.isUnknown {
+            width: min(38vw, 190px, calc(350px * var(--vp-share-photo-factor)));
+          }
+
+          .vpSharePhotoPreview.isSquare {
+            width: min(42vw, 235px);
           }
 
           .vpSharePhotoFishBody svg {
@@ -999,7 +1004,7 @@ export default function CaptureSharePanelPreview({
           }
 
           .vpShareSummaryText > strong {
-            font-size: clamp(25px, 5.2vw, 42px);
+            font-size: clamp(23px, 5vw, 36px);
           }
 
           .vpShareSummaryText > p {
@@ -1119,11 +1124,17 @@ export default function CaptureSharePanelPreview({
 
         @media (max-width: 374px) {
           .vpShareSummaryCard {
-            grid-template-columns: 174px minmax(0, 1fr);
+            grid-template-columns: auto minmax(0, 1fr);
           }
 
           .vpSharePhotoPreview {
-            min-height: 174px;
+            width: 184px;
+            min-height: 0;
+          }
+
+          .vpSharePhotoPreview.isPortrait,
+          .vpSharePhotoPreview.isUnknown {
+            width: min(36vw, 164px, calc(310px * var(--vp-share-photo-factor)));
           }
 
           .vpSharePhotoFishBody svg {
@@ -1132,7 +1143,7 @@ export default function CaptureSharePanelPreview({
           }
 
           .vpShareSummaryText > strong {
-            font-size: 23px;
+            font-size: 21px;
           }
 
           .vpShareSummaryText > p {
@@ -1212,7 +1223,7 @@ export default function CaptureSharePanelPreview({
           }
 
           .vpShareScroll {
-            gap: 10px;
+            gap: 14px;
             padding-right: 2px;
           }
 
@@ -1223,13 +1234,24 @@ export default function CaptureSharePanelPreview({
           }
 
           .vpShareSummaryCard {
-            grid-template-columns: 250px minmax(0, 1fr);
+            grid-template-columns: auto minmax(0, 1fr);
             padding: 12px;
             gap: 18px;
+            align-items: center;
           }
 
           .vpSharePhotoPreview {
-            min-height: 174px;
+            width: 300px;
+            min-height: 0;
+          }
+
+          .vpSharePhotoPreview.isPortrait,
+          .vpSharePhotoPreview.isUnknown {
+            width: min(182px, calc(320px * var(--vp-share-photo-factor)));
+          }
+
+          .vpSharePhotoPreview.isSquare {
+            width: 210px;
           }
 
           .vpSharePhotoFishBody svg {
@@ -1238,7 +1260,7 @@ export default function CaptureSharePanelPreview({
           }
 
           .vpShareSummaryText > strong {
-            font-size: 34px;
+            font-size: 32px;
           }
 
           .vpShareSummaryText > p {
