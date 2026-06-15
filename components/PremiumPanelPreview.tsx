@@ -1,22 +1,6 @@
 "use client";
 
 import type React from "react";
-import { useState } from "react";
-
-type PremiumPanelPreviewProps = {
-  onClose?: () => void;
-};
-
-type IconProps = {
-  className?: string;
-};
-
-type DataItem = {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  detail?: string;
-};
 
 export type PreviewIconName =
   | "weather"
@@ -33,6 +17,26 @@ export type PreviewIconName =
   | "night"
   | "copy"
   | "clock";
+
+type PremiumPanelPreviewProps = {
+  onClose?: () => void;
+  onBack?: () => void;
+  placeName?: string;
+  lat?: number;
+  lng?: number;
+  coordinatesText?: string;
+};
+
+type IconProps = {
+  className?: string;
+};
+
+type AdvancedMetric = {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  detail?: string;
+};
 
 export function PreviewIcon({
   name,
@@ -122,20 +126,20 @@ function CloseIcon(props: IconProps) {
   );
 }
 
+function BackIcon(props: IconProps) {
+  return (
+    <SvgBase {...props}>
+      <path d="M29 12 17 24l12 12" />
+      <path d="M18 24h20" />
+    </SvgBase>
+  );
+}
+
 function PinIcon(props: IconProps) {
   return (
     <SvgBase {...props}>
       <path d="M24 43s14-12.5 14-25A14 14 0 1 0 10 18c0 12.5 14 25 14 25Z" />
       <circle cx="24" cy="18" r="5" />
-    </SvgBase>
-  );
-}
-
-function CopyIcon(props: IconProps) {
-  return (
-    <SvgBase {...props}>
-      <rect x="17" y="12" width="19" height="25" rx="3" />
-      <path d="M12 30V16a4 4 0 0 1 4-4h12" />
     </SvgBase>
   );
 }
@@ -161,12 +165,59 @@ function WaterThermometerIcon(props: IconProps) {
   );
 }
 
+function PressureIcon(props: IconProps) {
+  return (
+    <SvgBase {...props}>
+      <circle cx="24" cy="24" r="16" />
+      <path d="M24 24l8-8" />
+      <path d="M15 33h18" />
+    </SvgBase>
+  );
+}
+
+function RainIcon(props: IconProps) {
+  return (
+    <SvgBase {...props}>
+      <path d="M15 22a9 9 0 0 1 17-5 7 7 0 0 1 2 14H15a7 7 0 0 1 0-14" />
+      <path d="M17 37l-2 5" />
+      <path d="M25 37l-2 5" />
+      <path d="M33 37l-2 5" />
+    </SvgBase>
+  );
+}
+
+function WeatherIcon(props: IconProps) {
+  return (
+    <SvgBase {...props}>
+      <circle cx="17" cy="17" r="6" />
+      <path d="M17 5v4" />
+      <path d="M17 25v4" />
+      <path d="M5 17h4" />
+      <path d="M25 17h4" />
+      <path d="m9 9 3 3" />
+      <path d="m25 9-3 3" />
+      <path d="M17 33h17a7 7 0 0 0 0-14 9 9 0 0 0-17-2" />
+      <path d="M14 33a7 7 0 0 1 0-14" />
+    </SvgBase>
+  );
+}
+
 function TideIcon(props: IconProps) {
   return (
     <SvgBase {...props}>
       <path d="M6 18c5 4 10 4 15 0s10-4 15 0 6 3 6 3" />
       <path d="M6 28c5 4 10 4 15 0s10-4 15 0 6 3 6 3" />
       <path d="M6 38c5 4 10 4 15 0s10-4 15 0 6 3 6 3" />
+    </SvgBase>
+  );
+}
+
+function WaveIcon(props: IconProps) {
+  return (
+    <SvgBase {...props}>
+      <path d="M6 25c5 4 10 4 15 0s10-4 15 0 6 3 6 3" />
+      <path d="M6 35c5 4 10 4 15 0s10-4 15 0 6 3 6 3" />
+      <path d="M33 12c-7 0-10 5-10 12" />
     </SvgBase>
   );
 }
@@ -181,63 +232,18 @@ function WindIcon(props: IconProps) {
   );
 }
 
-function MoonIcon(props: IconProps) {
-  return (
-    <svg className={`${props.className || ""} vpMoonIcon`} viewBox="0 0 48 48" aria-hidden="true">
-      <path d="M32 6a20 20 0 1 0 10 32A22 22 0 0 1 32 6Z" fill="currentColor" />
-    </svg>
-  );
-}
-
-function SunIcon(props: IconProps) {
+function SunMoonIcon(props: IconProps) {
   return (
     <SvgBase {...props}>
-      <circle cx="24" cy="24" r="8" />
-      <path d="M24 4v7" />
-      <path d="M24 37v7" />
-      <path d="M4 24h7" />
-      <path d="M37 24h7" />
-      <path d="m10 10 5 5" />
-      <path d="m33 33 5 5" />
-      <path d="m38 10-5 5" />
-      <path d="m15 33-5 5" />
+      <circle cx="17" cy="17" r="6" />
+      <path d="M17 4v4" />
+      <path d="M17 26v4" />
+      <path d="M4 17h4" />
+      <path d="M26 17h4" />
+      <path d="m8 8 3 3" />
+      <path d="m26 8-3 3" />
+      <path d="M35 29a10 10 0 1 0 6 12 12 12 0 0 1-6-12Z" />
     </SvgBase>
-  );
-}
-
-function SunriseIcon(props: IconProps) {
-  return (
-    <SvgBase {...props}>
-      <path d="M13 29a11 11 0 0 1 22 0" />
-      <path d="M24 9v8" />
-      <path d="m10 15 5 5" />
-      <path d="m38 15-5 5" />
-      <path d="M8 32c5 4 10 4 15 0s10-4 17 0" />
-      <path d="M8 39c5 4 10 4 15 0s10-4 17 0" />
-    </SvgBase>
-  );
-}
-
-function DepthIcon(props: IconProps) {
-  return (
-    <SvgBase {...props}>
-      <path d="M24 5v25" />
-      <path d="m16 22 8 8 8-8" />
-      <path d="M8 38c5 4 10 4 15 0s10-4 17 0" />
-      <path d="M8 44c5 4 10 4 15 0s10-4 17 0" />
-    </SvgBase>
-  );
-}
-
-function BottomIcon(props: IconProps) {
-  return (
-    <svg className={`${props.className || ""} vpBottomIcon`} viewBox="0 0 48 48" aria-hidden="true">
-      <circle cx="14" cy="32" r="5" fill="currentColor" />
-      <circle cx="26" cy="28" r="7" fill="currentColor" />
-      <circle cx="34" cy="36" r="5" fill="currentColor" />
-      <circle cx="20" cy="18" r="3" fill="currentColor" />
-      <circle cx="33" cy="18" r="4" fill="currentColor" />
-    </svg>
   );
 }
 
@@ -267,217 +273,110 @@ function CardShell({
   children: React.ReactNode;
   className?: string;
 }) {
-  return <div className={`vpOfficialCard ${className}`}>{children}</div>;
+  return <div className={`vpAdvancedCard ${className}`}>{children}</div>;
 }
 
-async function copyTextWithFallback(text: string) {
-  try {
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(text);
-      return true;
-    }
-  } catch {
-    // tenta fallback abaixo
-  }
-
-  try {
-    const textarea = document.createElement("textarea");
-    textarea.value = text;
-    textarea.setAttribute("readonly", "");
-    textarea.style.position = "fixed";
-    textarea.style.top = "-9999px";
-    textarea.style.left = "-9999px";
-    textarea.style.opacity = "0";
-
-    document.body.appendChild(textarea);
-    textarea.focus();
-    textarea.select();
-
-    const copied = document.execCommand("copy");
-    document.body.removeChild(textarea);
-
-    return copied;
-  } catch {
-    return false;
-  }
-}
-
-function ScoreGauge() {
+function SelectedPointCard({ placeName }: { placeName: string }) {
   return (
-    <div className="vpOfficialScoreGauge">
-      <svg viewBox="0 0 340 205" aria-label="VouPescar Score 82 Excelente">
-        <path
-          d="M 52 150 A 118 118 0 0 1 288 150"
-          fill="none"
-          stroke="rgba(120, 132, 148, 0.42)"
-          strokeWidth="11"
-          strokeLinecap="round"
-        />
-        <path
-          d="M 52 150 A 118 118 0 0 1 288 150"
-          fill="none"
-          stroke="rgba(255, 255, 255, 0.96)"
-          strokeWidth="11"
-          strokeLinecap="round"
-          pathLength="100"
-          strokeDasharray="82 100"
-        />
-        <g fill="none" stroke="rgba(255, 255, 255, 0.5)" strokeWidth="2" strokeLinecap="round">
-          <path d="M52 150h16" />
-          <path d="M170 36v16" />
-          <path d="M272 150h16" />
-          <path d="M79 98l13 8" />
-          <path d="M122 62l7 13" />
-          <path d="M218 62l-7 13" />
-          <path d="M261 98l-13 8" />
-        </g>
-        <text x="52" y="177" fill="rgba(255,255,255,.78)" fontSize="15" fontWeight="500">
-          0
-        </text>
-        <text x="170" y="27" textAnchor="middle" fill="rgba(255,255,255,.78)" fontSize="15" fontWeight="500">
-          50
-        </text>
-        <text x="288" y="177" textAnchor="end" fill="rgba(255,255,255,.78)" fontSize="15" fontWeight="500">
-          100
-        </text>
-        <line x1="236" y1="88" x2="260" y2="69" stroke="rgba(255,255,255,.9)" strokeWidth="3" strokeLinecap="round" />
-        <circle cx="236" cy="88" r="6.5" fill="rgba(255,255,255,.96)" />
-        <text x="170" y="128" textAnchor="middle" fill="#fff" fontSize="68" fontWeight="800" letterSpacing="-6">
-          82
-        </text>
-        <text x="170" y="168" textAnchor="middle" fill="rgba(255,255,255,.86)" fontSize="23" fontWeight="560">
-          Excelente
-        </text>
-      </svg>
-    </div>
-  );
-}
-
-function SelectedPointCard() {
-  const coords = "-25.823456, -48.536789";
-  const [copied, setCopied] = useState(false);
-
-  const copyCoords = async () => {
-    const success = await copyTextWithFallback(coords);
-
-    if (success) {
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1800);
-    }
-  };
-
-  return (
-    <CardShell className="vpOfficialPlaceBlock">
-      <div className="vpOfficialPlaceIcon">
+    <CardShell className="vpAdvancedPlaceBlock">
+      <div className="vpAdvancedPlaceIcon">
         <PinIcon />
       </div>
 
-      <div className="vpOfficialPlaceText">
+      <div className="vpAdvancedPlaceText">
         <span>Ponto Selecionado</span>
-        <strong>Pontal de Matinhos</strong>
-        <small>{coords}</small>
+        <strong>{placeName}</strong>
       </div>
 
-      <button
-        className={`vpOfficialCopyButton ${copied ? "isCopied" : ""}`}
-        type="button"
-        onClick={copyCoords}
-        aria-live="polite"
-      >
-        <CopyIcon />
-        <span>{copied ? "Copiado!" : "Copiar"}</span>
-      </button>
-    </CardShell>
-  );
-}
-
-function ScoreCard() {
-  return (
-    <CardShell className="vpOfficialScoreBlock">
-      <h1>VOUPESCAR SCORE</h1>
-      <ScoreGauge />
-      <p>Baseado em múltiplos dados.</p>
-    </CardShell>
-  );
-}
-
-function BestTimesCard() {
-  return (
-    <CardShell className="vpOfficialBestTimes">
-      <h2>MELHORES HORÁRIOS</h2>
-
-      <div className="vpOfficialTimeGrid">
-        <div className="vpOfficialTimeItem">
-          <SunriseIcon className="vpOfficialTimeIcon" />
-          <strong>14h às 16h</strong>
-        </div>
-
-        <div className="vpOfficialDivider" />
-
-        <div className="vpOfficialTimeItem">
-          <SunriseIcon className="vpOfficialTimeIcon" />
-          <strong>19h às 21h</strong>
-        </div>
+      <div className="vpAdvancedHeaderScore" aria-label="VouPescar Score 82">
+        <span>Score</span>
+        <strong>82</strong>
       </div>
     </CardShell>
   );
 }
 
-function DataCard({ item }: { item: DataItem }) {
+function IntroCard() {
   return (
-    <CardShell className="vpOfficialDataTile">
-      <div className="vpOfficialTileIcon">{item.icon}</div>
+    <CardShell className="vpAdvancedIntroBlock">
+      <div className="vpAdvancedIntroIcon">
+        <ChartIcon />
+      </div>
 
-      <div className="vpOfficialTileText">
-        <span>{item.label}</span>
+      <div className="vpAdvancedIntroText">
+        <span>DADOS AVANÇADOS</span>
+        <strong>Selecione um dado</strong>
+        <small>Toque em um card para abrir o gráfico detalhado.</small>
+      </div>
+    </CardShell>
+  );
+}
+
+function MetricButton({ item }: { item: AdvancedMetric }) {
+  return (
+    <button className="vpAdvancedDataTile" type="button">
+      <div className="vpAdvancedTileIcon">{item.icon}</div>
+
+      <div className={`vpAdvancedTileText ${item.label ? "" : "isTitleOnly"}`}>
+        {item.label ? <span>{item.label}</span> : null}
         <strong>{item.value}</strong>
         {item.detail ? <small>{item.detail}</small> : null}
       </div>
-    </CardShell>
+
+      <ChevronIcon className="vpAdvancedTileChevron" />
+    </button>
   );
 }
 
-export default function PremiumPanelPreview({ onClose }: PremiumPanelPreviewProps) {
-  const data: DataItem[] = [
+export default function PremiumPanelPreview({ onClose, onBack, placeName }: PremiumPanelPreviewProps) {
+  const selectedPlaceName = placeName?.trim() || "Ponto selecionado";
+
+  const metrics: AdvancedMetric[] = [
+    { icon: <RainIcon />, label: "Clima", value: "Parcialmente nublado" },
     { icon: <ThermometerIcon />, label: "Temperatura do Ar", value: "26,0 °C" },
     { icon: <WaterThermometerIcon />, label: "Temperatura da Água", value: "22,4 °C" },
     { icon: <TideIcon />, label: "Maré", value: "Enchendo" },
+    { icon: <WaveIcon />, label: "Swell", value: "0,7 m • 8 s" },
     { icon: <WindIcon />, label: "Vento", value: "NE • 8 km/h" },
-    { icon: <MoonIcon />, label: "Lua", value: "Crescente", detail: "35% iluminada" },
-    { icon: <SunIcon />, label: "Clima", value: "Ensolarado" },
-    { icon: <DepthIcon />, label: "Profundidade", value: "4,2 m" },
-    { icon: <BottomIcon />, label: "Tipo de Fundo", value: "Areia e Pedra" },
+    { icon: <PressureIcon />, label: "Pressão", value: "1016 hPa" },
+    {
+      icon: <SunMoonIcon />,
+      label: "",
+      value: "SOL E LUA",
+    },
   ];
 
   return (
-    <section className="vpOfficialPreview" aria-label="Preview Aba Oficial Gratuita">
-      <button className="vpOfficialCloseButton" type="button" aria-label="Fechar" onClick={onClose}>
-        <CloseIcon />
-      </button>
+    <section className="vpAdvancedPreview" aria-label="Preview Dados Avançados">
+      {onClose ? (
+        <button className="vpAdvancedCloseButton" type="button" aria-label="Fechar" onClick={onClose}>
+          <CloseIcon />
+        </button>
+      ) : null}
 
-      <main className="vpOfficialPanelShell">
-        <SelectedPointCard />
+      <main className="vpAdvancedPanelShell">
+        <button
+          type="button"
+          className="vpAdvancedBackButton"
+          aria-label="Voltar"
+          onClick={onBack}
+        >
+          <BackIcon />
+        </button>
 
-        <div className="vpOfficialTopGrid">
-          <ScoreCard />
-          <BestTimesCard />
-        </div>
+        <SelectedPointCard placeName={selectedPlaceName} />
 
-        <section className="vpOfficialDataGrid" aria-label="Dados gratuitos">
-          {data.map((item) => (
-            <DataCard key={item.label} item={item} />
+        <IntroCard />
+
+        <section className="vpAdvancedDataGrid" aria-label="Dados avançados">
+          {metrics.map((item) => (
+            <MetricButton key={item.label} item={item} />
           ))}
         </section>
-
-        <button className="vpOfficialAdvancedButton" type="button">
-          <ChartIcon className="vpOfficialAdvancedIcon" />
-          <span>Dados Avançados</span>
-          <ChevronIcon className="vpOfficialChevron" />
-        </button>
       </main>
 
       <style jsx global>{`
-        .vpOfficialPreview {
+        .vpAdvancedPreview {
           position: fixed;
           inset: 0;
           z-index: 99999;
@@ -507,7 +406,7 @@ export default function PremiumPanelPreview({ onClose }: PremiumPanelPreviewProp
             sans-serif;
         }
 
-        .vpOfficialCloseButton {
+        .vpAdvancedCloseButton {
           position: fixed;
           top: max(14px, env(safe-area-inset-top));
           right: max(16px, env(safe-area-inset-right));
@@ -526,12 +425,36 @@ export default function PremiumPanelPreview({ onClose }: PremiumPanelPreviewProp
           cursor: pointer;
         }
 
-        .vpOfficialCloseButton svg {
+        .vpAdvancedCloseButton svg {
           width: 25px;
           height: 25px;
         }
 
-        .vpOfficialPanelShell {
+        .vpAdvancedBackButton {
+          position: absolute;
+          top: 16px;
+          left: 16px;
+          z-index: 2;
+          width: 44px;
+          height: 44px;
+          border: 0;
+          border-radius: 999px;
+          background: transparent;
+          color: rgba(248, 250, 252, 0.94);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          box-shadow: none;
+        }
+
+        .vpAdvancedBackButton svg {
+          width: 25px;
+          height: 25px;
+        }
+
+        .vpAdvancedPanelShell {
+          position: relative;
           width: min(100vw, 460px);
           height: 100dvh;
           margin: 0 auto;
@@ -542,8 +465,8 @@ export default function PremiumPanelPreview({ onClose }: PremiumPanelPreviewProp
           gap: 7px;
         }
 
-        .vpOfficialCard,
-        .vpOfficialAdvancedButton {
+        .vpAdvancedCard,
+        .vpAdvancedDataTile {
           background: linear-gradient(135deg, rgba(23, 31, 42, 0.88), rgba(10, 16, 23, 0.94));
           border: 1px solid rgba(148, 163, 184, 0.2);
           box-shadow:
@@ -552,7 +475,7 @@ export default function PremiumPanelPreview({ onClose }: PremiumPanelPreviewProp
           backdrop-filter: blur(14px);
         }
 
-        .vpOfficialPlaceBlock {
+        .vpAdvancedPlaceBlock {
           flex: 0 0 auto;
           border-radius: 18px;
           min-height: 64px;
@@ -560,11 +483,11 @@ export default function PremiumPanelPreview({ onClose }: PremiumPanelPreviewProp
           grid-template-columns: auto minmax(0, 1fr) auto;
           align-items: center;
           gap: 10px;
-          padding: 9px 62px 9px 11px;
+          padding: 9px 11px 9px 54px;
           box-sizing: border-box;
         }
 
-        .vpOfficialPlaceIcon {
+        .vpAdvancedPlaceIcon {
           width: 42px;
           height: 42px;
           border-radius: 999px;
@@ -576,19 +499,19 @@ export default function PremiumPanelPreview({ onClose }: PremiumPanelPreviewProp
           box-shadow: 0 0 22px rgba(14, 165, 233, 0.18);
         }
 
-        .vpOfficialPlaceIcon svg {
+        .vpAdvancedPlaceIcon svg {
           width: 27px;
           height: 27px;
         }
 
-        .vpOfficialPlaceText {
+        .vpAdvancedPlaceText {
           min-width: 0;
           display: flex;
           flex-direction: column;
           gap: 1px;
         }
 
-        .vpOfficialPlaceText span {
+        .vpAdvancedPlaceText span {
           color: rgba(226, 232, 240, 0.72);
           font-size: 11px;
           line-height: 1;
@@ -597,7 +520,7 @@ export default function PremiumPanelPreview({ onClose }: PremiumPanelPreviewProp
           font-weight: 520;
         }
 
-        .vpOfficialPlaceText strong {
+        .vpAdvancedPlaceText strong {
           color: #38bdf8;
           font-size: clamp(17px, 4.7vw, 21px);
           line-height: 1.15;
@@ -607,150 +530,95 @@ export default function PremiumPanelPreview({ onClose }: PremiumPanelPreviewProp
           text-overflow: ellipsis;
         }
 
-        .vpOfficialPlaceText small {
-          color: rgba(226, 232, 240, 0.74);
-          font-size: clamp(12px, 3.25vw, 14px);
-          line-height: 1.1;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        .vpOfficialCopyButton {
-          border: 1px solid rgba(56, 189, 248, 0.36);
-          border-radius: 11px;
-          background: rgba(14, 165, 233, 0.08);
-          color: #7dd3fc;
-          height: 36px;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 6px;
-          padding: 0 10px;
-          font-size: 13px;
-          font-weight: 560;
-          cursor: pointer;
-          transition:
-            border-color 160ms ease,
-            background 160ms ease,
-            color 160ms ease,
-            box-shadow 160ms ease;
-        }
-
-        .vpOfficialCopyButton svg {
-          width: 17px;
-          height: 17px;
-        }
-
-        .vpOfficialCopyButton span {
-          white-space: nowrap;
-        }
-
-        .vpOfficialCopyButton.isCopied {
-          border-color: rgba(34, 197, 94, 0.48);
-          background: rgba(34, 197, 94, 0.12);
-          color: #86efac;
-          box-shadow: 0 0 18px rgba(34, 197, 94, 0.14);
-        }
-
-        .vpOfficialTopGrid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 7px;
+        .vpAdvancedIntroBlock {
           flex: 0 0 auto;
-        }
-
-        .vpOfficialScoreBlock {
-          min-height: 168px;
           border-radius: 18px;
-          padding: 8px 8px 7px;
-          text-align: center;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-        }
-
-        .vpOfficialScoreBlock h1 {
-          margin: 0 0 -4px;
-          color: rgba(255, 255, 255, 0.88);
-          font-size: clamp(12px, 3.35vw, 15px);
-          line-height: 1.05;
-          letter-spacing: 0.055em;
-          font-weight: 600;
-        }
-
-        .vpOfficialScoreBlock p {
-          margin: -12px 0 0;
-          color: rgba(226, 232, 240, 0.72);
-          font-size: clamp(10px, 2.65vw, 12px);
-          line-height: 1.05;
-        }
-
-        .vpOfficialScoreGauge {
-          width: min(41vw, 185px);
-          margin: 0 auto;
-        }
-
-        .vpOfficialScoreGauge svg {
-          width: 100%;
-          height: auto;
-          display: block;
-          overflow: visible;
-        }
-
-        .vpOfficialBestTimes {
-          min-height: 168px;
-          border-radius: 18px;
-          padding: 10px 8px;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-        }
-
-        .vpOfficialBestTimes h2 {
-          margin: 0 0 12px;
-          text-align: center;
-          color: rgba(226, 232, 240, 0.74);
-          font-size: clamp(11px, 3vw, 13px);
-          line-height: 1;
-          font-weight: 600;
-          letter-spacing: 0.055em;
-        }
-
-        .vpOfficialTimeGrid {
+          min-height: 82px;
           display: grid;
-          grid-template-columns: 1fr;
+          grid-template-columns: auto minmax(0, 1fr);
+          align-items: center;
           gap: 12px;
+          padding: 11px 13px;
+          box-sizing: border-box;
         }
 
-        .vpOfficialTimeItem {
+        .vpAdvancedIntroIcon {
+          width: 42px;
+          height: 42px;
+          border-radius: 14px;
+          color: #7dd3fc;
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 8px;
+          background: rgba(14, 165, 233, 0.12);
+        }
+
+        .vpAdvancedIntroIcon svg {
+          width: 27px;
+          height: 27px;
+        }
+
+        .vpAdvancedIntroText {
           min-width: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
         }
 
-        .vpOfficialTimeItem strong {
-          color: #ffffff;
-          font-size: clamp(13px, 3.75vw, 16px);
+        .vpAdvancedIntroText span {
+          color: rgba(226, 232, 240, 0.72);
+          font-size: 11px;
           line-height: 1;
-          font-weight: 650;
-          white-space: nowrap;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          font-weight: 620;
         }
 
-        .vpOfficialTimeIcon {
-          width: clamp(28px, 7.8vw, 36px);
-          height: clamp(28px, 7.8vw, 36px);
+        .vpAdvancedIntroText strong {
+          color: #ffffff;
+          font-size: clamp(19px, 4.8vw, 23px);
+          line-height: 1.08;
+          font-weight: 680;
+          letter-spacing: -0.02em;
+        }
+
+        .vpAdvancedIntroText small {
+          color: rgba(226, 232, 240, 0.72);
+          font-size: clamp(11px, 3vw, 13px);
+          line-height: 1.2;
+          font-weight: 450;
+        }
+
+        .vpAdvancedHeaderScore {
           color: #7dd3fc;
-          flex: 0 0 auto;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 0;
+          box-sizing: border-box;
+          text-align: center;
         }
 
-        .vpOfficialDivider {
-          display: none;
+        .vpAdvancedHeaderScore span {
+          color: rgba(186, 230, 253, 0.78);
+          font-size: 9px;
+          line-height: 1;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          font-weight: 720;
         }
 
-        .vpOfficialDataGrid {
+        .vpAdvancedHeaderScore strong {
+          margin-top: 2px;
+          color: #38bdf8;
+          font-size: 22px;
+          line-height: 0.95;
+          font-weight: 780;
+          letter-spacing: -0.04em;
+        }
+
+        .vpAdvancedDataGrid {
           flex: 1 1 auto;
           min-height: 0;
           display: grid;
@@ -759,31 +627,54 @@ export default function PremiumPanelPreview({ onClose }: PremiumPanelPreviewProp
           gap: 7px;
         }
 
-        .vpOfficialDataTile {
+        .vpAdvancedDataTile {
           min-height: 0;
+          width: 100%;
           border-radius: 16px;
           display: grid;
-          grid-template-columns: auto minmax(0, 1fr);
+          grid-template-columns: auto minmax(0, 1fr) auto;
           align-items: center;
           gap: 9px;
           padding: 8px 10px;
           box-sizing: border-box;
+          color: inherit;
+          text-align: left;
+          cursor: pointer;
+          appearance: none;
+          transition:
+            border-color 160ms ease,
+            background 160ms ease,
+            transform 160ms ease,
+            box-shadow 160ms ease;
         }
 
-        .vpOfficialTileIcon {
+        .vpAdvancedDataTile:hover {
+          border-color: rgba(125, 211, 252, 0.34);
+          background: linear-gradient(135deg, rgba(23, 39, 54, 0.9), rgba(10, 20, 30, 0.96));
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.045),
+            0 16px 38px rgba(0, 0, 0, 0.22),
+            0 0 18px rgba(14, 165, 233, 0.08);
+        }
+
+        .vpAdvancedDataTile:active {
+          transform: scale(0.985);
+        }
+
+        .vpAdvancedTileIcon {
           color: #e0f2fe;
           display: flex;
           align-items: center;
           justify-content: center;
         }
 
-        .vpOfficialTileIcon svg {
+        .vpAdvancedTileIcon svg {
           width: clamp(27px, 7.7vw, 35px);
           height: clamp(27px, 7.7vw, 35px);
           display: block;
         }
 
-        .vpOfficialTileText {
+        .vpAdvancedTileText {
           min-width: 0;
           display: flex;
           flex-direction: column;
@@ -792,7 +683,7 @@ export default function PremiumPanelPreview({ onClose }: PremiumPanelPreviewProp
           gap: 2px;
         }
 
-        .vpOfficialTileText span {
+        .vpAdvancedTileText span {
           color: rgba(226, 232, 240, 0.72);
           font-size: 11.5px;
           line-height: 1.05;
@@ -801,62 +692,39 @@ export default function PremiumPanelPreview({ onClose }: PremiumPanelPreviewProp
           text-transform: uppercase;
         }
 
-        .vpOfficialTileText strong {
+        .vpAdvancedTileText strong {
           color: #ffffff;
-          font-size: clamp(20px, 4.9vw, 24px);
+          font-size: clamp(18px, 4.55vw, 23px);
           line-height: 1.08;
           font-weight: 680;
           letter-spacing: -0.02em;
         }
 
-        .vpOfficialTileText small {
+        .vpAdvancedTileText.isTitleOnly strong {
+          font-size: clamp(18px, 4.35vw, 21px);
+          line-height: 1.05;
+          letter-spacing: 0.03em;
+        }
+
+        .vpAdvancedTileText small {
           color: rgba(226, 232, 240, 0.68);
           font-size: 12px;
           line-height: 1.2;
           font-weight: 400;
         }
 
-        .vpOfficialAdvancedButton {
-          flex: 0 0 auto;
-          width: 100%;
-          min-height: 54px;
-          border-radius: 16px;
-          color: #ffffff;
-          display: grid;
-          grid-template-columns: auto 1fr auto;
-          align-items: center;
-          gap: 12px;
-          padding: 0 15px;
-          text-align: left;
-          cursor: pointer;
+        .vpAdvancedTileChevron {
+          width: 24px;
+          height: 24px;
+          color: rgba(255, 255, 255, 0.68);
         }
 
-        .vpOfficialAdvancedIcon {
-          width: 29px;
-          height: 29px;
-          color: #7dd3fc;
-        }
-
-        .vpOfficialAdvancedButton span {
-          font-size: clamp(17px, 4.6vw, 21px);
-          font-weight: 620;
-          letter-spacing: 0.01em;
-        }
-
-        .vpOfficialChevron {
-          width: 28px;
-          height: 28px;
-          color: rgba(255, 255, 255, 0.78);
-        }
-
-        .vpOfficialPlaceIcon svg,
-        .vpOfficialCopyButton svg,
-        .vpOfficialTileIcon svg,
-        .vpOfficialTimeIcon,
-        .vpOfficialAdvancedIcon,
-        .vpOfficialChevron,
-        .vpOfficialCloseButton svg,
-        .vpOfficialPreviewMiniIcon svg {
+        .vpAdvancedPlaceIcon svg,
+        .vpAdvancedIntroIcon svg,
+        .vpAdvancedTileIcon svg,
+        .vpAdvancedTileChevron,
+        .vpAdvancedCloseButton svg,
+        .vpAdvancedBackButton svg {
           fill: none;
           stroke: currentColor;
           stroke-width: 3;
@@ -864,87 +732,87 @@ export default function PremiumPanelPreview({ onClose }: PremiumPanelPreviewProp
           stroke-linejoin: round;
         }
 
-        .vpOfficialTileIcon .vpMoonIcon,
-        .vpOfficialTileIcon .vpBottomIcon {
-          fill: currentColor;
-          stroke: none;
-        }
-
-        .vpOfficialPreviewMiniIcon {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          width: 28px;
-          height: 28px;
-          border-radius: 10px;
-          background: rgba(14, 165, 233, 0.12);
-          color: #7dd3fc;
-        }
-
-        .vpOfficialPreviewMiniIcon svg {
-          width: 18px;
-          height: 18px;
-        }
-
         @media (max-width: 390px) {
-          .vpOfficialPanelShell {
+          .vpAdvancedPanelShell {
             gap: 6px;
             padding-left: 10px;
             padding-right: 10px;
           }
 
-          .vpOfficialPlaceBlock {
-            min-height: 58px;
-            padding: 7px 54px 7px 9px;
+          .vpAdvancedBackButton {
+            top: 10px;
+            left: 10px;
           }
 
-          .vpOfficialPlaceIcon {
+          .vpAdvancedPlaceBlock {
+            min-height: 58px;
+            padding: 7px 9px 7px 50px;
+          }
+
+          .vpAdvancedPlaceIcon {
             width: 36px;
             height: 36px;
           }
 
-          .vpOfficialPlaceIcon svg {
+          .vpAdvancedPlaceIcon svg {
             width: 23px;
             height: 23px;
           }
 
-          .vpOfficialCopyButton {
-            width: 34px;
+          .vpAdvancedIntroBlock {
+            min-height: 76px;
+            grid-template-columns: auto minmax(0, 1fr);
+            gap: 9px;
+            padding: 9px;
+          }
+
+          .vpAdvancedIntroIcon {
+            width: 36px;
+            height: 36px;
+            border-radius: 13px;
+          }
+
+          .vpAdvancedIntroIcon svg {
+            width: 23px;
+            height: 23px;
+          }
+
+          .vpAdvancedIntroText strong {
+            font-size: 18px;
+          }
+
+          .vpAdvancedIntroText small {
+            font-size: 11px;
+          }
+
+          .vpAdvancedHeaderScore {
             padding: 0;
           }
 
-          .vpOfficialCopyButton span {
-            display: none;
+          .vpAdvancedHeaderScore strong {
+            font-size: 20px;
           }
 
-          .vpOfficialScoreBlock,
-          .vpOfficialBestTimes {
-            min-height: 150px;
-          }
-
-          .vpOfficialScoreGauge {
-            width: min(39vw, 165px);
-          }
-
-          .vpOfficialDataGrid {
+          .vpAdvancedDataGrid {
             gap: 6px;
           }
 
-          .vpOfficialDataTile {
+          .vpAdvancedDataTile {
             padding: 7px 8px;
           }
 
-          .vpOfficialTileText strong {
-            font-size: 19px;
+          .vpAdvancedTileText strong {
+            font-size: 18px;
           }
 
-          .vpOfficialAdvancedButton {
-            min-height: 50px;
+          .vpAdvancedTileChevron {
+            width: 20px;
+            height: 20px;
           }
         }
 
         @media (min-width: 768px) {
-          .vpOfficialPreview {
+          .vpAdvancedPreview {
             display: flex;
             align-items: center;
             justify-content: center;
@@ -957,21 +825,21 @@ export default function PremiumPanelPreview({ onClose }: PremiumPanelPreviewProp
             backdrop-filter: blur(2px);
           }
 
-          .vpOfficialCloseButton {
+          .vpAdvancedCloseButton {
             position: absolute;
             top: max(24px, calc(50% - 410px));
             left: calc(50% + min(43vw, 460px) + 12px);
             right: auto;
           }
 
-          .vpOfficialPanelShell {
+          .vpAdvancedPanelShell {
             width: min(86vw, 920px);
             height: auto;
             max-height: min(92dvh, 820px);
             padding: 14px;
             display: grid;
             grid-template-columns: 1fr 1fr;
-            grid-template-rows: auto auto auto auto;
+            grid-template-rows: auto auto auto;
             gap: 16px;
             background: rgba(3, 10, 18, 0.82);
             border: 1px solid rgba(148, 163, 184, 0.14);
@@ -980,100 +848,96 @@ export default function PremiumPanelPreview({ onClose }: PremiumPanelPreviewProp
             backdrop-filter: blur(6px);
           }
 
-          .vpOfficialCard,
-          .vpOfficialAdvancedButton {
+          .vpAdvancedBackButton {
+            top: 18px;
+            left: 18px;
+          }
+
+          .vpAdvancedCard,
+          .vpAdvancedDataTile {
             background: rgba(10, 18, 30, 0.82);
             border: 1px solid rgba(148, 163, 184, 0.18);
           }
 
-          .vpOfficialPlaceBlock {
+          .vpAdvancedPlaceBlock {
             grid-column: 1 / -1;
             min-height: 78px;
-            padding: 14px 18px;
+            padding: 14px 18px 14px 58px;
           }
 
-          .vpOfficialTopGrid {
+          .vpAdvancedIntroBlock {
             grid-column: 1 / -1;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
+            min-height: 96px;
+            padding: 16px 18px;
           }
 
-          .vpOfficialScoreBlock,
-          .vpOfficialBestTimes {
-            min-height: 220px;
+          .vpAdvancedIntroIcon {
+            width: 50px;
+            height: 50px;
+            border-radius: 16px;
           }
 
-          .vpOfficialScoreBlock h1 {
-            font-size: 18px;
+          .vpAdvancedIntroIcon svg {
+            width: 31px;
+            height: 31px;
           }
 
-          .vpOfficialScoreGauge {
-            width: 280px;
+          .vpAdvancedIntroText span {
+            font-size: 12px;
           }
 
-          .vpOfficialScoreBlock p {
-            font-size: 13px;
+          .vpAdvancedIntroText strong {
+            font-size: 25px;
           }
 
-          .vpOfficialBestTimes h2 {
+          .vpAdvancedIntroText small {
             font-size: 14px;
           }
 
-          .vpOfficialTimeGrid {
-            grid-template-columns: 1fr auto 1fr;
-            align-items: center;
-            gap: 0;
+          .vpAdvancedHeaderScore {
+            padding: 0;
           }
 
-          .vpOfficialDivider {
-            display: block;
-            width: 1px;
-            height: 58px;
-            background: rgba(148, 163, 184, 0.24);
+          .vpAdvancedHeaderScore strong {
+            font-size: 24px;
           }
 
-          .vpOfficialTimeItem strong {
-            font-size: 20px;
-          }
-
-          .vpOfficialTimeIcon {
-            width: 42px;
-            height: 42px;
-          }
-
-          .vpOfficialDataGrid {
+          .vpAdvancedDataGrid {
             grid-column: 1 / -1;
             grid-template-columns: repeat(4, minmax(0, 1fr));
             grid-template-rows: repeat(2, 126px);
             gap: 14px;
           }
 
-          .vpOfficialDataTile {
+          .vpAdvancedDataTile {
             border-radius: 18px;
             padding: 14px;
           }
 
-          .vpOfficialTileIcon svg {
+          .vpAdvancedTileIcon svg {
             width: 32px;
             height: 32px;
           }
 
-          .vpOfficialTileText span {
+          .vpAdvancedTileText span {
             font-size: 12px;
           }
 
-          .vpOfficialTileText strong {
+          .vpAdvancedTileText strong {
             font-size: 20px;
           }
 
-          .vpOfficialAdvancedButton {
-            grid-column: 1 / -1;
-            min-height: 62px;
-            border-radius: 18px;
+          .vpAdvancedTileText.isTitleOnly strong {
+            font-size: 20px;
           }
 
-          .vpOfficialAdvancedButton span {
-            font-size: 20px;
+          .vpAdvancedTileText small {
+            font-size: 12px;
+          }
+
+          .vpAdvancedTileChevron {
+            width: 25px;
+            height: 25px;
           }
         }
       `}</style>
