@@ -982,7 +982,7 @@ function drawFooter(context: CanvasRenderingContext2D, logo: HTMLImageElement | 
 
   context.fillStyle = "#38bdf8";
   context.font = "860 23px Arial, sans-serif";
-  context.fillText("→", 314, footerY + 40);
+  context.fillText("→", 318, footerY + 40);
 
   drawQrPlaceholder(context, 358, footerY + 6, 58);
 }

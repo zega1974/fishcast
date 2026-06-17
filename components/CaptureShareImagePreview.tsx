@@ -643,7 +643,7 @@ export default function CaptureShareImagePreview() {
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 7px;
+          gap: 11px;
           color: rgba(248, 250, 252, 0.94);
         }
 
