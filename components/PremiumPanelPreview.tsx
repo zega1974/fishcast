@@ -99,6 +99,13 @@ type PressureSummaryItem = {
   emphasis?: boolean;
 };
 
+type SunMoonSummaryItem = {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  emphasis?: boolean;
+};
+
 export function PreviewIcon({
   name,
   className = '',
@@ -2417,6 +2424,268 @@ function PressureDetailView({
   );
 }
 
+function SunMoonTitleCard() {
+  return (
+    <CardShell className="vpTideTitleCard vpSunMoonTitleCard">
+      <div className="vpTideTitleIcon vpSunMoonTitleIcon">
+        <SunMoonIcon />
+      </div>
+
+      <div className="vpTideTitleText">
+        <span>DADOS AVANÇADOS</span>
+        <strong>SOL E LUA</strong>
+        <small>Horários solares, fase e iluminação lunar.</small>
+      </div>
+    </CardShell>
+  );
+}
+
+function SunMoonCycleChart() {
+  return (
+    <CardShell className="vpTideChartCard vpSunMoonChartCard">
+      <div className="vpTideSituation vpSunMoonSituation">
+        <SunMoonIcon />
+        <span>
+          SITUAÇÃO ATUAL: <strong>LUA CRESCENTE • 35% ILUMINADA</strong>
+        </span>
+      </div>
+
+      <div className="vpTideChartWrap vpSunMoonChartWrap">
+        <div className="vpSunMoonScene" aria-label="Ciclo de lua e sol ao longo de 24 horas">
+          <div className="vpSunMoonMoonHeader">
+            <div className="vpSunMoonPhaseMark" aria-hidden="true">
+              <span />
+            </div>
+
+            <div className="vpSunMoonPhaseText">
+              <span>LUA</span>
+              <strong>Crescente</strong>
+            </div>
+
+            <div className="vpSunMoonPhaseStats">
+              <div>
+                <span>ILUMINAÇÃO</span>
+                <strong>35%</strong>
+              </div>
+              <div>
+                <span>IDADE</span>
+                <strong>9,3 dias</strong>
+              </div>
+            </div>
+          </div>
+
+          <svg
+            className="vpSunMoonCurveChart"
+            viewBox="0 0 920 330"
+            preserveAspectRatio="none"
+            role="img"
+            aria-label="Curvas de nascer e pôr da lua e do sol"
+          >
+            <defs>
+              <linearGradient id="vpSunMoonMoonFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="rgba(148,163,184,0.26)" />
+                <stop offset="100%" stopColor="rgba(148,163,184,0.025)" />
+              </linearGradient>
+
+              <linearGradient id="vpSunMoonDayFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="rgba(14,165,233,0.34)" />
+                <stop offset="100%" stopColor="rgba(14,165,233,0.025)" />
+              </linearGradient>
+
+              <filter id="vpSunMoonCurveGlow" x="-30%" y="-30%" width="160%" height="160%">
+                <feGaussianBlur stdDeviation="3.4" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+
+            <g className="vpSunMoonGrid">
+              <line x1="80" y1="92" x2="880" y2="92" />
+              <line x1="80" y1="142" x2="880" y2="142" />
+              <line x1="80" y1="226" x2="880" y2="226" />
+              <line x1="80" y1="276" x2="880" y2="276" />
+
+              <line x1="80" y1="54" x2="80" y2="302" />
+              <line x1="280" y1="54" x2="280" y2="302" />
+              <line x1="480" y1="54" x2="480" y2="302" />
+              <line x1="680" y1="54" x2="680" y2="302" />
+              <line x1="880" y1="54" x2="880" y2="302" />
+            </g>
+
+            <g className="vpSunMoonRowLabel">
+              <text x="24" y="126">LUA</text>
+              <text x="24" y="258">SOL</text>
+            </g>
+
+            <path
+              className="vpSunMoonMoonArea"
+              d="M80 132 C174 144 252 140 336 118 C424 94 522 82 622 88 C724 94 810 112 880 134 L880 142 L80 142 Z"
+            />
+            <path
+              className="vpSunMoonMoonCurve"
+              d="M80 132 C174 144 252 140 336 118 C424 94 522 82 622 88 C724 94 810 112 880 134"
+            />
+
+            <path
+              className="vpSunMoonSunArea"
+              d="M80 288 C188 284 272 260 366 224 C460 188 560 184 654 218 C748 252 820 280 880 288 L880 276 L80 276 Z"
+            />
+            <path
+              className="vpSunMoonSunCurve"
+              d="M80 288 C188 284 272 260 366 224 C460 188 560 184 654 218 C748 252 820 280 880 288"
+            />
+
+            <g className="vpSunMoonEventMarkers">
+              <g>
+                <line x1="420" y1="142" x2="420" y2="112" />
+                <circle cx="420" cy="112" r="6" />
+                <text className="vpSunMoonEventLabel" x="420" y="78" textAnchor="middle">
+                  Nascer da lua
+                </text>
+                <text className="vpSunMoonEventValue" x="420" y="98" textAnchor="middle">
+                  10h12
+                </text>
+              </g>
+
+              <g>
+                <line x1="833" y1="142" x2="833" y2="126" />
+                <circle cx="833" cy="126" r="6" />
+                <text className="vpSunMoonEventLabel" x="833" y="160" textAnchor="middle">
+                  Pôr da lua
+                </text>
+                <text className="vpSunMoonEventValue" x="833" y="180" textAnchor="middle">
+                  22h36
+                </text>
+              </g>
+
+              <g>
+                <line x1="307" y1="276" x2="307" y2="250" />
+                <circle cx="307" cy="250" r="6" />
+                <text className="vpSunMoonEventLabel" x="307" y="216" textAnchor="middle">
+                  Nascer do sol
+                </text>
+                <text className="vpSunMoonEventValue" x="307" y="236" textAnchor="middle">
+                  06h48
+                </text>
+              </g>
+
+              <g>
+                <line x1="670" y1="276" x2="670" y2="232" />
+                <circle cx="670" cy="232" r="6" />
+                <text className="vpSunMoonEventLabel" x="670" y="198" textAnchor="middle">
+                  Pôr do sol
+                </text>
+                <text className="vpSunMoonEventValue" x="670" y="218" textAnchor="middle">
+                  17h42
+                </text>
+              </g>
+            </g>
+
+            <g className="vpSunMoonXAxis">
+              <text x="80" y="322" textAnchor="middle">00h</text>
+              <text x="280" y="322" textAnchor="middle">06h</text>
+              <text x="480" y="322" textAnchor="middle">12h</text>
+              <text x="680" y="322" textAnchor="middle">18h</text>
+              <text x="880" y="322" textAnchor="middle">24h</text>
+            </g>
+          </svg>
+        </div>
+      </div>
+
+      <span className="vpTideAxisLabel">Ciclo de 24h</span>
+    </CardShell>
+  );
+}
+
+function SunMoonSummaryCard({ item }: { item: SunMoonSummaryItem }) {
+  return (
+    <CardShell className="vpTideSummaryCard vpSunMoonSummaryCard">
+      <div className="vpTideSummaryIcon vpSunMoonSummaryIcon">{item.icon}</div>
+
+      <div className="vpTideSummaryText">
+        <span>{item.label}</span>
+        <strong className={item.emphasis ? 'isEmphasis' : ''}>
+          {item.value}
+        </strong>
+      </div>
+    </CardShell>
+  );
+}
+
+function SunMoonDetailView({
+  placeName,
+  onBack,
+}: {
+  placeName: string;
+  onBack: () => void;
+}) {
+  const summaries: SunMoonSummaryItem[] = [
+    {
+      icon: <SunMoonIcon />,
+      label: 'LUA ATUAL',
+      value: 'Crescente',
+      emphasis: true,
+    },
+    {
+      icon: <ActivityIcon />,
+      label: 'ILUMINAÇÃO',
+      value: '35%',
+    },
+    {
+      icon: <ClockIcon />,
+      label: 'NASCER DO SOL',
+      value: '06h48',
+    },
+    {
+      icon: <ClockIcon />,
+      label: 'PÔR DO SOL',
+      value: '17h42',
+    },
+  ];
+
+  return (
+    <main className="vpTidePanelShell vpSunMoonPanelShell">
+      <div className="vpTideTopBar">
+        <button
+          type="button"
+          className="vpTideBackButton"
+          aria-label="Voltar para Dados Avançados"
+          onClick={onBack}
+        >
+          <BackIcon />
+        </button>
+
+        <span>DADOS AVANÇADOS</span>
+      </div>
+
+      <SelectedPointCard placeName={placeName} />
+
+      <SunMoonTitleCard />
+
+      <SunMoonCycleChart />
+
+      <section className="vpTideSummaryGrid vpSunMoonSummaryGrid" aria-label="Resumo de sol e lua">
+        {summaries.map((item) => (
+          <SunMoonSummaryCard key={item.label} item={item} />
+        ))}
+      </section>
+
+      <CardShell className="vpTideVariationCard vpSunMoonVariationCard">
+        <div className="vpTideVariationIcon vpSunMoonVariationIcon">
+          <ClockIcon />
+        </div>
+
+        <div className="vpTideVariationText">
+          <span>PERÍODO CLARO</span>
+          <strong>06h48 às 17h42.</strong>
+        </div>
+      </CardShell>
+    </main>
+  );
+}
+
 export default function PremiumPanelPreview({
   onClose,
   onBack,
@@ -2484,7 +2753,8 @@ export default function PremiumPanelPreview({
       id === 'swell' ||
       id === 'airTemp' ||
       id === 'waterTemp' ||
-      id === 'pressure'
+      id === 'pressure' ||
+      id === 'sunMoon'
     ) {
       setActiveMetric(id);
     }
@@ -2535,6 +2805,11 @@ export default function PremiumPanelPreview({
         />
       ) : activeMetric === 'pressure' ? (
         <PressureDetailView
+          placeName={selectedPlaceName}
+          onBack={() => setActiveMetric(null)}
+        />
+      ) : activeMetric === 'sunMoon' ? (
+        <SunMoonDetailView
           placeName={selectedPlaceName}
           onBack={() => setActiveMetric(null)}
         />
@@ -3340,6 +3615,192 @@ export default function PremiumPanelPreview({
           color: #7dd3fc;
         }
 
+        .vpSunMoonTitleIcon {
+          color: #bae6fd;
+        }
+
+        .vpSunMoonSituation strong,
+        .vpSunMoonSummaryCard .isEmphasis {
+          color: #7dd3fc;
+        }
+
+        .vpSunMoonChartWrap {
+          display: flex;
+          align-items: stretch;
+          justify-content: center;
+          overflow: hidden;
+        }
+
+        .vpSunMoonScene {
+          flex: 1 1 auto;
+          min-width: 0;
+          min-height: 0;
+          display: grid;
+          grid-template-rows: auto minmax(0, 1fr);
+          gap: 14px;
+          padding: 10px 3px 0;
+          box-sizing: border-box;
+        }
+
+        .vpSunMoonMoonHeader {
+          display: grid;
+          grid-template-columns: auto minmax(0, 1fr) auto;
+          align-items: center;
+          gap: 18px;
+          padding: 0 8px;
+        }
+
+        .vpSunMoonPhaseMark {
+          width: 72px;
+          height: 72px;
+          border-radius: 999px;
+          border: 1px solid rgba(125, 211, 252, 0.34);
+          background:
+            radial-gradient(circle at 38% 42%, rgba(226, 232, 240, 0.98) 0 37%, transparent 38%),
+            radial-gradient(circle at 57% 42%, rgba(15, 23, 42, 0.98) 0 43%, transparent 44%),
+            radial-gradient(circle at 34% 30%, rgba(255, 255, 255, 0.35), transparent 28%),
+            rgba(15, 23, 42, 0.78);
+          box-shadow:
+            inset 0 0 26px rgba(2, 8, 18, 0.58),
+            0 0 28px rgba(125, 211, 252, 0.18);
+        }
+
+        .vpSunMoonPhaseMark span {
+          display: block;
+          width: 100%;
+          height: 100%;
+          border-radius: inherit;
+          background:
+            radial-gradient(circle at 48% 26%, rgba(255, 255, 255, 0.22), transparent 8%),
+            radial-gradient(circle at 32% 56%, rgba(255, 255, 255, 0.16), transparent 7%),
+            radial-gradient(circle at 54% 62%, rgba(255, 255, 255, 0.12), transparent 6%);
+          opacity: 0.65;
+        }
+
+        .vpSunMoonPhaseText {
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 7px;
+        }
+
+        .vpSunMoonPhaseText span,
+        .vpSunMoonPhaseStats span {
+          color: rgba(226, 232, 240, 0.68);
+          font-size: 12px;
+          line-height: 1;
+          font-weight: 760;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+        }
+
+        .vpSunMoonPhaseText span {
+          color: #7dd3fc;
+        }
+
+        .vpSunMoonPhaseText strong {
+          color: #ffffff;
+          font-size: 24px;
+          line-height: 1;
+          font-weight: 780;
+        }
+
+        .vpSunMoonPhaseStats {
+          display: grid;
+          grid-template-columns: repeat(2, auto);
+          gap: 28px;
+        }
+
+        .vpSunMoonPhaseStats div {
+          display: flex;
+          flex-direction: column;
+          gap: 7px;
+          text-align: right;
+        }
+
+        .vpSunMoonPhaseStats strong {
+          color: #7dd3fc;
+          font-size: 22px;
+          line-height: 1;
+          font-weight: 790;
+        }
+
+        .vpSunMoonCurveChart {
+          width: 100%;
+          height: 100%;
+          min-height: 310px;
+          overflow: visible;
+        }
+
+        .vpSunMoonGrid line {
+          stroke: rgba(148, 163, 184, 0.13);
+          stroke-width: 1;
+          stroke-dasharray: 4 9;
+        }
+
+        .vpSunMoonRowLabel text {
+          fill: #38bdf8;
+          font-size: 16px;
+          font-weight: 830;
+          letter-spacing: 0.08em;
+        }
+
+        .vpSunMoonMoonArea {
+          fill: url(#vpSunMoonMoonFill);
+        }
+
+        .vpSunMoonSunArea {
+          fill: url(#vpSunMoonDayFill);
+        }
+
+        .vpSunMoonMoonCurve,
+        .vpSunMoonSunCurve {
+          fill: none;
+          stroke: rgba(224, 242, 254, 0.98);
+          stroke-width: 3.4;
+          stroke-linecap: round;
+          filter: url(#vpSunMoonCurveGlow);
+        }
+
+        .vpSunMoonSunCurve {
+          stroke: rgba(14, 165, 233, 0.98);
+        }
+
+        .vpSunMoonEventMarkers line {
+          stroke: rgba(125, 211, 252, 0.62);
+          stroke-width: 2;
+          stroke-dasharray: 5 7;
+        }
+
+        .vpSunMoonEventMarkers circle {
+          fill: #e0f2fe;
+          stroke: rgba(56, 189, 248, 0.96);
+          stroke-width: 3;
+          filter: url(#vpSunMoonCurveGlow);
+        }
+
+        .vpSunMoonEventLabel {
+          fill: rgba(226, 232, 240, 0.76);
+          font-size: 11px;
+          line-height: 1;
+          font-weight: 780;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+        }
+
+        .vpSunMoonEventValue {
+          fill: rgba(248, 250, 252, 0.98);
+          font-size: 18px;
+          line-height: 1;
+          font-weight: 820;
+        }
+
+        .vpSunMoonXAxis text {
+          fill: rgba(226, 232, 240, 0.76);
+          font-size: 14px;
+          font-weight: 720;
+        }
+
         .vpTideYAxis text,
         .vpTideXAxis text {
           fill: rgba(226, 232, 240, 0.78);
@@ -3478,7 +3939,11 @@ export default function PremiumPanelPreview({
         .vpPressureTitleIcon svg,
         .vpPressureSituation svg,
         .vpPressureSummaryIcon svg,
-        .vpPressureVariationIcon svg {
+        .vpPressureVariationIcon svg,
+        .vpSunMoonTitleIcon svg,
+        .vpSunMoonSituation svg,
+        .vpSunMoonSummaryIcon svg,
+        .vpSunMoonVariationIcon svg {
           fill: none;
           stroke: currentColor;
           stroke-width: 3;
@@ -3793,6 +4258,145 @@ export default function PremiumPanelPreview({
           .vpTideVariationCard {
             display: none;
           }
+
+          .vpSunMoonPanelShell .vpTideTitleCard {
+            display: none;
+          }
+
+          .vpSunMoonPanelShell .vpTideChartCard {
+            grid-column: 1;
+            grid-row: 2 / 4;
+          }
+
+          .vpSunMoonPanelShell .vpTideSummaryGrid {
+            grid-column: 2;
+            grid-row: 2 / 4;
+          }
+
+          .vpSunMoonPanelShell .vpSunMoonScene {
+            gap: 6px;
+            padding: 2px 0 0;
+          }
+
+          .vpSunMoonPanelShell .vpSunMoonMoonHeader {
+            gap: 10px;
+            padding: 0 2px;
+          }
+
+          .vpSunMoonPanelShell .vpSunMoonPhaseMark {
+            width: 48px;
+            height: 48px;
+          }
+
+          .vpSunMoonPanelShell .vpSunMoonPhaseText span,
+          .vpSunMoonPanelShell .vpSunMoonPhaseStats span {
+            font-size: 8px;
+          }
+
+          .vpSunMoonPanelShell .vpSunMoonPhaseText strong {
+            font-size: 15px;
+          }
+
+          .vpSunMoonPanelShell .vpSunMoonPhaseStats {
+            gap: 10px;
+          }
+
+          .vpSunMoonPanelShell .vpSunMoonPhaseStats strong {
+            font-size: 14px;
+          }
+
+          .vpSunMoonPanelShell .vpSunMoonCurveChart {
+            min-height: 0;
+            height: 100%;
+          }
+
+          .vpSunMoonPanelShell .vpSunMoonEventLabel {
+            font-size: 8px;
+          }
+
+          .vpSunMoonPanelShell .vpSunMoonEventValue {
+            font-size: 13px;
+          }
+
+          .vpSunMoonPanelShell .vpSunMoonXAxis text {
+            font-size: 11px;
+          }
+        }
+
+        @media (orientation: portrait) and (max-width: 767px) {
+          .vpSunMoonChartCard {
+            overflow: hidden;
+          }
+
+          .vpSunMoonChartWrap {
+            overflow: hidden;
+            padding-bottom: 0;
+          }
+
+          .vpSunMoonScene {
+            gap: 8px;
+            padding: 4px 0 0;
+          }
+
+          .vpSunMoonMoonHeader {
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            gap: 10px;
+            padding: 0 2px;
+          }
+
+          .vpSunMoonPhaseMark {
+            width: 56px;
+            height: 56px;
+          }
+
+          .vpSunMoonPhaseText {
+            gap: 5px;
+          }
+
+          .vpSunMoonPhaseText span,
+          .vpSunMoonPhaseStats span {
+            font-size: 9px;
+          }
+
+          .vpSunMoonPhaseText strong {
+            font-size: 18px;
+          }
+
+          .vpSunMoonPhaseStats {
+            gap: 12px;
+          }
+
+          .vpSunMoonPhaseStats strong {
+            font-size: 17px;
+          }
+
+          .vpSunMoonCurveChart {
+            width: 100%;
+            min-width: 0;
+            height: clamp(260px, 38vh, 330px);
+            min-height: 260px;
+            max-height: 330px;
+          }
+
+          .vpSunMoonRowLabel text {
+            font-size: 14px;
+          }
+
+          .vpSunMoonEventLabel {
+            font-size: 9px;
+          }
+
+          .vpSunMoonEventValue {
+            font-size: 15px;
+          }
+
+          .vpSunMoonXAxis text {
+            font-size: 12px;
+          }
+
+          .vpSunMoonPanelShell .vpTideVariationCard {
+            display: grid;
+          }
         }
 
         @media (min-width: 768px) {
@@ -4045,6 +4649,46 @@ export default function PremiumPanelPreview({
           .vpTideVariationText strong {
             font-size: 15px;
           }
+
+          .vpSunMoonPanelShell {
+            width: min(96vw, 1320px);
+            max-height: min(92dvh, 860px);
+            grid-template-columns: minmax(0, 1fr) 260px;
+            grid-template-rows: 40px 72px 86px minmax(390px, 1fr) 84px;
+          }
+
+          .vpSunMoonPanelShell .vpAdvancedPlaceBlock {
+            grid-column: 1 / -1;
+            grid-row: 2;
+          }
+
+          .vpSunMoonPanelShell .vpTideTitleCard {
+            grid-column: 1 / -1;
+            grid-row: 3;
+          }
+
+          .vpSunMoonPanelShell .vpSunMoonChartCard {
+            grid-column: 1;
+            grid-row: 4;
+            min-height: 0;
+          }
+
+          .vpSunMoonPanelShell .vpSunMoonSummaryGrid {
+            grid-column: 2;
+            grid-row: 4;
+            grid-template-columns: 1fr;
+            grid-template-rows: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+          }
+
+          .vpSunMoonPanelShell .vpSunMoonVariationCard {
+            grid-column: 1 / -1;
+            grid-row: 5;
+          }
+
+          .vpSunMoonPanelShell .vpSunMoonCurveChart {
+            min-height: 340px;
+          }
         }
 
         @media (orientation: landscape) and (max-height: 500px) {
@@ -4199,9 +4843,57 @@ export default function PremiumPanelPreview({
             font-size: 15px;
             font-weight: 700;
           }
+
+          .vpSunMoonPanelShell .vpSunMoonScene {
+            gap: 5px;
+            padding: 0;
+          }
+
+          .vpSunMoonPanelShell .vpSunMoonMoonHeader {
+            gap: 8px;
+            padding: 0 2px;
+          }
+
+          .vpSunMoonPanelShell .vpSunMoonPhaseMark {
+            width: 42px;
+            height: 42px;
+          }
+
+          .vpSunMoonPanelShell .vpSunMoonPhaseText span,
+          .vpSunMoonPanelShell .vpSunMoonPhaseStats span {
+            font-size: 7px;
+          }
+
+          .vpSunMoonPanelShell .vpSunMoonPhaseText strong {
+            font-size: 13px;
+          }
+
+          .vpSunMoonPanelShell .vpSunMoonPhaseStats {
+            gap: 8px;
+          }
+
+          .vpSunMoonPanelShell .vpSunMoonPhaseStats strong {
+            font-size: 12px;
+          }
+
+          .vpSunMoonPanelShell .vpSunMoonCurveChart {
+            min-height: 0;
+            height: 100%;
+          }
+
+          .vpSunMoonPanelShell .vpSunMoonEventLabel {
+            font-size: 7px;
+          }
+
+          .vpSunMoonPanelShell .vpSunMoonEventValue {
+            font-size: 12px;
+          }
+
+          .vpSunMoonPanelShell .vpSunMoonXAxis text {
+            font-size: 10px;
+          }
         }
       `}</style>
     </section>
   );
 }
-
