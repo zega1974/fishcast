@@ -71,6 +71,13 @@ type WeatherSummaryItem = {
   emphasis?: boolean;
 };
 
+type SwellSummaryItem = {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  emphasis?: boolean;
+};
+
 export function PreviewIcon({
   name,
   className = '',
@@ -848,18 +855,28 @@ function WindChart() {
   const chartRight = 890;
   const chartTop = 30;
   const chartBottom = 245;
-  const windMax = 20;
+  const yAxisLabelY = [35, 90, 145, 200, 250];
 
   const windHourlyData = [
-    { hour: 0, label: '00h', speed: 10 },
-    { hour: 3, label: '03h', speed: 6 },
-    { hour: 6, label: '06h', speed: 8 },
-    { hour: 9, label: '09h', speed: 11 },
-    { hour: 12, label: '12h', speed: 8, current: true },
-    { hour: 15, label: '15h', speed: 14 },
-    { hour: 18, label: '18h', speed: 13 },
-    { hour: 21, label: '21h', speed: 9 },
-    { hour: 24, label: '24h', speed: 7 },
+    { hour: 0, label: '00h', speed: 10, direction: 'N' },
+    { hour: 3, label: '03h', speed: 6, direction: 'NE' },
+    { hour: 6, label: '06h', speed: 8, direction: 'NE' },
+    { hour: 9, label: '09h', speed: 11, direction: 'E' },
+    { hour: 12, label: '12h', speed: 8, direction: 'NE', current: true },
+    { hour: 15, label: '15h', speed: 14, direction: 'E' },
+    { hour: 18, label: '18h', speed: 13, direction: 'SE' },
+    { hour: 21, label: '21h', speed: 9, direction: 'SE' },
+    { hour: 24, label: '24h', speed: 7, direction: 'S' },
+  ];
+
+  const highestWind = Math.max(...windHourlyData.map((point) => point.speed));
+  const windMax = Math.max(20, Math.ceil((highestWind * 1.25) / 5) * 5);
+  const windYAxisValues = [
+    windMax,
+    windMax * 0.75,
+    windMax * 0.5,
+    windMax * 0.25,
+    0,
   ];
 
   const toX = (hour: number) =>
@@ -868,6 +885,29 @@ function WindChart() {
   const toY = (speed: number) =>
     chartBottom - (speed / windMax) * (chartBottom - chartTop);
 
+  const getWindArrow = (direction: string) => {
+    switch (direction) {
+      case 'N':
+        return '↑';
+      case 'NE':
+        return '↗';
+      case 'E':
+        return '→';
+      case 'SE':
+        return '↘';
+      case 'S':
+        return '↓';
+      case 'SW':
+        return '↙';
+      case 'W':
+        return '←';
+      case 'NW':
+        return '↖';
+      default:
+        return '•';
+    }
+  };
+
   const linePoints = windHourlyData.map((point) => ({
     x: toX(point.hour),
     y: toY(point.speed),
@@ -875,9 +915,7 @@ function WindChart() {
 
   const linePath = createSmoothPath(linePoints);
   const areaPath = `${linePath} L ${toX(24).toFixed(1)} ${chartBottom} L ${toX(0).toFixed(1)} ${chartBottom} Z`;
-  const markers = windHourlyData.filter((point) =>
-    [3, 12, 15, 21].includes(point.hour)
-  );
+  const markers = windHourlyData;
 
   return (
     <CardShell className="vpTideChartCard vpWindChartCard">
@@ -929,24 +967,6 @@ function WindChart() {
             <line x1="890" y1="30" x2="890" y2="245" />
           </g>
 
-          <g className="vpWindBars" aria-hidden="true">
-            {windHourlyData.map((point) => {
-              const x = toX(point.hour);
-              const y = toY(point.speed);
-
-              return (
-                <rect
-                  key={point.label}
-                  x={x - 8}
-                  y={y}
-                  width="16"
-                  height={chartBottom - y}
-                  rx="8"
-                />
-              );
-            })}
-          </g>
-
           <g className="vpChartBarLabels vpWindBarLabels">
             {windHourlyData.map((point) => {
               const x = toX(point.hour);
@@ -954,7 +974,7 @@ function WindChart() {
 
               return (
                 <text key={point.label} x={x} y={y - 10} textAnchor="middle">
-                  {point.speed}
+                  {point.speed} {getWindArrow(point.direction)}
                 </text>
               );
             })}
@@ -979,11 +999,11 @@ function WindChart() {
           })}
 
           <g className="vpTideYAxis">
-            <text x="4" y="35">20</text>
-            <text x="4" y="90">15</text>
-            <text x="4" y="145">10</text>
-            <text x="4" y="200">5</text>
-            <text x="4" y="250">0</text>
+            {windYAxisValues.map((value, index) => (
+              <text key={value} x="4" y={yAxisLabelY[index]}>
+                {Math.round(value)}
+              </text>
+            ))}
           </g>
 
           <g className="vpTideXAxis">
@@ -1109,7 +1129,7 @@ function WeatherChart() {
   const chartRight = 890;
   const chartTop = 30;
   const chartBottom = 245;
-  const rainMax = 80;
+  const rainMax = 100;
 
   const weatherHourlyData = [
     { hour: 0, label: '00h', rainChance: 16 },
@@ -1136,9 +1156,7 @@ function WeatherChart() {
 
   const linePath = createSmoothPath(linePoints);
   const areaPath = `${linePath} L ${toX(24).toFixed(1)} ${chartBottom} L ${toX(0).toFixed(1)} ${chartBottom} Z`;
-  const markers = weatherHourlyData.filter((point) =>
-    [3, 12, 18, 21].includes(point.hour)
-  );
+  const markers = weatherHourlyData;
 
   return (
     <CardShell className="vpTideChartCard vpWeatherChartCard">
@@ -1190,24 +1208,6 @@ function WeatherChart() {
             <line x1="890" y1="30" x2="890" y2="245" />
           </g>
 
-          <g className="vpWeatherBars" aria-hidden="true">
-            {weatherHourlyData.map((point) => {
-              const x = toX(point.hour);
-              const y = toY(point.rainChance);
-
-              return (
-                <rect
-                  key={point.label}
-                  x={x - 8}
-                  y={y}
-                  width="16"
-                  height={chartBottom - y}
-                  rx="8"
-                />
-              );
-            })}
-          </g>
-
           <g className="vpChartBarLabels vpWeatherBarLabels">
             {weatherHourlyData.map((point) => {
               const x = toX(point.hour);
@@ -1240,10 +1240,10 @@ function WeatherChart() {
           })}
 
           <g className="vpTideYAxis">
-            <text x="4" y="35">80</text>
-            <text x="4" y="90">60</text>
-            <text x="4" y="145">40</text>
-            <text x="4" y="200">20</text>
+            <text x="4" y="35">100</text>
+            <text x="4" y="90">75</text>
+            <text x="4" y="145">50</text>
+            <text x="4" y="200">25</text>
             <text x="4" y="250">0</text>
           </g>
 
@@ -1349,6 +1349,277 @@ function WeatherDetailView({
   );
 }
 
+function SwellTitleCard() {
+  return (
+    <CardShell className="vpTideTitleCard vpSwellTitleCard">
+      <div className="vpTideTitleIcon vpSwellTitleIcon">
+        <WaveIcon />
+      </div>
+
+      <div className="vpTideTitleText">
+        <span>DADOS AVANÇADOS</span>
+        <strong>SWELL</strong>
+        <small>Altura, período e direção da ondulação nas próximas horas.</small>
+      </div>
+    </CardShell>
+  );
+}
+
+function SwellChart() {
+  const chartLeft = 90;
+  const chartRight = 890;
+  const chartTop = 30;
+  const chartBottom = 245;
+  const yAxisLabelY = [35, 90, 145, 200, 250];
+
+  const swellHourlyData = [
+    { hour: 0, label: '00h', height: 0.5, period: 7 },
+    { hour: 3, label: '03h', height: 0.6, period: 7 },
+    { hour: 6, label: '06h', height: 0.7, period: 8 },
+    { hour: 9, label: '09h', height: 0.8, period: 8 },
+    { hour: 12, label: '12h', height: 0.7, period: 8, current: true },
+    { hour: 15, label: '15h', height: 0.9, period: 9 },
+    { hour: 18, label: '18h', height: 1.0, period: 9 },
+    { hour: 21, label: '21h', height: 0.8, period: 8 },
+    { hour: 24, label: '24h', height: 0.7, period: 8 },
+  ];
+
+  const highestSwell = Math.max(...swellHourlyData.map((point) => point.height));
+  const swellMax = Math.max(1.5, Math.ceil(highestSwell * 1.25 * 10) / 10);
+  const swellYAxisValues = [
+    swellMax,
+    swellMax * 0.75,
+    swellMax * 0.5,
+    swellMax * 0.25,
+    0,
+  ];
+
+  const toX = (hour: number) =>
+    chartLeft + (hour / 24) * (chartRight - chartLeft);
+
+  const toY = (height: number) =>
+    chartBottom - (height / swellMax) * (chartBottom - chartTop);
+
+  const formatHeight = (height: number) =>
+    `${height.toFixed(1).replace('.', ',')}m`;
+
+  const linePoints = swellHourlyData.map((point) => ({
+    x: toX(point.hour),
+    y: toY(point.height),
+  }));
+
+  const linePath = createSmoothPath(linePoints);
+  const areaPath = `${linePath} L ${toX(24).toFixed(1)} ${chartBottom} L ${toX(0).toFixed(1)} ${chartBottom} Z`;
+  const markers = swellHourlyData;
+
+  return (
+    <CardShell className="vpTideChartCard vpSwellChartCard">
+      <div className="vpTideSituation vpSwellSituation">
+        <WaveIcon />
+        <span>
+          SITUAÇÃO ATUAL: <strong>ONDULAÇÃO FRACA A MODERADA DE SE</strong>
+        </span>
+      </div>
+
+      <div className="vpTideChartWrap vpSwellChartWrap">
+        <svg
+          className="vpTideChart vpSwellChart"
+          viewBox="0 0 920 270"
+          preserveAspectRatio="none"
+          role="img"
+          aria-label="Gráfico de swell ao longo de 24 horas"
+        >
+          <defs>
+            <linearGradient id="vpSwellFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="rgba(125,211,252,0.26)" />
+              <stop offset="100%" stopColor="rgba(125,211,252,0.015)" />
+            </linearGradient>
+
+            <filter id="vpSwellGlow" x="-30%" y="-30%" width="160%" height="160%">
+              <feGaussianBlur stdDeviation="4" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+
+          <g className="vpTideGrid">
+            <line x1="55" y1="30" x2="900" y2="30" />
+            <line x1="55" y1="85" x2="900" y2="85" />
+            <line x1="55" y1="140" x2="900" y2="140" />
+            <line x1="55" y1="195" x2="900" y2="195" />
+            <line x1="55" y1="245" x2="900" y2="245" />
+
+            <line x1="90" y1="30" x2="90" y2="245" />
+            <line x1="190" y1="30" x2="190" y2="245" />
+            <line x1="290" y1="30" x2="290" y2="245" />
+            <line x1="390" y1="30" x2="390" y2="245" />
+            <line x1="490" y1="30" x2="490" y2="245" />
+            <line x1="590" y1="30" x2="590" y2="245" />
+            <line x1="690" y1="30" x2="690" y2="245" />
+            <line x1="790" y1="30" x2="790" y2="245" />
+            <line x1="890" y1="30" x2="890" y2="245" />
+          </g>
+
+          <path className="vpSwellArea" d={areaPath} />
+          <path className="vpSwellLine" d={linePath} />
+
+          <g className="vpChartBarLabels vpSwellHeightLabels">
+            {swellHourlyData.map((point) => {
+              const x = toX(point.hour);
+              const y = toY(point.height);
+
+              return (
+                <g className="vpSwellPointLabels" key={point.label}>
+                  <text
+                    className="vpSwellPeriodValue"
+                    x={x}
+                    y={y - 30}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                  >
+                    {point.period} s
+                  </text>
+                  <text
+                    className="vpSwellHeightValue"
+                    x={x}
+                    y={y - 14}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                  >
+                    {formatHeight(point.height)}
+                  </text>
+                </g>
+              );
+            })}
+          </g>
+
+          {markers.map((point) => {
+            const x = toX(point.hour);
+            const y = toY(point.height);
+
+            return (
+              <g
+                className={`vpTideMarker vpSwellMarker${point.current ? ' isCurrent' : ''}`}
+                key={point.label}
+              >
+                <line x1={x} y1={y} x2={x} y2={chartBottom} />
+                <circle cx={x} cy={y} r={point.current ? 7 : 6} />
+              </g>
+            );
+          })}
+
+          <g className="vpTideYAxis">
+            {swellYAxisValues.map((value, index) => (
+              <text key={value} x="4" y={yAxisLabelY[index]}>
+                {value.toFixed(1).replace('.', ',')}
+              </text>
+            ))}
+          </g>
+
+          <g className="vpTideXAxis">
+            {swellHourlyData.map((point) => (
+              <text key={point.label} x={toX(point.hour)} y="265" textAnchor="middle">
+                {point.label}
+              </text>
+            ))}
+          </g>
+        </svg>
+      </div>
+
+      <span className="vpTideAxisLabel">Altura (m) • Período (s)</span>
+    </CardShell>
+  );
+}
+
+function SwellSummaryCard({ item }: { item: SwellSummaryItem }) {
+  return (
+    <CardShell className="vpTideSummaryCard vpSwellSummaryCard">
+      <div className="vpTideSummaryIcon vpSwellSummaryIcon">{item.icon}</div>
+
+      <div className="vpTideSummaryText">
+        <span>{item.label}</span>
+        <strong className={item.emphasis ? 'isEmphasis' : ''}>
+          {item.value}
+        </strong>
+      </div>
+    </CardShell>
+  );
+}
+
+function SwellDetailView({
+  placeName,
+  onBack,
+}: {
+  placeName: string;
+  onBack: () => void;
+}) {
+  const summaries: SwellSummaryItem[] = [
+    {
+      icon: <WaveIcon />,
+      label: 'SWELL ATUAL',
+      value: '0,7 m • 8 s',
+      emphasis: true,
+    },
+    {
+      icon: <ActivityIcon />,
+      label: 'PICO DO DIA',
+      value: '1,0 m às 18h',
+    },
+    {
+      icon: <CompassIcon />,
+      label: 'DIREÇÃO',
+      value: 'Sudeste',
+    },
+    {
+      icon: <ClockIcon />,
+      label: 'PERÍODO',
+      value: '8–9 s',
+    },
+  ];
+
+  return (
+    <main className="vpTidePanelShell vpSwellPanelShell">
+      <div className="vpTideTopBar">
+        <button
+          type="button"
+          className="vpTideBackButton"
+          aria-label="Voltar para Dados Avançados"
+          onClick={onBack}
+        >
+          <BackIcon />
+        </button>
+
+        <span>DADOS AVANÇADOS</span>
+      </div>
+
+      <SelectedPointCard placeName={placeName} />
+
+      <SwellTitleCard />
+
+      <SwellChart />
+
+      <section className="vpTideSummaryGrid vpSwellSummaryGrid" aria-label="Resumo do swell">
+        {summaries.map((item) => (
+          <SwellSummaryCard key={item.label} item={item} />
+        ))}
+      </section>
+
+      <CardShell className="vpTideVariationCard vpSwellVariationCard">
+        <div className="vpTideVariationIcon vpSwellVariationIcon">
+          <ClockIcon />
+        </div>
+
+        <div className="vpTideVariationText">
+          <span>JANELA MAIS LIMPA</span>
+          <strong>Ondulação mais organizada entre 13h e 18h.</strong>
+        </div>
+      </CardShell>
+    </main>
+  );
+}
+
 export default function PremiumPanelPreview({
   onClose,
   onBack,
@@ -1409,7 +1680,7 @@ export default function PremiumPanelPreview({
   ];
 
   const openMetric = (id: AdvancedMetricId) => {
-    if (id === 'tide' || id === 'wind' || id === 'weather') {
+    if (id === 'tide' || id === 'wind' || id === 'weather' || id === 'swell') {
       setActiveMetric(id);
     }
   };
@@ -1439,6 +1710,11 @@ export default function PremiumPanelPreview({
         />
       ) : activeMetric === 'weather' ? (
         <WeatherDetailView
+          placeName={selectedPlaceName}
+          onBack={() => setActiveMetric(null)}
+        />
+      ) : activeMetric === 'swell' ? (
+        <SwellDetailView
           placeName={selectedPlaceName}
           onBack={() => setActiveMetric(null)}
         />
@@ -2116,12 +2392,6 @@ export default function PremiumPanelPreview({
           fill: rgba(224, 242, 254, 0.96);
         }
 
-        .vpWindBars rect {
-          fill: rgba(125, 211, 252, 0.12);
-          stroke: rgba(125, 211, 252, 0.2);
-          stroke-width: 1;
-        }
-
         .vpWindTitleIcon {
           color: #bae6fd;
         }
@@ -2131,18 +2401,47 @@ export default function PremiumPanelPreview({
           color: #7dd3fc;
         }
 
-        .vpWeatherBars rect {
-          fill: rgba(125, 211, 252, 0.12);
-          stroke: rgba(125, 211, 252, 0.2);
-          stroke-width: 1;
-        }
-
         .vpWeatherTitleIcon {
           color: #bae6fd;
         }
 
         .vpWeatherSituation strong,
         .vpWeatherSummaryCard .isEmphasis {
+          color: #7dd3fc;
+        }
+
+        .vpSwellArea {
+          fill: url(#vpSwellFill);
+        }
+
+        .vpSwellLine {
+          fill: none;
+          stroke: rgba(224, 242, 254, 0.96);
+          stroke-width: 3;
+          stroke-linecap: round;
+          filter: url(#vpSwellGlow);
+        }
+
+        .vpSwellHeightLabels .vpSwellHeightValue {
+          fill: rgba(248, 250, 252, 0.96);
+        }
+
+        .vpSwellHeightLabels .vpSwellPeriodValue {
+          fill: rgba(125, 211, 252, 0.96);
+          font-size: inherit;
+          font-weight: 700;
+        }
+
+        .vpSwellPointLabels text {
+          text-anchor: middle;
+        }
+
+        .vpSwellTitleIcon {
+          color: #bae6fd;
+        }
+
+        .vpSwellSituation strong,
+        .vpSwellSummaryCard .isEmphasis {
           color: #7dd3fc;
         }
 
@@ -2268,7 +2567,11 @@ export default function PremiumPanelPreview({
         .vpWeatherTitleIcon svg,
         .vpWeatherSituation svg,
         .vpWeatherSummaryIcon svg,
-        .vpWeatherVariationIcon svg {
+        .vpWeatherVariationIcon svg,
+        .vpSwellTitleIcon svg,
+        .vpSwellSituation svg,
+        .vpSwellSummaryIcon svg,
+        .vpSwellVariationIcon svg {
           fill: none;
           stroke: currentColor;
           stroke-width: 3;
