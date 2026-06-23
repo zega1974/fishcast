@@ -64,6 +64,13 @@ type WindSummaryItem = {
   emphasis?: boolean;
 };
 
+type WeatherSummaryItem = {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  emphasis?: boolean;
+};
+
 export function PreviewIcon({
   name,
   className = '',
@@ -228,6 +235,24 @@ function RainIcon(props: IconProps) {
       <path d="M17 37l-2 5" />
       <path d="M25 37l-2 5" />
       <path d="M33 37l-2 5" />
+    </SvgBase>
+  );
+}
+
+function CloudIcon(props: IconProps) {
+  return (
+    <SvgBase {...props}>
+      <path d="M15 31h19a8 8 0 0 0 1-16 11 11 0 0 0-21 4 6 6 0 0 0 1 12Z" />
+      <path d="M15 37h18" />
+    </SvgBase>
+  );
+}
+
+function VisibilityIcon(props: IconProps) {
+  return (
+    <SvgBase {...props}>
+      <path d="M5 24s7-12 19-12 19 12 19 12-7 12-19 12S5 24 5 24Z" />
+      <circle cx="24" cy="24" r="6" />
     </SvgBase>
   );
 }
@@ -431,6 +456,41 @@ function MetricButton({
   );
 }
 
+type ChartPoint = {
+  x: number;
+  y: number;
+};
+
+function createSmoothPath(points: ChartPoint[]) {
+  if (points.length === 0) {
+    return '';
+  }
+
+  if (points.length === 1) {
+    return `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`;
+  }
+
+  const commands = [`M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`];
+
+  for (let index = 0; index < points.length - 1; index += 1) {
+    const p0 = points[index - 1] ?? points[index];
+    const p1 = points[index];
+    const p2 = points[index + 1];
+    const p3 = points[index + 2] ?? p2;
+
+    const c1x = p1.x + (p2.x - p0.x) / 6;
+    const c1y = p1.y + (p2.y - p0.y) / 6;
+    const c2x = p2.x - (p3.x - p1.x) / 6;
+    const c2y = p2.y - (p3.y - p1.y) / 6;
+
+    commands.push(
+      `C ${c1x.toFixed(1)} ${c1y.toFixed(1)} ${c2x.toFixed(1)} ${c2y.toFixed(1)} ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`
+    );
+  }
+
+  return commands.join(' ');
+}
+
 function TideTitleCard() {
   return (
     <CardShell className="vpTideTitleCard">
@@ -448,6 +508,126 @@ function TideTitleCard() {
 }
 
 function TideChart() {
+  const chartLeft = 90;
+  const chartRight = 890;
+  const chartTop = 30;
+  const chartBottom = 245;
+  const tideMax = 1.6;
+
+  const tideMainPoints = [
+    {
+      key: 'lowMorning',
+      kind: 'major',
+      hour: 5 + 18 / 60,
+      height: 0.3,
+      labelHour: '05h18',
+      labelHeight: '0,3 m',
+    },
+    {
+      key: 'current',
+      kind: 'current',
+      hour: 11 + 24 / 60,
+      height: 0.9,
+      labelHour: '11h24',
+      labelHeight: '0,9 m',
+    },
+    {
+      key: 'highAfternoon',
+      kind: 'major',
+      hour: 16 + 42 / 60,
+      height: 1.4,
+      labelHour: '16h42',
+      labelHeight: '1,4 m',
+    },
+    {
+      key: 'lowNight',
+      kind: 'major',
+      hour: 22 + 18 / 60,
+      height: 0.3,
+      labelHour: '22h18',
+      labelHeight: '0,3 m',
+    },
+  ] as const;
+
+  const toX = (hour: number) =>
+    chartLeft + (hour / 24) * (chartRight - chartLeft);
+
+  const toY = (height: number) =>
+    chartBottom - (height / tideMax) * (chartBottom - chartTop);
+
+  const formatHour = (hour: number) => {
+    const normalized = ((hour % 24) + 24) % 24;
+    const h = Math.floor(normalized);
+    const m = Math.round((normalized - h) * 60);
+
+    if (m === 60) {
+      return `${String((h + 1) % 24).padStart(2, '0')}h`;
+    }
+
+    if (m === 0) {
+      return `${String(h).padStart(2, '0')}h`;
+    }
+
+    return `${String(h).padStart(2, '0')}h${String(m).padStart(2, '0')}`;
+  };
+
+  const formatHeight = (height: number) =>
+    `${height.toFixed(1).replace('.', ',')} m`;
+
+  const getInterpolatedTideHeight = (hour: number) => {
+    for (let index = 0; index < tideMainPoints.length; index += 1) {
+      const point = tideMainPoints[index];
+      const nextPoint = tideMainPoints[(index + 1) % tideMainPoints.length];
+      const startHour = point.hour;
+      const endHour =
+        nextPoint.hour <= startHour ? nextPoint.hour + 24 : nextPoint.hour;
+      const testHour = hour < startHour ? hour + 24 : hour;
+
+      if (testHour >= startHour && testHour <= endHour) {
+        const progress = (testHour - startHour) / (endHour - startHour);
+        return point.height + (nextPoint.height - point.height) * progress;
+      }
+    }
+
+    return tideMainPoints[0].height;
+  };
+
+  const tideAuxiliaryPoints = tideMainPoints.map((point, index) => {
+    const nextPoint = tideMainPoints[(index + 1) % tideMainPoints.length];
+    const nextHour =
+      nextPoint.hour <= point.hour ? nextPoint.hour + 24 : nextPoint.hour;
+    const midHourRaw = (point.hour + nextHour) / 2;
+    const midHour = midHourRaw % 24;
+    const midHeight = (point.height + nextPoint.height) / 2;
+
+    return {
+      key: `aux-${point.key}-${nextPoint.key}`,
+      kind: 'secondary',
+      hour: midHour,
+      height: midHeight,
+      labelHour: formatHour(midHour),
+      labelHeight: formatHeight(midHeight),
+    };
+  });
+
+  const tideMarkers = [...tideMainPoints, ...tideAuxiliaryPoints]
+    .slice()
+    .sort((a, b) => a.hour - b.hour);
+
+  const curveHours = [
+    0,
+    ...tideMarkers.map((point) => point.hour),
+    24,
+  ];
+
+  const curvePoints = curveHours.map((hour) => ({
+    x: toX(hour),
+    y: toY(getInterpolatedTideHeight(hour === 24 ? 0 : hour)),
+  }));
+
+  const curvePath = createSmoothPath(curvePoints);
+  const areaPath = `${curvePath} L ${toX(24).toFixed(1)} ${chartBottom} L ${toX(0).toFixed(1)} ${chartBottom} Z`;
+
   return (
     <CardShell className="vpTideChartCard">
       <div className="vpTideSituation">
@@ -463,7 +643,7 @@ function TideChart() {
           viewBox="0 0 920 270"
           preserveAspectRatio="none"
           role="img"
-          aria-label="Gráfico de altura da maré ao longo de 24 horas"
+          aria-label="GrÃ¡fico de altura da marÃ© ao longo de 24 horas"
         >
           <defs>
             <linearGradient id="vpTideFill" x1="0" y1="0" x2="0" y2="1">
@@ -498,74 +678,40 @@ function TideChart() {
             <line x1="890" y1="30" x2="890" y2="245" />
           </g>
 
-          <path
-            className="vpTideArea"
-            d="M55 128
-               C100 126 135 150 175 184
-               C220 222 250 224 290 210
-               C340 191 385 147 440 126
-               C505 102 555 55 625 44
-               C705 31 750 70 785 125
-               C820 180 845 218 880 208
-               C890 205 896 199 900 195
-               L900 245 L55 245 Z"
-          />
+          <path className="vpTideArea" d={areaPath} />
+          <path className="vpTideLine" d={curvePath} />
 
-          <path
-            className="vpTideLine"
-            d="M55 128
-               C100 126 135 150 175 184
-               C220 222 250 224 290 210
-               C340 191 385 147 440 126
-               C505 102 555 55 625 44
-               C705 31 750 70 785 125
-               C820 180 845 218 880 208
-               C890 205 896 199 900 195"
-          />
+          {tideMarkers.map((point) => {
+            const x = toX(point.hour);
+            const y = toY(point.height);
+            const isCurrent = point.kind === 'current';
+            const isMajor = point.kind === 'major';
+            const isSecondary = point.kind === 'secondary';
 
-          <g className="vpTideMarker">
-            <line x1="240" y1="210" x2="240" y2="245" />
-            <circle cx="240" cy="210" r="6" />
-            <text x="240" y="183" textAnchor="middle">
-              05h18
-            </text>
-            <text x="240" y="200" textAnchor="middle">
-              0,3 m
-            </text>
-          </g>
+            const className = isCurrent
+              ? 'vpTideMarker isCurrent'
+              : isSecondary
+                ? 'vpTideMarker isSecondary'
+                : 'vpTideMarker';
 
-          <g className="vpTideMarker isCurrent">
-            <line x1="440" y1="126" x2="440" y2="245" />
-            <circle cx="440" cy="126" r="7" />
-            <text x="440" y="92" textAnchor="middle">
-              11h24
-            </text>
-            <text x="440" y="111" textAnchor="middle">
-              0,9 m
-            </text>
-          </g>
+            const textAbove = y > 78 || isMajor || isCurrent;
+            const textGap = isMajor || isCurrent ? 28 : 25;
+            const textY1 = textAbove ? y - textGap : y + 29;
+            const textY2 = textAbove ? y - (isMajor || isCurrent ? 11 : 9) : y + 45;
 
-          <g className="vpTideMarker">
-            <line x1="625" y1="44" x2="625" y2="245" />
-            <circle cx="625" cy="44" r="6" />
-            <text x="625" y="15" textAnchor="middle">
-              16h42
-            </text>
-            <text x="625" y="33" textAnchor="middle">
-              1,4 m
-            </text>
-          </g>
-
-          <g className="vpTideMarker">
-            <line x1="850" y1="208" x2="850" y2="245" />
-            <circle cx="850" cy="208" r="6" />
-            <text x="850" y="181" textAnchor="middle">
-              22h18
-            </text>
-            <text x="850" y="198" textAnchor="middle">
-              0,3 m
-            </text>
-          </g>
+            return (
+              <g className={className} key={point.key}>
+                <line x1={x} y1={y} x2={x} y2={chartBottom} />
+                <circle cx={x} cy={y} r={isCurrent ? 7 : isMajor ? 6 : 4} />
+                <text x={x} y={textY1} textAnchor="middle">
+                  {point.labelHour}
+                </text>
+                <text x={x} y={textY2} textAnchor="middle">
+                  {point.labelHeight}
+                </text>
+              </g>
+            );
+          })}
 
           <g className="vpTideYAxis">
             <text x="4" y="35">1,6</text>
@@ -698,6 +844,41 @@ function WindTitleCard() {
 }
 
 function WindChart() {
+  const chartLeft = 90;
+  const chartRight = 890;
+  const chartTop = 30;
+  const chartBottom = 245;
+  const windMax = 20;
+
+  const windHourlyData = [
+    { hour: 0, label: '00h', speed: 10 },
+    { hour: 3, label: '03h', speed: 6 },
+    { hour: 6, label: '06h', speed: 8 },
+    { hour: 9, label: '09h', speed: 11 },
+    { hour: 12, label: '12h', speed: 8, current: true },
+    { hour: 15, label: '15h', speed: 14 },
+    { hour: 18, label: '18h', speed: 13 },
+    { hour: 21, label: '21h', speed: 9 },
+    { hour: 24, label: '24h', speed: 7 },
+  ];
+
+  const toX = (hour: number) =>
+    chartLeft + (hour / 24) * (chartRight - chartLeft);
+
+  const toY = (speed: number) =>
+    chartBottom - (speed / windMax) * (chartBottom - chartTop);
+
+  const linePoints = windHourlyData.map((point) => ({
+    x: toX(point.hour),
+    y: toY(point.speed),
+  }));
+
+  const linePath = createSmoothPath(linePoints);
+  const areaPath = `${linePath} L ${toX(24).toFixed(1)} ${chartBottom} L ${toX(0).toFixed(1)} ${chartBottom} Z`;
+  const markers = windHourlyData.filter((point) =>
+    [3, 12, 15, 21].includes(point.hour)
+  );
+
   return (
     <CardShell className="vpTideChartCard vpWindChartCard">
       <div className="vpTideSituation vpWindSituation">
@@ -713,7 +894,7 @@ function WindChart() {
           viewBox="0 0 920 270"
           preserveAspectRatio="none"
           role="img"
-          aria-label="Gráfico de vento ao longo de 24 horas"
+          aria-label="GrÃ¡fico de vento ao longo de 24 horas"
         >
           <defs>
             <linearGradient id="vpWindFill" x1="0" y1="0" x2="0" y2="1">
@@ -749,100 +930,68 @@ function WindChart() {
           </g>
 
           <g className="vpWindBars" aria-hidden="true">
-            <rect x="82" y="192" width="16" height="53" rx="8" />
-            <rect x="182" y="178" width="16" height="67" rx="8" />
-            <rect x="282" y="158" width="16" height="87" rx="8" />
-            <rect x="382" y="140" width="16" height="105" rx="8" />
-            <rect x="482" y="125" width="16" height="120" rx="8" />
-            <rect x="582" y="110" width="16" height="135" rx="8" />
-            <rect x="682" y="120" width="16" height="125" rx="8" />
-            <rect x="782" y="148" width="16" height="97" rx="8" />
-            <rect x="882" y="172" width="16" height="73" rx="8" />
+            {windHourlyData.map((point) => {
+              const x = toX(point.hour);
+              const y = toY(point.speed);
+
+              return (
+                <rect
+                  key={point.label}
+                  x={x - 8}
+                  y={y}
+                  width="16"
+                  height={chartBottom - y}
+                  rx="8"
+                />
+              );
+            })}
           </g>
 
-          <path
-            className="vpWindArea"
-            d="M55 190
-               C105 186 145 178 190 170
-               C245 160 300 145 355 136
-               C420 124 485 112 545 105
-               C620 96 670 110 720 128
-               C785 150 840 165 900 174
-               L900 245 L55 245 Z"
-          />
+          <g className="vpChartBarLabels vpWindBarLabels">
+            {windHourlyData.map((point) => {
+              const x = toX(point.hour);
+              const y = toY(point.speed);
 
-          <path
-            className="vpWindLine"
-            d="M55 190
-               C105 186 145 178 190 170
-               C245 160 300 145 355 136
-               C420 124 485 112 545 105
-               C620 96 670 110 720 128
-               C785 150 840 165 900 174"
-          />
-
-          <g className="vpTideMarker vpWindMarker">
-            <line x1="190" y1="170" x2="190" y2="245" />
-            <circle cx="190" cy="170" r="6" />
-            <text x="190" y="143" textAnchor="middle">
-              03h
-            </text>
-            <text x="190" y="160" textAnchor="middle">
-              6 km/h
-            </text>
+              return (
+                <text key={point.label} x={x} y={y - 10} textAnchor="middle">
+                  {point.speed}
+                </text>
+              );
+            })}
           </g>
 
-          <g className="vpTideMarker vpWindMarker isCurrent">
-            <line x1="490" y1="112" x2="490" y2="245" />
-            <circle cx="490" cy="112" r="7" />
-            <text x="490" y="78" textAnchor="middle">
-              12h
-            </text>
-            <text x="490" y="97" textAnchor="middle">
-              8 km/h
-            </text>
-          </g>
+          <path className="vpWindArea" d={areaPath} />
+          <path className="vpWindLine" d={linePath} />
 
-          <g className="vpTideMarker vpWindMarker">
-            <line x1="625" y1="100" x2="625" y2="245" />
-            <circle cx="625" cy="100" r="6" />
-            <text x="625" y="71" textAnchor="middle">
-              16h
-            </text>
-            <text x="625" y="89" textAnchor="middle">
-              14 km/h
-            </text>
-          </g>
+          {markers.map((point) => {
+            const x = toX(point.hour);
+            const y = toY(point.speed);
 
-          <g className="vpTideMarker vpWindMarker">
-            <line x1="850" y1="166" x2="850" y2="245" />
-            <circle cx="850" cy="166" r="6" />
-            <text x="850" y="139" textAnchor="middle">
-              22h
-            </text>
-            <text x="850" y="156" textAnchor="middle">
-              9 km/h
-            </text>
-          </g>
+            return (
+              <g
+                className={`vpTideMarker vpWindMarker${point.current ? ' isCurrent' : ''}`}
+                key={point.label}
+              >
+                <line x1={x} y1={y} x2={x} y2={chartBottom} />
+                <circle cx={x} cy={y} r={point.current ? 7 : 6} />
+              </g>
+            );
+          })}
 
           <g className="vpTideYAxis">
-            <text x="4" y="35">25</text>
-            <text x="4" y="90">20</text>
-            <text x="4" y="145">15</text>
-            <text x="4" y="200">10</text>
+            <text x="4" y="35">20</text>
+            <text x="4" y="90">15</text>
+            <text x="4" y="145">10</text>
+            <text x="4" y="200">5</text>
             <text x="4" y="250">0</text>
           </g>
 
           <g className="vpTideXAxis">
-            <text x="90" y="265" textAnchor="middle">00h</text>
-            <text x="190" y="265" textAnchor="middle">03h</text>
-            <text x="290" y="265" textAnchor="middle">06h</text>
-            <text x="390" y="265" textAnchor="middle">09h</text>
-            <text x="490" y="265" textAnchor="middle">12h</text>
-            <text x="590" y="265" textAnchor="middle">15h</text>
-            <text x="690" y="265" textAnchor="middle">18h</text>
-            <text x="790" y="265" textAnchor="middle">21h</text>
-            <text x="890" y="265" textAnchor="middle">24h</text>
+            {windHourlyData.map((point) => (
+              <text key={point.label} x={toX(point.hour)} y="265" textAnchor="middle">
+                {point.label}
+              </text>
+            ))}
           </g>
         </svg>
       </div>
@@ -939,6 +1088,267 @@ function WindDetailView({
   );
 }
 
+function WeatherTitleCard() {
+  return (
+    <CardShell className="vpTideTitleCard vpWeatherTitleCard">
+      <div className="vpTideTitleIcon vpWeatherTitleIcon">
+        <CloudIcon />
+      </div>
+
+      <div className="vpTideTitleText">
+        <span>DADOS AVANÇADOS</span>
+        <strong>CLIMA</strong>
+        <small>Chuva, nebulosidade e estabilidade nas próximas horas.</small>
+      </div>
+    </CardShell>
+  );
+}
+
+function WeatherChart() {
+  const chartLeft = 90;
+  const chartRight = 890;
+  const chartTop = 30;
+  const chartBottom = 245;
+  const rainMax = 80;
+
+  const weatherHourlyData = [
+    { hour: 0, label: '00h', rainChance: 16 },
+    { hour: 3, label: '03h', rainChance: 12 },
+    { hour: 6, label: '06h', rainChance: 20 },
+    { hour: 9, label: '09h', rainChance: 26 },
+    { hour: 12, label: '12h', rainChance: 18, current: true },
+    { hour: 15, label: '15h', rainChance: 28 },
+    { hour: 18, label: '18h', rainChance: 42 },
+    { hour: 21, label: '21h', rainChance: 31 },
+    { hour: 24, label: '24h', rainChance: 22 },
+  ];
+
+  const toX = (hour: number) =>
+    chartLeft + (hour / 24) * (chartRight - chartLeft);
+
+  const toY = (rainChance: number) =>
+    chartBottom - (rainChance / rainMax) * (chartBottom - chartTop);
+
+  const linePoints = weatherHourlyData.map((point) => ({
+    x: toX(point.hour),
+    y: toY(point.rainChance),
+  }));
+
+  const linePath = createSmoothPath(linePoints);
+  const areaPath = `${linePath} L ${toX(24).toFixed(1)} ${chartBottom} L ${toX(0).toFixed(1)} ${chartBottom} Z`;
+  const markers = weatherHourlyData.filter((point) =>
+    [3, 12, 18, 21].includes(point.hour)
+  );
+
+  return (
+    <CardShell className="vpTideChartCard vpWeatherChartCard">
+      <div className="vpTideSituation vpWeatherSituation">
+        <CloudIcon />
+        <span>
+          SITUAÇÃO ATUAL: <strong>PARCIALMENTE NUBLADO</strong>
+        </span>
+      </div>
+
+      <div className="vpTideChartWrap vpWeatherChartWrap">
+        <svg
+          className="vpTideChart vpWeatherChart"
+          viewBox="0 0 920 270"
+          preserveAspectRatio="none"
+          role="img"
+          aria-label="GrÃ¡fico de chance de chuva ao longo de 24 horas"
+        >
+          <defs>
+            <linearGradient id="vpWeatherFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="rgba(125,211,252,0.28)" />
+              <stop offset="100%" stopColor="rgba(125,211,252,0.015)" />
+            </linearGradient>
+
+            <filter id="vpWeatherGlow" x="-30%" y="-30%" width="160%" height="160%">
+              <feGaussianBlur stdDeviation="4" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+
+          <g className="vpTideGrid">
+            <line x1="55" y1="30" x2="900" y2="30" />
+            <line x1="55" y1="85" x2="900" y2="85" />
+            <line x1="55" y1="140" x2="900" y2="140" />
+            <line x1="55" y1="195" x2="900" y2="195" />
+            <line x1="55" y1="245" x2="900" y2="245" />
+
+            <line x1="90" y1="30" x2="90" y2="245" />
+            <line x1="190" y1="30" x2="190" y2="245" />
+            <line x1="290" y1="30" x2="290" y2="245" />
+            <line x1="390" y1="30" x2="390" y2="245" />
+            <line x1="490" y1="30" x2="490" y2="245" />
+            <line x1="590" y1="30" x2="590" y2="245" />
+            <line x1="690" y1="30" x2="690" y2="245" />
+            <line x1="790" y1="30" x2="790" y2="245" />
+            <line x1="890" y1="30" x2="890" y2="245" />
+          </g>
+
+          <g className="vpWeatherBars" aria-hidden="true">
+            {weatherHourlyData.map((point) => {
+              const x = toX(point.hour);
+              const y = toY(point.rainChance);
+
+              return (
+                <rect
+                  key={point.label}
+                  x={x - 8}
+                  y={y}
+                  width="16"
+                  height={chartBottom - y}
+                  rx="8"
+                />
+              );
+            })}
+          </g>
+
+          <g className="vpChartBarLabels vpWeatherBarLabels">
+            {weatherHourlyData.map((point) => {
+              const x = toX(point.hour);
+              const y = toY(point.rainChance);
+
+              return (
+                <text key={point.label} x={x} y={y - 10} textAnchor="middle">
+                  {point.rainChance}%
+                </text>
+              );
+            })}
+          </g>
+
+          <path className="vpWeatherArea" d={areaPath} />
+          <path className="vpWeatherLine" d={linePath} />
+
+          {markers.map((point) => {
+            const x = toX(point.hour);
+            const y = toY(point.rainChance);
+
+            return (
+              <g
+                className={`vpTideMarker vpWeatherMarker${point.current ? ' isCurrent' : ''}`}
+                key={point.label}
+              >
+                <line x1={x} y1={y} x2={x} y2={chartBottom} />
+                <circle cx={x} cy={y} r={point.current ? 7 : 6} />
+              </g>
+            );
+          })}
+
+          <g className="vpTideYAxis">
+            <text x="4" y="35">80</text>
+            <text x="4" y="90">60</text>
+            <text x="4" y="145">40</text>
+            <text x="4" y="200">20</text>
+            <text x="4" y="250">0</text>
+          </g>
+
+          <g className="vpTideXAxis">
+            {weatherHourlyData.map((point) => (
+              <text key={point.label} x={toX(point.hour)} y="265" textAnchor="middle">
+                {point.label}
+              </text>
+            ))}
+          </g>
+        </svg>
+      </div>
+
+      <span className="vpTideAxisLabel">Chuva (%)</span>
+    </CardShell>
+  );
+}
+
+function WeatherSummaryCard({ item }: { item: WeatherSummaryItem }) {
+  return (
+    <CardShell className="vpTideSummaryCard vpWeatherSummaryCard">
+      <div className="vpTideSummaryIcon vpWeatherSummaryIcon">{item.icon}</div>
+
+      <div className="vpTideSummaryText">
+        <span>{item.label}</span>
+        <strong className={item.emphasis ? 'isEmphasis' : ''}>
+          {item.value}
+        </strong>
+      </div>
+    </CardShell>
+  );
+}
+
+function WeatherDetailView({
+  placeName,
+  onBack,
+}: {
+  placeName: string;
+  onBack: () => void;
+}) {
+  const summaries: WeatherSummaryItem[] = [
+    {
+      icon: <CloudIcon />,
+      label: 'CLIMA ATUAL',
+      value: 'Parcialmente nublado',
+      emphasis: true,
+    },
+    {
+      icon: <RainIcon />,
+      label: 'CHUVA',
+      value: '18%',
+    },
+    {
+      icon: <SunMoonIcon />,
+      label: 'NEBULOSIDADE',
+      value: '62%',
+    },
+    {
+      icon: <VisibilityIcon />,
+      label: 'VISIBILIDADE',
+      value: 'Boa',
+    },
+  ];
+
+  return (
+    <main className="vpTidePanelShell vpWeatherPanelShell">
+      <div className="vpTideTopBar">
+        <button
+          type="button"
+          className="vpTideBackButton"
+          aria-label="Voltar para Dados Avançados"
+          onClick={onBack}
+        >
+          <BackIcon />
+        </button>
+
+        <span>DADOS AVANÇADOS</span>
+      </div>
+
+      <SelectedPointCard placeName={placeName} />
+
+      <WeatherTitleCard />
+
+      <WeatherChart />
+
+      <section className="vpTideSummaryGrid vpWeatherSummaryGrid" aria-label="Resumo do clima">
+        {summaries.map((item) => (
+          <WeatherSummaryCard key={item.label} item={item} />
+        ))}
+      </section>
+
+      <CardShell className="vpTideVariationCard vpWeatherVariationCard">
+        <div className="vpTideVariationIcon vpWeatherVariationIcon">
+          <ClockIcon />
+        </div>
+
+        <div className="vpTideVariationText">
+          <span>JANELA MAIS ESTÁVEL</span>
+          <strong>Melhor estabilidade entre 9h e 13h.</strong>
+        </div>
+      </CardShell>
+    </main>
+  );
+}
+
 export default function PremiumPanelPreview({
   onClose,
   onBack,
@@ -999,7 +1409,7 @@ export default function PremiumPanelPreview({
   ];
 
   const openMetric = (id: AdvancedMetricId) => {
-    if (id === 'tide' || id === 'wind') {
+    if (id === 'tide' || id === 'wind' || id === 'weather') {
       setActiveMetric(id);
     }
   };
@@ -1024,6 +1434,11 @@ export default function PremiumPanelPreview({
         />
       ) : activeMetric === 'wind' ? (
         <WindDetailView
+          placeName={selectedPlaceName}
+          onBack={() => setActiveMetric(null)}
+        />
+      ) : activeMetric === 'weather' ? (
+        <WeatherDetailView
           placeName={selectedPlaceName}
           onBack={() => setActiveMetric(null)}
         />
@@ -1602,6 +2017,10 @@ export default function PremiumPanelPreview({
           fill: url(#vpWindFill);
         }
 
+        .vpWeatherArea {
+          fill: url(#vpWeatherFill);
+        }
+
         .vpTideLine {
           fill: none;
           stroke: rgba(224, 242, 254, 0.96);
@@ -1616,6 +2035,14 @@ export default function PremiumPanelPreview({
           stroke-width: 3;
           stroke-linecap: round;
           filter: url(#vpWindGlow);
+        }
+
+        .vpWeatherLine {
+          fill: none;
+          stroke: rgba(224, 242, 254, 0.96);
+          stroke-width: 3;
+          stroke-linecap: round;
+          filter: url(#vpWeatherGlow);
         }
 
         .vpTideMarker line {
@@ -1636,6 +2063,29 @@ export default function PremiumPanelPreview({
           font-weight: 680;
         }
 
+        .vpTideMarker.isSecondary line {
+          stroke: rgba(125, 211, 252, 0.34);
+          stroke-width: 1.2;
+          stroke-dasharray: 4 7;
+        }
+
+        .vpTideMarker.isSecondary circle {
+          fill: rgba(224, 242, 254, 0.9);
+          stroke: rgba(56, 189, 248, 0.28);
+          stroke-width: 1.7;
+          filter: none;
+        }
+
+        .vpTideMarker.isSecondary text {
+          fill: rgba(226, 232, 240, 0.82);
+          font-size: 14px;
+          font-weight: 640;
+          paint-order: stroke;
+          stroke: rgba(2, 8, 15, 0.68);
+          stroke-width: 2px;
+          stroke-linejoin: round;
+        }
+
         .vpTideMarker.isCurrent line {
           stroke: #38bdf8;
         }
@@ -1645,6 +2095,25 @@ export default function PremiumPanelPreview({
           stroke: #bae6fd;
           stroke-width: 3;
           filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.9));
+        }
+
+        .vpChartBarLabels text {
+          fill: rgba(248, 250, 252, 0.94);
+          font-size: 16px;
+          line-height: 1;
+          font-weight: 760;
+          paint-order: stroke;
+          stroke: rgba(2, 8, 15, 0.72);
+          stroke-width: 3px;
+          stroke-linejoin: round;
+        }
+
+        .vpWeatherBarLabels text {
+          fill: rgba(186, 230, 253, 0.96);
+        }
+
+        .vpWindBarLabels text {
+          fill: rgba(224, 242, 254, 0.96);
         }
 
         .vpWindBars rect {
@@ -1659,6 +2128,21 @@ export default function PremiumPanelPreview({
 
         .vpWindSituation strong,
         .vpWindSummaryCard .isEmphasis {
+          color: #7dd3fc;
+        }
+
+        .vpWeatherBars rect {
+          fill: rgba(125, 211, 252, 0.12);
+          stroke: rgba(125, 211, 252, 0.2);
+          stroke-width: 1;
+        }
+
+        .vpWeatherTitleIcon {
+          color: #bae6fd;
+        }
+
+        .vpWeatherSituation strong,
+        .vpWeatherSummaryCard .isEmphasis {
           color: #7dd3fc;
         }
 
@@ -1780,7 +2264,11 @@ export default function PremiumPanelPreview({
         .vpWindTitleIcon svg,
         .vpWindSituation svg,
         .vpWindSummaryIcon svg,
-        .vpWindVariationIcon svg {
+        .vpWindVariationIcon svg,
+        .vpWeatherTitleIcon svg,
+        .vpWeatherSituation svg,
+        .vpWeatherSummaryIcon svg,
+        .vpWeatherVariationIcon svg {
           fill: none;
           stroke: currentColor;
           stroke-width: 3;
@@ -1978,6 +2466,20 @@ export default function PremiumPanelPreview({
           .vpTideMarker text {
             font-size: 19px;
             font-weight: 720;
+          }
+
+          .vpTideMarker.isSecondary text {
+            font-size: 16px;
+            font-weight: 680;
+          }
+
+          .vpTideMarker.isSecondary circle {
+            r: 4;
+          }
+
+          .vpChartBarLabels text {
+            font-size: 19px;
+            font-weight: 780;
           }
 
           .vpTideYAxis text,
