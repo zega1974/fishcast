@@ -57,6 +57,13 @@ type TideSummaryItem = {
   emphasis?: boolean;
 };
 
+type WindSummaryItem = {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  emphasis?: boolean;
+};
+
 export function PreviewIcon({
   name,
   className = '',
@@ -284,6 +291,19 @@ function WindIcon(props: IconProps) {
       <path d="M5 18h26a6 6 0 1 0-6-6" />
       <path d="M5 27h34" />
       <path d="M5 36h24a5 5 0 1 1-5 5" />
+    </SvgBase>
+  );
+}
+
+function CompassIcon(props: IconProps) {
+  return (
+    <SvgBase {...props}>
+      <circle cx="24" cy="24" r="17" />
+      <path d="M29 19 21 34l-2-12 12-3Z" />
+      <path d="M24 7v4" />
+      <path d="M24 37v4" />
+      <path d="M7 24h4" />
+      <path d="M37 24h4" />
     </SvgBase>
   );
 }
@@ -661,6 +681,264 @@ function TideDetailView({
   );
 }
 
+function WindTitleCard() {
+  return (
+    <CardShell className="vpTideTitleCard vpWindTitleCard">
+      <div className="vpTideTitleIcon vpWindTitleIcon">
+        <WindIcon />
+      </div>
+
+      <div className="vpTideTitleText">
+        <span>DADOS AVANÇADOS</span>
+        <strong>VENTO</strong>
+        <small>Direção, intensidade e rajadas nas próximas horas.</small>
+      </div>
+    </CardShell>
+  );
+}
+
+function WindChart() {
+  return (
+    <CardShell className="vpTideChartCard vpWindChartCard">
+      <div className="vpTideSituation vpWindSituation">
+        <WindIcon />
+        <span>
+          SITUAÇÃO ATUAL: <strong>BRISA MODERADA DE NE</strong>
+        </span>
+      </div>
+
+      <div className="vpTideChartWrap vpWindChartWrap">
+        <svg
+          className="vpTideChart vpWindChart"
+          viewBox="0 0 920 270"
+          preserveAspectRatio="none"
+          role="img"
+          aria-label="Gráfico de vento ao longo de 24 horas"
+        >
+          <defs>
+            <linearGradient id="vpWindFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="rgba(125,211,252,0.25)" />
+              <stop offset="100%" stopColor="rgba(125,211,252,0.015)" />
+            </linearGradient>
+
+            <filter id="vpWindGlow" x="-30%" y="-30%" width="160%" height="160%">
+              <feGaussianBlur stdDeviation="4" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+
+          <g className="vpTideGrid">
+            <line x1="55" y1="30" x2="900" y2="30" />
+            <line x1="55" y1="85" x2="900" y2="85" />
+            <line x1="55" y1="140" x2="900" y2="140" />
+            <line x1="55" y1="195" x2="900" y2="195" />
+            <line x1="55" y1="245" x2="900" y2="245" />
+
+            <line x1="90" y1="30" x2="90" y2="245" />
+            <line x1="190" y1="30" x2="190" y2="245" />
+            <line x1="290" y1="30" x2="290" y2="245" />
+            <line x1="390" y1="30" x2="390" y2="245" />
+            <line x1="490" y1="30" x2="490" y2="245" />
+            <line x1="590" y1="30" x2="590" y2="245" />
+            <line x1="690" y1="30" x2="690" y2="245" />
+            <line x1="790" y1="30" x2="790" y2="245" />
+            <line x1="890" y1="30" x2="890" y2="245" />
+          </g>
+
+          <g className="vpWindBars" aria-hidden="true">
+            <rect x="82" y="192" width="16" height="53" rx="8" />
+            <rect x="182" y="178" width="16" height="67" rx="8" />
+            <rect x="282" y="158" width="16" height="87" rx="8" />
+            <rect x="382" y="140" width="16" height="105" rx="8" />
+            <rect x="482" y="125" width="16" height="120" rx="8" />
+            <rect x="582" y="110" width="16" height="135" rx="8" />
+            <rect x="682" y="120" width="16" height="125" rx="8" />
+            <rect x="782" y="148" width="16" height="97" rx="8" />
+            <rect x="882" y="172" width="16" height="73" rx="8" />
+          </g>
+
+          <path
+            className="vpWindArea"
+            d="M55 190
+               C105 186 145 178 190 170
+               C245 160 300 145 355 136
+               C420 124 485 112 545 105
+               C620 96 670 110 720 128
+               C785 150 840 165 900 174
+               L900 245 L55 245 Z"
+          />
+
+          <path
+            className="vpWindLine"
+            d="M55 190
+               C105 186 145 178 190 170
+               C245 160 300 145 355 136
+               C420 124 485 112 545 105
+               C620 96 670 110 720 128
+               C785 150 840 165 900 174"
+          />
+
+          <g className="vpTideMarker vpWindMarker">
+            <line x1="190" y1="170" x2="190" y2="245" />
+            <circle cx="190" cy="170" r="6" />
+            <text x="190" y="143" textAnchor="middle">
+              03h
+            </text>
+            <text x="190" y="160" textAnchor="middle">
+              6 km/h
+            </text>
+          </g>
+
+          <g className="vpTideMarker vpWindMarker isCurrent">
+            <line x1="490" y1="112" x2="490" y2="245" />
+            <circle cx="490" cy="112" r="7" />
+            <text x="490" y="78" textAnchor="middle">
+              12h
+            </text>
+            <text x="490" y="97" textAnchor="middle">
+              8 km/h
+            </text>
+          </g>
+
+          <g className="vpTideMarker vpWindMarker">
+            <line x1="625" y1="100" x2="625" y2="245" />
+            <circle cx="625" cy="100" r="6" />
+            <text x="625" y="71" textAnchor="middle">
+              16h
+            </text>
+            <text x="625" y="89" textAnchor="middle">
+              14 km/h
+            </text>
+          </g>
+
+          <g className="vpTideMarker vpWindMarker">
+            <line x1="850" y1="166" x2="850" y2="245" />
+            <circle cx="850" cy="166" r="6" />
+            <text x="850" y="139" textAnchor="middle">
+              22h
+            </text>
+            <text x="850" y="156" textAnchor="middle">
+              9 km/h
+            </text>
+          </g>
+
+          <g className="vpTideYAxis">
+            <text x="4" y="35">25</text>
+            <text x="4" y="90">20</text>
+            <text x="4" y="145">15</text>
+            <text x="4" y="200">10</text>
+            <text x="4" y="250">0</text>
+          </g>
+
+          <g className="vpTideXAxis">
+            <text x="90" y="265" textAnchor="middle">00h</text>
+            <text x="190" y="265" textAnchor="middle">03h</text>
+            <text x="290" y="265" textAnchor="middle">06h</text>
+            <text x="390" y="265" textAnchor="middle">09h</text>
+            <text x="490" y="265" textAnchor="middle">12h</text>
+            <text x="590" y="265" textAnchor="middle">15h</text>
+            <text x="690" y="265" textAnchor="middle">18h</text>
+            <text x="790" y="265" textAnchor="middle">21h</text>
+            <text x="890" y="265" textAnchor="middle">24h</text>
+          </g>
+        </svg>
+      </div>
+
+      <span className="vpTideAxisLabel">Vento (km/h)</span>
+    </CardShell>
+  );
+}
+
+function WindSummaryCard({ item }: { item: WindSummaryItem }) {
+  return (
+    <CardShell className="vpTideSummaryCard vpWindSummaryCard">
+      <div className="vpTideSummaryIcon vpWindSummaryIcon">{item.icon}</div>
+
+      <div className="vpTideSummaryText">
+        <span>{item.label}</span>
+        <strong className={item.emphasis ? 'isEmphasis' : ''}>
+          {item.value}
+        </strong>
+      </div>
+    </CardShell>
+  );
+}
+
+function WindDetailView({
+  placeName,
+  onBack,
+}: {
+  placeName: string;
+  onBack: () => void;
+}) {
+  const summaries: WindSummaryItem[] = [
+    {
+      icon: <WindIcon />,
+      label: 'VENTO ATUAL',
+      value: 'NE • 8 km/h',
+      emphasis: true,
+    },
+    {
+      icon: <ActivityIcon />,
+      label: 'RAJADAS',
+      value: 'até 17 km/h',
+    },
+    {
+      icon: <CompassIcon />,
+      label: 'DIREÇÃO',
+      value: 'Nordeste',
+    },
+    {
+      icon: <ClockIcon />,
+      label: 'TENDÊNCIA',
+      value: 'Aumenta à tarde',
+    },
+  ];
+
+  return (
+    <main className="vpTidePanelShell vpWindPanelShell">
+      <div className="vpTideTopBar">
+        <button
+          type="button"
+          className="vpTideBackButton"
+          aria-label="Voltar para Dados Avançados"
+          onClick={onBack}
+        >
+          <BackIcon />
+        </button>
+
+        <span>DADOS AVANÇADOS</span>
+      </div>
+
+      <SelectedPointCard placeName={placeName} />
+
+      <WindTitleCard />
+
+      <WindChart />
+
+      <section className="vpTideSummaryGrid vpWindSummaryGrid" aria-label="Resumo do vento">
+        {summaries.map((item) => (
+          <WindSummaryCard key={item.label} item={item} />
+        ))}
+      </section>
+
+      <CardShell className="vpTideVariationCard vpWindVariationCard">
+        <div className="vpTideVariationIcon vpWindVariationIcon">
+          <ClockIcon />
+        </div>
+
+        <div className="vpTideVariationText">
+          <span>JANELA MAIS ESTÁVEL</span>
+          <strong>Vento mais previsível entre 10h e 14h.</strong>
+        </div>
+      </CardShell>
+    </main>
+  );
+}
+
 export default function PremiumPanelPreview({
   onClose,
   onBack,
@@ -721,8 +999,8 @@ export default function PremiumPanelPreview({
   ];
 
   const openMetric = (id: AdvancedMetricId) => {
-    if (id === 'tide') {
-      setActiveMetric('tide');
+    if (id === 'tide' || id === 'wind') {
+      setActiveMetric(id);
     }
   };
 
@@ -741,6 +1019,11 @@ export default function PremiumPanelPreview({
 
       {activeMetric === 'tide' ? (
         <TideDetailView
+          placeName={selectedPlaceName}
+          onBack={() => setActiveMetric(null)}
+        />
+      ) : activeMetric === 'wind' ? (
+        <WindDetailView
           placeName={selectedPlaceName}
           onBack={() => setActiveMetric(null)}
         />
@@ -1315,12 +1598,24 @@ export default function PremiumPanelPreview({
           fill: url(#vpTideFill);
         }
 
+        .vpWindArea {
+          fill: url(#vpWindFill);
+        }
+
         .vpTideLine {
           fill: none;
           stroke: rgba(224, 242, 254, 0.96);
           stroke-width: 3;
           stroke-linecap: round;
           filter: url(#vpTideGlow);
+        }
+
+        .vpWindLine {
+          fill: none;
+          stroke: rgba(224, 242, 254, 0.96);
+          stroke-width: 3;
+          stroke-linecap: round;
+          filter: url(#vpWindGlow);
         }
 
         .vpTideMarker line {
@@ -1350,6 +1645,21 @@ export default function PremiumPanelPreview({
           stroke: #bae6fd;
           stroke-width: 3;
           filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.9));
+        }
+
+        .vpWindBars rect {
+          fill: rgba(125, 211, 252, 0.12);
+          stroke: rgba(125, 211, 252, 0.2);
+          stroke-width: 1;
+        }
+
+        .vpWindTitleIcon {
+          color: #bae6fd;
+        }
+
+        .vpWindSituation strong,
+        .vpWindSummaryCard .isEmphasis {
+          color: #7dd3fc;
         }
 
         .vpTideYAxis text,
@@ -1466,7 +1776,11 @@ export default function PremiumPanelPreview({
         .vpTideTitleIcon svg,
         .vpTideSituation svg,
         .vpTideSummaryIcon svg,
-        .vpTideVariationIcon svg {
+        .vpTideVariationIcon svg,
+        .vpWindTitleIcon svg,
+        .vpWindSituation svg,
+        .vpWindSummaryIcon svg,
+        .vpWindVariationIcon svg {
           fill: none;
           stroke: currentColor;
           stroke-width: 3;
