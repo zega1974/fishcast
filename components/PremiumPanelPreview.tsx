@@ -78,6 +78,13 @@ type SwellSummaryItem = {
   emphasis?: boolean;
 };
 
+type AirTempSummaryItem = {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  emphasis?: boolean;
+};
+
 export function PreviewIcon({
   name,
   className = '',
@@ -1620,6 +1627,265 @@ function SwellDetailView({
   );
 }
 
+function AirTempTitleCard() {
+  return (
+    <CardShell className="vpTideTitleCard vpAirTempTitleCard">
+      <div className="vpTideTitleIcon vpAirTempTitleIcon">
+        <ThermometerIcon />
+      </div>
+
+      <div className="vpTideTitleText">
+        <span>DADOS AVANÇADOS</span>
+        <strong>TEMPERATURA DO AR</strong>
+        <small>Variação da temperatura nas próximas horas.</small>
+      </div>
+    </CardShell>
+  );
+}
+
+function AirTempChart() {
+  const chartLeft = 90;
+  const chartRight = 890;
+  const chartTop = 30;
+  const chartBottom = 245;
+  const yAxisLabelY = [35, 90, 145, 200, 250];
+
+  const airTempHourlyData = [
+    { hour: 0, label: '00h', temp: 22.0 },
+    { hour: 3, label: '03h', temp: 21.5 },
+    { hour: 6, label: '06h', temp: 21.0 },
+    { hour: 9, label: '09h', temp: 24.0 },
+    { hour: 12, label: '12h', temp: 26.0, current: true },
+    { hour: 15, label: '15h', temp: 27.5 },
+    { hour: 18, label: '18h', temp: 25.5 },
+    { hour: 21, label: '21h', temp: 23.5 },
+    { hour: 24, label: '24h', temp: 22.5 },
+  ];
+
+  const lowestAirTemp = Math.min(...airTempHourlyData.map((point) => point.temp));
+  const highestAirTemp = Math.max(...airTempHourlyData.map((point) => point.temp));
+  const airTempPadding = Math.max(2, (highestAirTemp - lowestAirTemp) * 0.35);
+  const airTempMin = Math.floor(lowestAirTemp - airTempPadding);
+  const airTempMax = Math.ceil(highestAirTemp + airTempPadding);
+  const airTempRange = airTempMax - airTempMin || 1;
+
+  const airTempYAxisValues = [
+    airTempMax,
+    airTempMin + airTempRange * 0.75,
+    airTempMin + airTempRange * 0.5,
+    airTempMin + airTempRange * 0.25,
+    airTempMin,
+  ];
+
+  const toX = (hour: number) =>
+    chartLeft + (hour / 24) * (chartRight - chartLeft);
+
+  const toY = (temp: number) =>
+    chartBottom - ((temp - airTempMin) / airTempRange) * (chartBottom - chartTop);
+
+  const formatTemp = (temp: number) =>
+    `${temp.toFixed(1).replace('.', ',')}°`;
+
+  const linePoints = airTempHourlyData.map((point) => ({
+    x: toX(point.hour),
+    y: toY(point.temp),
+  }));
+
+  const linePath = createSmoothPath(linePoints);
+  const areaPath = `${linePath} L ${toX(24).toFixed(1)} ${chartBottom} L ${toX(0).toFixed(1)} ${chartBottom} Z`;
+  const markers = airTempHourlyData;
+
+  return (
+    <CardShell className="vpTideChartCard vpAirTempChartCard">
+      <div className="vpTideSituation vpAirTempSituation">
+        <ThermometerIcon />
+        <span>
+          SITUAÇÃO ATUAL: <strong>AR AQUECENDO AO LONGO DO DIA</strong>
+        </span>
+      </div>
+
+      <div className="vpTideChartWrap vpAirTempChartWrap">
+        <svg
+          className="vpTideChart vpAirTempChart"
+          viewBox="0 0 920 270"
+          preserveAspectRatio="none"
+          role="img"
+          aria-label="Gráfico de temperatura do ar ao longo de 24 horas"
+        >
+          <defs>
+            <linearGradient id="vpAirTempFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="rgba(125,211,252,0.25)" />
+              <stop offset="100%" stopColor="rgba(125,211,252,0.015)" />
+            </linearGradient>
+
+            <filter id="vpAirTempGlow" x="-30%" y="-30%" width="160%" height="160%">
+              <feGaussianBlur stdDeviation="4" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+
+          <g className="vpTideGrid">
+            <line x1="55" y1="30" x2="900" y2="30" />
+            <line x1="55" y1="85" x2="900" y2="85" />
+            <line x1="55" y1="140" x2="900" y2="140" />
+            <line x1="55" y1="195" x2="900" y2="195" />
+            <line x1="55" y1="245" x2="900" y2="245" />
+
+            <line x1="90" y1="30" x2="90" y2="245" />
+            <line x1="190" y1="30" x2="190" y2="245" />
+            <line x1="290" y1="30" x2="290" y2="245" />
+            <line x1="390" y1="30" x2="390" y2="245" />
+            <line x1="490" y1="30" x2="490" y2="245" />
+            <line x1="590" y1="30" x2="590" y2="245" />
+            <line x1="690" y1="30" x2="690" y2="245" />
+            <line x1="790" y1="30" x2="790" y2="245" />
+            <line x1="890" y1="30" x2="890" y2="245" />
+          </g>
+
+          <path className="vpAirTempArea" d={areaPath} />
+          <path className="vpAirTempLine" d={linePath} />
+
+          <g className="vpChartBarLabels vpAirTempLabels">
+            {airTempHourlyData.map((point) => {
+              const x = toX(point.hour);
+              const y = toY(point.temp);
+
+              return (
+                <text key={point.label} x={x} y={y - 12} textAnchor="middle">
+                  {formatTemp(point.temp)}
+                </text>
+              );
+            })}
+          </g>
+
+          {markers.map((point) => {
+            const x = toX(point.hour);
+            const y = toY(point.temp);
+
+            return (
+              <g
+                className={`vpTideMarker vpAirTempMarker${point.current ? ' isCurrent' : ''}`}
+                key={point.label}
+              >
+                <line x1={x} y1={y} x2={x} y2={chartBottom} />
+                <circle cx={x} cy={y} r={point.current ? 7 : 6} />
+              </g>
+            );
+          })}
+
+          <g className="vpTideYAxis">
+            {airTempYAxisValues.map((value, index) => (
+              <text key={`${value}-${index}`} x="4" y={yAxisLabelY[index]}>
+                {Math.round(value)}
+              </text>
+            ))}
+          </g>
+
+          <g className="vpTideXAxis">
+            {airTempHourlyData.map((point) => (
+              <text key={point.label} x={toX(point.hour)} y="265" textAnchor="middle">
+                {point.label}
+              </text>
+            ))}
+          </g>
+        </svg>
+      </div>
+
+      <span className="vpTideAxisLabel">Temperatura do ar (°C)</span>
+    </CardShell>
+  );
+}
+
+function AirTempSummaryCard({ item }: { item: AirTempSummaryItem }) {
+  return (
+    <CardShell className="vpTideSummaryCard vpAirTempSummaryCard">
+      <div className="vpTideSummaryIcon vpAirTempSummaryIcon">{item.icon}</div>
+
+      <div className="vpTideSummaryText">
+        <span>{item.label}</span>
+        <strong className={item.emphasis ? 'isEmphasis' : ''}>
+          {item.value}
+        </strong>
+      </div>
+    </CardShell>
+  );
+}
+
+function AirTempDetailView({
+  placeName,
+  onBack,
+}: {
+  placeName: string;
+  onBack: () => void;
+}) {
+  const summaries: AirTempSummaryItem[] = [
+    {
+      icon: <ThermometerIcon />,
+      label: 'TEMP. ATUAL',
+      value: '26,0 °C',
+      emphasis: true,
+    },
+    {
+      icon: <ActivityIcon />,
+      label: 'MÁXIMA',
+      value: '27,5 °C às 15h',
+    },
+    {
+      icon: <ClockIcon />,
+      label: 'MÍNIMA',
+      value: '21,0 °C às 06h',
+    },
+    {
+      icon: <SunMoonIcon />,
+      label: 'TENDÊNCIA',
+      value: 'Aquece à tarde',
+    },
+  ];
+
+  return (
+    <main className="vpTidePanelShell vpAirTempPanelShell">
+      <div className="vpTideTopBar">
+        <button
+          type="button"
+          className="vpTideBackButton"
+          aria-label="Voltar para Dados Avançados"
+          onClick={onBack}
+        >
+          <BackIcon />
+        </button>
+
+        <span>DADOS AVANÇADOS</span>
+      </div>
+
+      <SelectedPointCard placeName={placeName} />
+
+      <AirTempTitleCard />
+
+      <AirTempChart />
+
+      <section className="vpTideSummaryGrid vpAirTempSummaryGrid" aria-label="Resumo da temperatura do ar">
+        {summaries.map((item) => (
+          <AirTempSummaryCard key={item.label} item={item} />
+        ))}
+      </section>
+
+      <CardShell className="vpTideVariationCard vpAirTempVariationCard">
+        <div className="vpTideVariationIcon vpAirTempVariationIcon">
+          <ClockIcon />
+        </div>
+
+        <div className="vpTideVariationText">
+          <span>JANELA MAIS CONFORTÁVEL</span>
+          <strong>Temperatura mais estável entre 9h e 12h.</strong>
+        </div>
+      </CardShell>
+    </main>
+  );
+}
+
 export default function PremiumPanelPreview({
   onClose,
   onBack,
@@ -1680,7 +1946,13 @@ export default function PremiumPanelPreview({
   ];
 
   const openMetric = (id: AdvancedMetricId) => {
-    if (id === 'tide' || id === 'wind' || id === 'weather' || id === 'swell') {
+    if (
+      id === 'tide' ||
+      id === 'wind' ||
+      id === 'weather' ||
+      id === 'swell' ||
+      id === 'airTemp'
+    ) {
       setActiveMetric(id);
     }
   };
@@ -1715,6 +1987,11 @@ export default function PremiumPanelPreview({
         />
       ) : activeMetric === 'swell' ? (
         <SwellDetailView
+          placeName={selectedPlaceName}
+          onBack={() => setActiveMetric(null)}
+        />
+      ) : activeMetric === 'airTemp' ? (
+        <AirTempDetailView
           placeName={selectedPlaceName}
           onBack={() => setActiveMetric(null)}
         />
@@ -2445,6 +2722,31 @@ export default function PremiumPanelPreview({
           color: #7dd3fc;
         }
 
+        .vpAirTempArea {
+          fill: url(#vpAirTempFill);
+        }
+
+        .vpAirTempLine {
+          fill: none;
+          stroke: rgba(224, 242, 254, 0.96);
+          stroke-width: 3;
+          stroke-linecap: round;
+          filter: url(#vpAirTempGlow);
+        }
+
+        .vpAirTempLabels text {
+          fill: rgba(248, 250, 252, 0.96);
+        }
+
+        .vpAirTempTitleIcon {
+          color: #bae6fd;
+        }
+
+        .vpAirTempSituation strong,
+        .vpAirTempSummaryCard .isEmphasis {
+          color: #7dd3fc;
+        }
+
         .vpTideYAxis text,
         .vpTideXAxis text {
           fill: rgba(226, 232, 240, 0.78);
@@ -2571,7 +2873,11 @@ export default function PremiumPanelPreview({
         .vpSwellTitleIcon svg,
         .vpSwellSituation svg,
         .vpSwellSummaryIcon svg,
-        .vpSwellVariationIcon svg {
+        .vpSwellVariationIcon svg,
+        .vpAirTempTitleIcon svg,
+        .vpAirTempSituation svg,
+        .vpAirTempSummaryIcon svg,
+        .vpAirTempVariationIcon svg {
           fill: none;
           stroke: currentColor;
           stroke-width: 3;
