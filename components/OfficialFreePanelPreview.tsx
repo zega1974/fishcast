@@ -23,6 +23,22 @@ type DataItem = {
   detail?: string;
 };
 
+type ForecastDayItem = {
+  id: string;
+  day: string;
+  isToday?: boolean;
+};
+
+const forecastDays: ForecastDayItem[] = [
+  { id: "day-25", day: "25", isToday: true },
+  { id: "day-26", day: "26" },
+  { id: "day-27", day: "27" },
+  { id: "day-28", day: "28" },
+  { id: "day-29", day: "29" },
+  { id: "day-30", day: "30" },
+  { id: "day-01", day: "01" },
+];
+
 function SvgBase({
   children,
   className = "",
@@ -196,11 +212,16 @@ function ChevronIcon(props: IconProps) {
 function CardShell({
   children,
   className = "",
+  ...props
 }: {
   children: React.ReactNode;
   className?: string;
-}) {
-  return <div className={`vpOfficialCard ${className}`}>{children}</div>;
+} & React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={`vpOfficialCard ${className}`} {...props}>
+      {children}
+    </div>
+  );
 }
 
 async function copyTextWithFallback(text: string) {
@@ -243,53 +264,10 @@ function formatCoordinates(lat?: number, lng?: number) {
   return "-25.823456, -48.536789";
 }
 
-function ScoreGauge() {
+function ScoreBar() {
   return (
-    <div className="vpOfficialScoreGauge">
-      <svg viewBox="0 0 340 205" aria-label="VouPescar Score 82 Excelente">
-        <path
-          d="M 52 150 A 118 118 0 0 1 288 150"
-          fill="none"
-          stroke="rgba(120, 132, 148, 0.42)"
-          strokeWidth="11"
-          strokeLinecap="round"
-        />
-        <path
-          d="M 52 150 A 118 118 0 0 1 288 150"
-          fill="none"
-          stroke="rgba(255, 255, 255, 0.96)"
-          strokeWidth="11"
-          strokeLinecap="round"
-          pathLength="100"
-          strokeDasharray="82 100"
-        />
-        <g fill="none" stroke="rgba(255, 255, 255, 0.5)" strokeWidth="2" strokeLinecap="round">
-          <path d="M52 150h16" />
-          <path d="M170 36v16" />
-          <path d="M272 150h16" />
-          <path d="M79 98l13 8" />
-          <path d="M122 62l7 13" />
-          <path d="M218 62l-7 13" />
-          <path d="M261 98l-13 8" />
-        </g>
-        <text x="52" y="177" fill="rgba(255,255,255,.78)" fontSize="15" fontWeight="500">
-          0
-        </text>
-        <text x="170" y="27" textAnchor="middle" fill="rgba(255,255,255,.78)" fontSize="15" fontWeight="500">
-          50
-        </text>
-        <text x="288" y="177" textAnchor="end" fill="rgba(255,255,255,.78)" fontSize="15" fontWeight="500">
-          100
-        </text>
-        <line x1="236" y1="88" x2="260" y2="69" stroke="rgba(255,255,255,.9)" strokeWidth="3" strokeLinecap="round" />
-        <circle cx="236" cy="88" r="6.5" fill="rgba(255,255,255,.96)" />
-        <text x="170" y="128" textAnchor="middle" fill="#fff" fontSize="68" fontWeight="800" letterSpacing="-6">
-          82
-        </text>
-        <text x="170" y="168" textAnchor="middle" fill="rgba(255,255,255,.86)" fontSize="23" fontWeight="560">
-          Excelente
-        </text>
-      </svg>
+    <div className="vpOfficialScoreBar" aria-hidden="true">
+      <span style={{ width: "82%" }} />
     </div>
   );
 }
@@ -337,31 +315,57 @@ function SelectedPointCard({
   );
 }
 
-function ScoreCard() {
+function ForecastDaySelector({
+  selectedDayId,
+  onSelectDay,
+}: {
+  selectedDayId: string;
+  onSelectDay: (dayId: string) => void;
+}) {
   return (
-    <CardShell className="vpOfficialScoreBlock">
-      <h1>VOUPESCAR SCORE</h1>
-      <ScoreGauge />
-      <p>Baseado em múltiplos dados.</p>
+    <CardShell className="vpOfficialDaySelector" aria-label="Selecionar dia da previsão">
+      {forecastDays.map((day) => {
+        const selected = day.id === selectedDayId;
+
+        return (
+          <button
+            key={day.id}
+            type="button"
+            className={`vpOfficialDayButton${selected ? " isSelected" : ""}${day.isToday ? " isToday" : ""}`}
+            onClick={() => onSelectDay(day.id)}
+            aria-pressed={selected}
+            aria-label={day.isToday ? `Hoje, dia ${day.day}` : `Dia ${day.day}`}
+          >
+            <span>{day.day}</span>
+          </button>
+        );
+      })}
     </CardShell>
   );
 }
 
-function BestTimesCard() {
+function DailySummaryCard() {
   return (
-    <CardShell className="vpOfficialBestTimes">
-      <h2>MELHORES HORÁRIOS</h2>
+    <CardShell className="vpOfficialDailySummary">
+      <div className="vpOfficialSummaryScoreRow">
+        <span className="vpOfficialSummaryLabel">Score do dia</span>
+        <strong>82</strong>
+        <ScoreBar />
+        <em>Excelente</em>
+      </div>
 
-      <div className="vpOfficialTimeGrid">
-        <div className="vpOfficialTimeItem">
-          <SunriseIcon className="vpOfficialTimeIcon" />
+      <div className="vpOfficialSummaryDivider" />
+
+      <div className="vpOfficialSummaryTimesRow">
+        <span className="vpOfficialSummaryLabel">Melhores horários</span>
+
+        <div className="vpOfficialSummaryTime">
+          <SunriseIcon className="vpOfficialSummaryTimeIcon" />
           <strong>14h às 16h</strong>
         </div>
 
-        <div className="vpOfficialDivider" />
-
-        <div className="vpOfficialTimeItem">
-          <SunriseIcon className="vpOfficialTimeIcon" />
+        <div className="vpOfficialSummaryTime">
+          <SunriseIcon className="vpOfficialSummaryTimeIcon" />
           <strong>19h às 21h</strong>
         </div>
       </div>
@@ -393,6 +397,7 @@ export default function OfficialFreePanelPreview({
 }: OfficialFreePanelPreviewProps) {
   const coordinates = coordinatesText || formatCoordinates(lat, lng);
   const selectedPlaceName = placeName?.trim() || "Pontal de Matinhos";
+  const [selectedForecastDayId, setSelectedForecastDayId] = useState(forecastDays[0].id);
   const data: DataItem[] = [
     { icon: <ThermometerIcon />, label: "Temperatura do Ar", value: "26,0 °C" },
     { icon: <WaterThermometerIcon />, label: "Temperatura da Água", value: "22,4 °C" },
@@ -417,10 +422,12 @@ export default function OfficialFreePanelPreview({
       <main className="vpOfficialPanelShell">
         <SelectedPointCard placeName={selectedPlaceName} coordinates={coordinates} />
 
-        <div className="vpOfficialTopGrid">
-          <ScoreCard />
-          <BestTimesCard />
-        </div>
+        <ForecastDaySelector
+          selectedDayId={selectedForecastDayId}
+          onSelectDay={setSelectedForecastDayId}
+        />
+
+        <DailySummaryCard />
 
         <section className="vpOfficialDataGrid" aria-label="Dados gratuitos">
           {data.map((item) => (
@@ -514,16 +521,17 @@ export default function OfficialFreePanelPreview({
         .vpOfficialPlaceBlock {
           flex: 0 0 auto;
           border-radius: 18px;
-          min-height: 64px;
+          min-height: 78px;
           display: grid;
-          grid-template-columns: auto minmax(0, 1fr) auto;
+          grid-template-columns: auto minmax(0, 1fr);
           align-items: center;
-          gap: 10px;
+          gap: 8px 10px;
           padding: 9px 62px 9px 11px;
           box-sizing: border-box;
         }
 
         .vpOfficialPlaceIcon {
+          grid-row: 1 / span 2;
           width: 42px;
           height: 42px;
           border-radius: 999px;
@@ -558,17 +566,20 @@ export default function OfficialFreePanelPreview({
 
         .vpOfficialPlaceText strong {
           color: #38bdf8;
-          font-size: clamp(17px, 4.7vw, 21px);
-          line-height: 1.15;
+          font-size: clamp(16px, 4.6vw, 21px);
+          line-height: 1.12;
           font-weight: 650;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
+          white-space: normal;
+          overflow: visible;
+          text-overflow: clip;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
         }
 
         .vpOfficialPlaceText small {
           color: rgba(226, 232, 240, 0.74);
-          font-size: clamp(12px, 3.25vw, 14px);
+          font-size: clamp(11px, 3.1vw, 14px);
           line-height: 1.1;
           white-space: nowrap;
           overflow: hidden;
@@ -576,17 +587,19 @@ export default function OfficialFreePanelPreview({
         }
 
         .vpOfficialCopyButton {
+          grid-column: 2 / 3;
+          justify-self: start;
           border: 1px solid rgba(56, 189, 248, 0.36);
           border-radius: 11px;
           background: rgba(14, 165, 233, 0.08);
           color: #7dd3fc;
-          height: 36px;
+          min-height: 30px;
           display: inline-flex;
           align-items: center;
           justify-content: center;
           gap: 6px;
           padding: 0 10px;
-          font-size: 13px;
+          font-size: 12px;
           font-weight: 560;
           cursor: pointer;
           transition:
@@ -597,8 +610,8 @@ export default function OfficialFreePanelPreview({
         }
 
         .vpOfficialCopyButton svg {
-          width: 17px;
-          height: 17px;
+          width: 16px;
+          height: 16px;
         }
 
         .vpOfficialCopyButton span {
@@ -612,101 +625,168 @@ export default function OfficialFreePanelPreview({
           box-shadow: 0 0 18px rgba(34, 197, 94, 0.14);
         }
 
-        .vpOfficialTopGrid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 7px;
+        .vpOfficialDaySelector {
           flex: 0 0 auto;
-        }
-
-        .vpOfficialScoreBlock {
-          min-height: 168px;
-          border-radius: 18px;
-          padding: 8px 8px 7px;
-          text-align: center;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-        }
-
-        .vpOfficialScoreBlock h1 {
-          margin: 0 0 -4px;
-          color: rgba(255, 255, 255, 0.88);
-          font-size: clamp(12px, 3.35vw, 15px);
-          line-height: 1.05;
-          letter-spacing: 0.055em;
-          font-weight: 600;
-        }
-
-        .vpOfficialScoreBlock p {
-          margin: -12px 0 0;
-          color: rgba(226, 232, 240, 0.72);
-          font-size: clamp(10px, 2.65vw, 12px);
-          line-height: 1.05;
-        }
-
-        .vpOfficialScoreGauge {
-          width: min(41vw, 185px);
-          margin: 0 auto;
-        }
-
-        .vpOfficialScoreGauge svg {
-          width: 100%;
-          height: auto;
-          display: block;
-          overflow: visible;
-        }
-
-        .vpOfficialBestTimes {
-          min-height: 168px;
-          border-radius: 18px;
-          padding: 10px 8px;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-        }
-
-        .vpOfficialBestTimes h2 {
-          margin: 0 0 12px;
-          text-align: center;
-          color: rgba(226, 232, 240, 0.74);
-          font-size: clamp(11px, 3vw, 13px);
-          line-height: 1;
-          font-weight: 600;
-          letter-spacing: 0.055em;
-        }
-
-        .vpOfficialTimeGrid {
+          min-height: 58px;
+          border-radius: 17px;
+          padding: 7px;
           display: grid;
-          grid-template-columns: 1fr;
-          gap: 12px;
+          grid-template-columns: repeat(7, minmax(0, 1fr));
+          align-items: center;
+          gap: 4px;
+          box-sizing: border-box;
         }
 
-        .vpOfficialTimeItem {
+        .vpOfficialDayButton {
+          position: relative;
+          min-width: 0;
+          height: 44px;
+          border: 1px solid transparent;
+          border-radius: 13px;
+          background: transparent;
+          color: rgba(226, 232, 240, 0.72);
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 8px;
-          min-width: 0;
+          font-size: clamp(18px, 5vw, 23px);
+          line-height: 1;
+          font-weight: 680;
+          cursor: pointer;
+          transition:
+            border-color 160ms ease,
+            background 160ms ease,
+            color 160ms ease,
+            box-shadow 160ms ease,
+            transform 160ms ease;
         }
 
-        .vpOfficialTimeItem strong {
-          color: #ffffff;
-          font-size: clamp(13px, 3.75vw, 16px);
+        .vpOfficialDayButton span {
+          transform: translateY(-1px);
+        }
+
+        .vpOfficialDayButton.isToday::after {
+          content: "";
+          position: absolute;
+          left: 50%;
+          bottom: 5px;
+          width: 6px;
+          height: 6px;
+          border-radius: 999px;
+          transform: translateX(-50%);
+          background: #22d3ee;
+          box-shadow: 0 0 12px rgba(34, 211, 238, 0.58);
+        }
+
+        .vpOfficialDayButton.isSelected {
+          border-color: rgba(34, 211, 238, 0.72);
+          background:
+            radial-gradient(circle at 50% 0%, rgba(34, 211, 238, 0.22), transparent 62%),
+            rgba(14, 165, 233, 0.1);
+          color: #67e8f9;
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.08),
+            0 0 22px rgba(34, 211, 238, 0.13);
+        }
+
+        .vpOfficialDailySummary {
+          flex: 0 0 auto;
+          border-radius: 18px;
+          min-height: 86px;
+          padding: 11px 13px;
+          box-sizing: border-box;
+          display: grid;
+          grid-template-rows: auto 1px auto;
+          gap: 9px;
+        }
+
+        .vpOfficialSummaryScoreRow,
+        .vpOfficialSummaryTimesRow {
+          min-width: 0;
+          display: grid;
+          align-items: center;
+          column-gap: 10px;
+        }
+
+        .vpOfficialSummaryScoreRow {
+          grid-template-columns: auto auto minmax(72px, 1fr) auto;
+        }
+
+        .vpOfficialSummaryTimesRow {
+          grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr);
+        }
+
+        .vpOfficialSummaryLabel {
+          color: rgba(226, 232, 240, 0.72);
+          font-size: clamp(10px, 2.8vw, 12px);
           line-height: 1;
-          font-weight: 650;
+          font-weight: 700;
+          letter-spacing: 0.075em;
+          text-transform: uppercase;
           white-space: nowrap;
         }
 
-        .vpOfficialTimeIcon {
-          width: clamp(28px, 7.8vw, 36px);
-          height: clamp(28px, 7.8vw, 36px);
-          color: #7dd3fc;
-          flex: 0 0 auto;
+        .vpOfficialSummaryScoreRow > strong {
+          color: #ffffff;
+          font-size: clamp(25px, 7vw, 34px);
+          line-height: 0.95;
+          font-weight: 800;
+          letter-spacing: -0.055em;
         }
 
-        .vpOfficialDivider {
-          display: none;
+        .vpOfficialSummaryScoreRow > em {
+          color: #67e8f9;
+          font-size: clamp(14px, 3.7vw, 17px);
+          line-height: 1;
+          font-style: normal;
+          font-weight: 700;
+          white-space: nowrap;
+        }
+
+        .vpOfficialScoreBar {
+          height: 8px;
+          border-radius: 999px;
+          overflow: hidden;
+          background: rgba(148, 163, 184, 0.24);
+          box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.035);
+        }
+
+        .vpOfficialScoreBar span {
+          display: block;
+          height: 100%;
+          border-radius: inherit;
+          background: linear-gradient(90deg, #22d3ee, #38bdf8);
+          box-shadow: 0 0 16px rgba(34, 211, 238, 0.35);
+        }
+
+        .vpOfficialSummaryDivider {
+          background: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.24), transparent);
+        }
+
+        .vpOfficialSummaryTime {
+          min-width: 0;
+          display: flex;
+          align-items: center;
+          justify-content: flex-end;
+          gap: 6px;
+        }
+
+        .vpOfficialSummaryTime + .vpOfficialSummaryTime {
+          border-left: 1px solid rgba(148, 163, 184, 0.2);
+        }
+
+        .vpOfficialSummaryTime strong {
+          color: #ffffff;
+          font-size: clamp(14px, 3.8vw, 17px);
+          line-height: 1;
+          font-weight: 720;
+          white-space: nowrap;
+        }
+
+        .vpOfficialSummaryTimeIcon {
+          width: clamp(24px, 6.6vw, 31px);
+          height: clamp(24px, 6.6vw, 31px);
+          color: #7dd3fc;
+          flex: 0 0 auto;
         }
 
         .vpOfficialDataGrid {
@@ -725,7 +805,7 @@ export default function OfficialFreePanelPreview({
           grid-template-columns: auto minmax(0, 1fr);
           align-items: center;
           gap: 9px;
-          padding: 8px 10px;
+          padding: 7px 9px;
           box-sizing: border-box;
         }
 
@@ -737,8 +817,8 @@ export default function OfficialFreePanelPreview({
         }
 
         .vpOfficialTileIcon svg {
-          width: clamp(27px, 7.7vw, 35px);
-          height: clamp(27px, 7.7vw, 35px);
+          width: clamp(26px, 7.1vw, 34px);
+          height: clamp(26px, 7.1vw, 34px);
           display: block;
         }
 
@@ -753,16 +833,16 @@ export default function OfficialFreePanelPreview({
 
         .vpOfficialTileText span {
           color: rgba(226, 232, 240, 0.72);
-          font-size: 11.5px;
+          font-size: 11px;
           line-height: 1.05;
           font-weight: 620;
-          letter-spacing: 0.08em;
+          letter-spacing: 0.075em;
           text-transform: uppercase;
         }
 
         .vpOfficialTileText strong {
           color: #ffffff;
-          font-size: clamp(20px, 4.9vw, 24px);
+          font-size: clamp(19px, 4.8vw, 24px);
           line-height: 1.08;
           font-weight: 680;
           letter-spacing: -0.02em;
@@ -778,7 +858,7 @@ export default function OfficialFreePanelPreview({
         .vpOfficialAdvancedButton {
           flex: 0 0 auto;
           width: 100%;
-          min-height: 54px;
+          min-height: 52px;
           border-radius: 16px;
           color: #ffffff;
           display: grid;
@@ -791,8 +871,8 @@ export default function OfficialFreePanelPreview({
         }
 
         .vpOfficialAdvancedIcon {
-          width: 29px;
-          height: 29px;
+          width: 28px;
+          height: 28px;
           color: #7dd3fc;
         }
 
@@ -811,7 +891,7 @@ export default function OfficialFreePanelPreview({
         .vpOfficialPlaceIcon svg,
         .vpOfficialCopyButton svg,
         .vpOfficialTileIcon svg,
-        .vpOfficialTimeIcon,
+        .vpOfficialSummaryTimeIcon,
         .vpOfficialAdvancedIcon,
         .vpOfficialChevron,
         .vpOfficialCloseButton svg,
@@ -853,8 +933,9 @@ export default function OfficialFreePanelPreview({
           }
 
           .vpOfficialPlaceBlock {
-            min-height: 58px;
+            min-height: 74px;
             padding: 7px 54px 7px 9px;
+            gap: 6px 8px;
           }
 
           .vpOfficialPlaceIcon {
@@ -868,21 +949,52 @@ export default function OfficialFreePanelPreview({
           }
 
           .vpOfficialCopyButton {
-            width: 34px;
-            padding: 0;
+            min-height: 28px;
+            padding: 0 8px;
           }
 
           .vpOfficialCopyButton span {
-            display: none;
+            display: inline;
           }
 
-          .vpOfficialScoreBlock,
-          .vpOfficialBestTimes {
-            min-height: 150px;
+          .vpOfficialDaySelector {
+            min-height: 52px;
+            padding: 6px;
           }
 
-          .vpOfficialScoreGauge {
-            width: min(39vw, 165px);
+          .vpOfficialDayButton {
+            height: 39px;
+            border-radius: 11px;
+            font-size: 18px;
+          }
+
+          .vpOfficialDailySummary {
+            min-height: 82px;
+            padding: 10px 11px;
+            gap: 8px;
+          }
+
+          .vpOfficialSummaryScoreRow {
+            grid-template-columns: auto auto minmax(54px, 1fr) auto;
+            column-gap: 7px;
+          }
+
+          .vpOfficialSummaryTimesRow {
+            grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr);
+            column-gap: 7px;
+          }
+
+          .vpOfficialSummaryTime {
+            gap: 4px;
+          }
+
+          .vpOfficialSummaryTimeIcon {
+            width: 23px;
+            height: 23px;
+          }
+
+          .vpOfficialSummaryTime strong {
+            font-size: 13px;
           }
 
           .vpOfficialDataGrid {
@@ -890,11 +1002,15 @@ export default function OfficialFreePanelPreview({
           }
 
           .vpOfficialDataTile {
-            padding: 7px 8px;
+            padding: 6px 8px;
+          }
+
+          .vpOfficialTileText span {
+            font-size: 10px;
           }
 
           .vpOfficialTileText strong {
-            font-size: 19px;
+            font-size: 18px;
           }
 
           .vpOfficialAdvancedButton {
@@ -930,8 +1046,8 @@ export default function OfficialFreePanelPreview({
             padding: 14px;
             display: grid;
             grid-template-columns: 1fr 1fr;
-            grid-template-rows: auto auto auto auto;
-            gap: 16px;
+            grid-template-rows: auto auto auto auto auto;
+            gap: 14px;
             background: rgba(3, 10, 18, 0.82);
             border: 1px solid rgba(148, 163, 184, 0.14);
             border-radius: 28px;
@@ -949,61 +1065,91 @@ export default function OfficialFreePanelPreview({
             grid-column: 1 / -1;
             min-height: 78px;
             padding: 14px 18px;
+            grid-template-columns: auto minmax(0, 1fr) auto;
           }
 
-          .vpOfficialTopGrid {
-            grid-column: 1 / -1;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
+          .vpOfficialPlaceIcon {
+            grid-row: auto;
           }
 
-          .vpOfficialScoreBlock,
-          .vpOfficialBestTimes {
-            min-height: 220px;
+          .vpOfficialPlaceText strong {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: block;
           }
 
-          .vpOfficialScoreBlock h1 {
-            font-size: 18px;
-          }
-
-          .vpOfficialScoreGauge {
-            width: 280px;
-          }
-
-          .vpOfficialScoreBlock p {
+          .vpOfficialCopyButton {
+            grid-column: auto;
+            justify-self: end;
+            height: 36px;
             font-size: 13px;
           }
 
-          .vpOfficialBestTimes h2 {
-            font-size: 14px;
+          .vpOfficialDaySelector {
+            grid-column: 1 / -1;
+            min-height: 72px;
+            padding: 10px 18px;
+            gap: 10px;
           }
 
-          .vpOfficialTimeGrid {
-            grid-template-columns: 1fr auto 1fr;
-            align-items: center;
-            gap: 0;
+          .vpOfficialDayButton {
+            height: 50px;
+            border-radius: 14px;
+            font-size: 24px;
           }
 
-          .vpOfficialDivider {
-            display: block;
-            width: 1px;
-            height: 58px;
-            background: rgba(148, 163, 184, 0.24);
+          .vpOfficialDailySummary {
+            grid-column: 1 / -1;
+            min-height: 94px;
+            padding: 14px 22px;
+            gap: 11px;
           }
 
-          .vpOfficialTimeItem strong {
+          .vpOfficialSummaryScoreRow {
+            grid-template-columns: auto auto minmax(220px, 1fr) auto;
+            column-gap: 16px;
+          }
+
+          .vpOfficialSummaryScoreRow > strong {
+            font-size: 42px;
+          }
+
+          .vpOfficialSummaryScoreRow > em {
             font-size: 20px;
           }
 
-          .vpOfficialTimeIcon {
-            width: 42px;
-            height: 42px;
+          .vpOfficialSummaryLabel {
+            font-size: 13px;
+          }
+
+          .vpOfficialScoreBar {
+            height: 10px;
+          }
+
+          .vpOfficialSummaryTimesRow {
+            grid-template-columns: auto 1fr 1fr;
+            column-gap: 18px;
+          }
+
+          .vpOfficialSummaryTime {
+            justify-content: center;
+            gap: 9px;
+          }
+
+          .vpOfficialSummaryTime strong {
+            font-size: 20px;
+          }
+
+          .vpOfficialSummaryTimeIcon {
+            width: 37px;
+            height: 37px;
           }
 
           .vpOfficialDataGrid {
             grid-column: 1 / -1;
             grid-template-columns: repeat(4, minmax(0, 1fr));
-            grid-template-rows: repeat(2, 126px);
+            grid-template-rows: repeat(2, 118px);
             gap: 14px;
           }
 
@@ -1027,7 +1173,7 @@ export default function OfficialFreePanelPreview({
 
           .vpOfficialAdvancedButton {
             grid-column: 1 / -1;
-            min-height: 62px;
+            min-height: 60px;
             border-radius: 18px;
           }
 
