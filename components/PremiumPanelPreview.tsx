@@ -42,6 +42,50 @@ type AdvancedMetricId =
   | 'pressure'
   | 'sunMoon';
 
+type WeatherCondition =
+  | 'clear'
+  | 'partlyCloudy'
+  | 'cloudy'
+  | 'rain'
+  | 'storm'
+  | 'fog';
+
+type TideDirection = 'rising' | 'falling' | 'slack';
+
+type TrendState = 'rising' | 'falling' | 'stable';
+
+type MoonPhase =
+  | 'new'
+  | 'waxingCrescent'
+  | 'firstQuarter'
+  | 'waxingGibbous'
+  | 'full'
+  | 'waningGibbous'
+  | 'lastQuarter'
+  | 'waningCrescent';
+
+type CardinalDirection =
+  | 'N'
+  | 'NE'
+  | 'E'
+  | 'SE'
+  | 'S'
+  | 'SW'
+  | 'W'
+  | 'NW';
+
+const mockAdvancedEnvironment = {
+  weatherCondition: 'partlyCloudy' as WeatherCondition,
+  tideDirection: 'rising' as TideDirection,
+  windDirection: 'NE' as CardinalDirection,
+  windTrend: 'rising' as TrendState,
+  swellDirection: 'SE' as CardinalDirection,
+  pressureTrend: 'falling' as TrendState,
+  airTempTrend: 'rising' as TrendState,
+  waterTempTrend: 'stable' as TrendState,
+  moonPhase: 'waxingCrescent' as MoonPhase,
+};
+
 type AdvancedMetric = {
   id: AdvancedMetricId;
   icon: React.ReactNode;
@@ -345,25 +389,22 @@ function WaveIcon(props: IconProps) {
   );
 }
 
+function SwellPeakIcon(props: IconProps) {
+  return (
+    <SvgBase {...props}>
+      <path d="M6 32c5 4 10 4 15 0s10-4 15 0 6 3 6 3" />
+      <path d="M24 27V9" />
+      <path d="m16 17 8-8 8 8" />
+    </SvgBase>
+  );
+}
+
 function WindIcon(props: IconProps) {
   return (
     <SvgBase {...props}>
       <path d="M5 18h26a6 6 0 1 0-6-6" />
       <path d="M5 27h34" />
       <path d="M5 36h24a5 5 0 1 1-5 5" />
-    </SvgBase>
-  );
-}
-
-function CompassIcon(props: IconProps) {
-  return (
-    <SvgBase {...props}>
-      <circle cx="24" cy="24" r="17" />
-      <path d="M29 19 21 34l-2-12 12-3Z" />
-      <path d="M24 7v4" />
-      <path d="M24 37v4" />
-      <path d="M7 24h4" />
-      <path d="M37 24h4" />
     </SvgBase>
   );
 }
@@ -379,6 +420,226 @@ function SunMoonIcon(props: IconProps) {
       <path d="m8 8 3 3" />
       <path d="m26 8-3 3" />
       <path d="M35 29a10 10 0 1 0 6 12 12 12 0 0 1-6-12Z" />
+    </SvgBase>
+  );
+}
+
+function SunIcon(props: IconProps) {
+  return (
+    <SvgBase {...props}>
+      <circle cx="24" cy="24" r="8" />
+      <path d="M24 5v5" />
+      <path d="M24 38v5" />
+      <path d="M5 24h5" />
+      <path d="M38 24h5" />
+      <path d="m10 10 4 4" />
+      <path d="m34 34 4 4" />
+      <path d="m38 10-4 4" />
+      <path d="m14 34-4 4" />
+    </SvgBase>
+  );
+}
+
+function StormIcon(props: IconProps) {
+  return (
+    <SvgBase {...props}>
+      <path d="M15 21a9 9 0 0 1 17-5 7 7 0 0 1 2 14H15a7 7 0 0 1 0-14" />
+      <path d="m25 31-5 9h7l-4 6" />
+      <path d="M35 35l-2 5" />
+    </SvgBase>
+  );
+}
+
+function FogIcon(props: IconProps) {
+  return (
+    <SvgBase {...props}>
+      <path d="M15 23a9 9 0 0 1 17-5 7 7 0 0 1 2 14H15a7 7 0 0 1 0-14" />
+      <path d="M8 37h32" />
+      <path d="M12 43h24" />
+    </SvgBase>
+  );
+}
+
+function TrendUpIcon(props: IconProps) {
+  return (
+    <SvgBase {...props}>
+      <path d="M8 34 19 23l8 8 13-17" />
+      <path d="M31 14h9v9" />
+    </SvgBase>
+  );
+}
+
+function TrendDownIcon(props: IconProps) {
+  return (
+    <SvgBase {...props}>
+      <path d="M8 14 19 25l8-8 13 17" />
+      <path d="M31 34h9v-9" />
+    </SvgBase>
+  );
+}
+
+function StabilityIcon(props: IconProps) {
+  return (
+    <SvgBase {...props}>
+      <path d="M8 24h32" />
+      <path d="M14 18h20" opacity=".72" />
+      <path d="M14 30h20" opacity=".72" />
+    </SvgBase>
+  );
+}
+
+function SunsetIcon(props: IconProps) {
+  return (
+    <SvgBase {...props}>
+      <path d="M8 36h32" />
+      <path d="M14 30a10 10 0 0 1 20 0" />
+      <path d="M24 8v8" />
+      <path d="m17 15 3 3" />
+      <path d="m31 15-3 3" />
+      <path d="m18 41 6 4 6-4" />
+    </SvgBase>
+  );
+}
+
+function DynamicWeatherIcon({
+  condition,
+  className,
+}: IconProps & {
+  condition: WeatherCondition;
+}) {
+  if (condition === 'clear') {
+    return <SunIcon className={className} />;
+  }
+
+  if (condition === 'rain') {
+    return <RainIcon className={className} />;
+  }
+
+  if (condition === 'storm') {
+    return <StormIcon className={className} />;
+  }
+
+  if (condition === 'fog') {
+    return <FogIcon className={className} />;
+  }
+
+  return <CloudIcon className={className} />;
+}
+
+function DynamicTideIcon({
+  direction,
+  className,
+}: IconProps & {
+  direction: TideDirection;
+}) {
+  if (direction === 'rising') {
+    return <TideRiseIcon className={className} />;
+  }
+
+  if (direction === 'falling') {
+    return <TideFallIcon className={className} />;
+  }
+
+  return <TideIcon className={className} />;
+}
+
+function DynamicTrendIcon({
+  trend,
+  className,
+}: IconProps & {
+  trend: TrendState;
+}) {
+  if (trend === 'rising') {
+    return <TrendUpIcon className={className} />;
+  }
+
+  if (trend === 'falling') {
+    return <TrendDownIcon className={className} />;
+  }
+
+  return <StabilityIcon className={className} />;
+}
+
+function directionToDegrees(direction: CardinalDirection) {
+  const degreesByDirection: Record<CardinalDirection, number> = {
+    N: 0,
+    NE: 45,
+    E: 90,
+    SE: 135,
+    S: 180,
+    SW: 225,
+    W: 270,
+    NW: 315,
+  };
+
+  return degreesByDirection[direction];
+}
+
+function DynamicDirectionIcon({
+  direction,
+  className,
+}: IconProps & {
+  direction: CardinalDirection;
+}) {
+  return (
+    <SvgBase className={className}>
+      <circle cx="24" cy="24" r="17" />
+      <g style={{ transform: `rotate(${directionToDegrees(direction)}deg)`, transformOrigin: '24px 24px' }}>
+        <path d="M24 8v30" />
+        <path d="m16 16 8-8 8 8" />
+      </g>
+      <path d="M24 7v4" />
+      <path d="M24 37v4" />
+      <path d="M7 24h4" />
+      <path d="M37 24h4" />
+    </SvgBase>
+  );
+}
+
+function MoonPhaseIcon({
+  phase,
+  className = '',
+}: {
+  phase: MoonPhase;
+  className?: string;
+}) {
+  const overlayByPhase: Record<MoonPhase, React.ReactNode> = {
+    new: <circle cx="24" cy="24" r="15" fill="rgba(2, 8, 18, 0.72)" stroke="none" />,
+    waxingCrescent: <path d="M30 9a15 15 0 1 0 0 30 19 19 0 0 1 0-30Z" fill="rgba(2, 8, 18, 0.62)" stroke="none" />,
+    firstQuarter: <path d="M24 9a15 15 0 0 0 0 30Z" fill="rgba(2, 8, 18, 0.62)" stroke="none" />,
+    waxingGibbous: <path d="M17 10a15 15 0 1 0 0 28 9 15 0 0 1 0-28Z" fill="rgba(2, 8, 18, 0.5)" stroke="none" />,
+    full: null,
+    waningGibbous: <path d="M31 10a9 15 0 0 1 0 28 15 15 0 1 0 0-28Z" fill="rgba(2, 8, 18, 0.5)" stroke="none" />,
+    lastQuarter: <path d="M24 9a15 15 0 0 1 0 30Z" fill="rgba(2, 8, 18, 0.62)" stroke="none" />,
+    waningCrescent: <path d="M18 9a19 19 0 0 1 0 30 15 15 0 1 0 0-30Z" fill="rgba(2, 8, 18, 0.62)" stroke="none" />,
+  };
+
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 48 48"
+      aria-hidden="true"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="24" cy="24" r="15" fill="currentColor" stroke="currentColor" />
+      {overlayByPhase[phase]}
+    </svg>
+  );
+}
+
+function MoonLightIcon(props: IconProps) {
+  return (
+    <SvgBase {...props}>
+      <path d="M29 10a14 14 0 1 0 0 28 18 18 0 0 1 0-28Z" />
+      <path d="M34 8v4" />
+      <path d="M34 36v4" />
+      <path d="M42 24h-4" />
+      <path d="m39 13-3 3" />
+      <path d="m39 35-3-3" />
     </SvgBase>
   );
 }
@@ -666,7 +927,7 @@ function TideChart() {
   return (
     <CardShell className="vpTideChartCard">
       <div className="vpTideSituation">
-        <ActivityIcon />
+        <DynamicTideIcon direction={mockAdvancedEnvironment.tideDirection} />
         <span>
           SITUAÇÃO ATUAL: <strong>ENCHENDO</strong>
         </span>
@@ -799,7 +1060,7 @@ function TideDetailView({
 }) {
   const summaries: TideSummaryItem[] = [
     {
-      icon: <TideIcon />,
+      icon: <DynamicTideIcon direction={mockAdvancedEnvironment.tideDirection} />,
       label: 'MARÉ ATUAL',
       value: 'Enchendo',
       emphasis: true,
@@ -1084,12 +1345,12 @@ function WindDetailView({
       value: 'até 17 km/h',
     },
     {
-      icon: <CompassIcon />,
+      icon: <DynamicDirectionIcon direction={mockAdvancedEnvironment.windDirection} />,
       label: 'DIREÇÃO',
       value: 'Nordeste',
     },
     {
-      icon: <ClockIcon />,
+      icon: <DynamicTrendIcon trend={mockAdvancedEnvironment.windTrend} />,
       label: 'TENDÊNCIA',
       value: 'Aumenta à tarde',
     },
@@ -1140,7 +1401,7 @@ function WeatherTitleCard() {
   return (
     <CardShell className="vpTideTitleCard vpWeatherTitleCard">
       <div className="vpTideTitleIcon vpWeatherTitleIcon">
-        <CloudIcon />
+        <DynamicWeatherIcon condition={mockAdvancedEnvironment.weatherCondition} />
       </div>
 
       <div className="vpTideTitleText">
@@ -1189,7 +1450,7 @@ function WeatherChart() {
   return (
     <CardShell className="vpTideChartCard vpWeatherChartCard">
       <div className="vpTideSituation vpWeatherSituation">
-        <CloudIcon />
+        <DynamicWeatherIcon condition={mockAdvancedEnvironment.weatherCondition} />
         <span>
           SITUAÇÃO ATUAL: <strong>PARCIALMENTE NUBLADO</strong>
         </span>
@@ -1314,7 +1575,7 @@ function WeatherDetailView({
 }) {
   const summaries: WeatherSummaryItem[] = [
     {
-      icon: <CloudIcon />,
+      icon: <DynamicWeatherIcon condition={mockAdvancedEnvironment.weatherCondition} />,
       label: 'CLIMA ATUAL',
       value: 'Parcialmente nublado',
       emphasis: true,
@@ -1591,12 +1852,12 @@ function SwellDetailView({
       emphasis: true,
     },
     {
-      icon: <ActivityIcon />,
+      icon: <SwellPeakIcon />,
       label: 'PICO DO DIA',
       value: '1,0 m às 18h',
     },
     {
-      icon: <CompassIcon />,
+      icon: <DynamicDirectionIcon direction={mockAdvancedEnvironment.swellDirection} />,
       label: 'DIREÇÃO',
       value: 'Sudeste',
     },
@@ -1850,17 +2111,17 @@ function AirTempDetailView({
       emphasis: true,
     },
     {
-      icon: <ActivityIcon />,
+      icon: <TrendUpIcon />,
       label: 'MÁXIMA',
       value: '27,5 °C às 15h',
     },
     {
-      icon: <ClockIcon />,
+      icon: <TrendDownIcon />,
       label: 'MÍNIMA',
       value: '21,0 °C às 06h',
     },
     {
-      icon: <SunMoonIcon />,
+      icon: <DynamicTrendIcon trend={mockAdvancedEnvironment.airTempTrend} />,
       label: 'TENDÊNCIA',
       value: 'Aquece à tarde',
     },
@@ -2109,17 +2370,17 @@ function WaterTempDetailView({
       emphasis: true,
     },
     {
-      icon: <ActivityIcon />,
+      icon: <TrendUpIcon />,
       label: 'MAIS QUENTE',
       value: '22,8 °C às 15h',
     },
     {
-      icon: <ClockIcon />,
+      icon: <TrendDownIcon />,
       label: 'MAIS FRIA',
       value: '22,1 °C às 06h',
     },
     {
-      icon: <WaveIcon />,
+      icon: <DynamicTrendIcon trend={mockAdvancedEnvironment.waterTempTrend} />,
       label: 'TENDÊNCIA',
       value: 'Estável',
     },
@@ -2367,17 +2628,17 @@ function PressureDetailView({
       emphasis: true,
     },
     {
-      icon: <ActivityIcon />,
+      icon: <TrendUpIcon />,
       label: 'MÁXIMA',
       value: '1018 hPa às 00h',
     },
     {
-      icon: <ClockIcon />,
+      icon: <TrendDownIcon />,
       label: 'MÍNIMA',
       value: '1014 hPa às 18h',
     },
     {
-      icon: <CompassIcon />,
+      icon: <DynamicTrendIcon trend={mockAdvancedEnvironment.pressureTrend} />,
       label: 'TENDÊNCIA',
       value: 'Leve queda',
     },
@@ -2615,23 +2876,23 @@ function SunMoonDetailView({
 }) {
   const summaries: SunMoonSummaryItem[] = [
     {
-      icon: <PreviewIcon name="moon" />,
+      icon: <MoonPhaseIcon phase={mockAdvancedEnvironment.moonPhase} />,
       label: 'LUA ATUAL',
       value: 'Crescente',
       emphasis: true,
     },
     {
-      icon: <ActivityIcon />,
+      icon: <MoonLightIcon />,
       label: 'ILUMINAÇÃO',
       value: '35%',
     },
     {
-      icon: <ClockIcon />,
+      icon: <SunIcon />,
       label: 'NASCER DO SOL',
       value: '06h48',
     },
     {
-      icon: <ClockIcon />,
+      icon: <SunsetIcon />,
       label: 'PÔR DO SOL',
       value: '17h42',
     },
@@ -2689,7 +2950,7 @@ export default function PremiumPanelPreview({
   const metrics: AdvancedMetric[] = [
     {
       id: 'weather',
-      icon: <RainIcon />,
+      icon: <DynamicWeatherIcon condition={mockAdvancedEnvironment.weatherCondition} />,
       label: 'Clima',
       value: 'Parcialmente nublado',
     },
@@ -2707,7 +2968,7 @@ export default function PremiumPanelPreview({
     },
     {
       id: 'tide',
-      icon: <TideIcon />,
+      icon: <DynamicTideIcon direction={mockAdvancedEnvironment.tideDirection} />,
       label: 'Maré',
       value: 'Enchendo',
     },
@@ -2719,7 +2980,7 @@ export default function PremiumPanelPreview({
     },
     {
       id: 'wind',
-      icon: <WindIcon />,
+      icon: <DynamicDirectionIcon direction={mockAdvancedEnvironment.windDirection} />,
       label: 'Vento',
       value: 'NE • 8 km/h',
     },
@@ -2731,7 +2992,7 @@ export default function PremiumPanelPreview({
     },
     {
       id: 'sunMoon',
-      icon: <SunMoonIcon />,
+      icon: <MoonPhaseIcon phase={mockAdvancedEnvironment.moonPhase} />,
       label: '',
       value: 'SOL E LUA',
     },
