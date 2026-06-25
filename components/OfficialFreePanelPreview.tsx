@@ -6,6 +6,9 @@ import { useState } from "react";
 type OfficialFreePanelPreviewProps = {
   isOpen: boolean;
   onClose: () => void;
+  onOpenAdvancedData?: (selectedForecastDayId: string) => void;
+  selectedForecastDayId?: string;
+  onSelectForecastDay?: (dayId: string) => void;
   placeName?: string;
   lat?: number;
   lng?: number;
@@ -324,6 +327,8 @@ function ForecastDaySelector({
 }) {
   return (
     <CardShell className="vpOfficialDaySelector" aria-label="Selecionar dia da previsão">
+      <span className="vpOfficialDaySelectorLabel">DIA</span>
+
       {forecastDays.map((day) => {
         const selected = day.id === selectedDayId;
 
@@ -390,6 +395,9 @@ function DataCard({ item }: { item: DataItem }) {
 export default function OfficialFreePanelPreview({
   isOpen,
   onClose,
+  onOpenAdvancedData,
+  selectedForecastDayId,
+  onSelectForecastDay,
   placeName,
   lat,
   lng,
@@ -397,7 +405,14 @@ export default function OfficialFreePanelPreview({
 }: OfficialFreePanelPreviewProps) {
   const coordinates = coordinatesText || formatCoordinates(lat, lng);
   const selectedPlaceName = placeName?.trim() || "Pontal de Matinhos";
-  const [selectedForecastDayId, setSelectedForecastDayId] = useState(forecastDays[0].id);
+  const [internalSelectedForecastDayId, setInternalSelectedForecastDayId] = useState(forecastDays[0].id);
+  const activeForecastDayId = selectedForecastDayId || internalSelectedForecastDayId;
+
+  const selectForecastDay = (dayId: string) => {
+    setInternalSelectedForecastDayId(dayId);
+    onSelectForecastDay?.(dayId);
+  };
+
   const data: DataItem[] = [
     { icon: <ThermometerIcon />, label: "Temperatura do Ar", value: "26,0 °C" },
     { icon: <WaterThermometerIcon />, label: "Temperatura da Água", value: "22,4 °C" },
@@ -423,8 +438,8 @@ export default function OfficialFreePanelPreview({
         <SelectedPointCard placeName={selectedPlaceName} coordinates={coordinates} />
 
         <ForecastDaySelector
-          selectedDayId={selectedForecastDayId}
-          onSelectDay={setSelectedForecastDayId}
+          selectedDayId={activeForecastDayId}
+          onSelectDay={selectForecastDay}
         />
 
         <DailySummaryCard />
@@ -435,7 +450,11 @@ export default function OfficialFreePanelPreview({
           ))}
         </section>
 
-        <button className="vpOfficialAdvancedButton" type="button">
+        <button
+          className="vpOfficialAdvancedButton"
+          type="button"
+          onClick={() => onOpenAdvancedData?.(activeForecastDayId)}
+        >
           <ChartIcon className="vpOfficialAdvancedIcon" />
           <span>Dados Avançados</span>
           <ChevronIcon className="vpOfficialChevron" />
@@ -631,10 +650,24 @@ export default function OfficialFreePanelPreview({
           border-radius: 17px;
           padding: 7px;
           display: grid;
-          grid-template-columns: repeat(7, minmax(0, 1fr));
+          grid-template-columns: auto repeat(7, minmax(0, 1fr));
           align-items: center;
           gap: 4px;
           box-sizing: border-box;
+        }
+
+        .vpOfficialDaySelectorLabel {
+          align-self: center;
+          justify-self: center;
+          padding: 0 7px 0 4px;
+          color: rgba(125, 211, 252, 0.76);
+          font-size: 10px;
+          line-height: 1;
+          font-weight: 780;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+          white-space: nowrap;
+          transform: translateY(-1px);
         }
 
         .vpOfficialDayButton {
@@ -960,6 +993,13 @@ export default function OfficialFreePanelPreview({
           .vpOfficialDaySelector {
             min-height: 52px;
             padding: 6px;
+            gap: 3px;
+          }
+
+          .vpOfficialDaySelectorLabel {
+            padding: 0 4px 0 2px;
+            font-size: 8.5px;
+            letter-spacing: 0.1em;
           }
 
           .vpOfficialDayButton {
@@ -1091,6 +1131,12 @@ export default function OfficialFreePanelPreview({
             min-height: 72px;
             padding: 10px 18px;
             gap: 10px;
+          }
+
+          .vpOfficialDaySelectorLabel {
+            padding: 0 10px 0 2px;
+            font-size: 12px;
+            letter-spacing: 0.16em;
           }
 
           .vpOfficialDayButton {

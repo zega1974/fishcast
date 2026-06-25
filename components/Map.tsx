@@ -904,6 +904,8 @@ function readStoredPersonalPlaces() {
 export default function Map() {
   const mapRef = useRef<L.Map | null>(null);
   const [premiumPreviewOpen, setPremiumPreviewOpen] = useState(false);
+  const [premiumPreviewPlace, setPremiumPreviewPlace] = useState<OfficialFreeSpotDataPlace | null>(null);
+  const [selectedForecastDayId, setSelectedForecastDayId] = useState("day-25");
   const [officialFreeSpotDataPlace, setOfficialFreeSpotDataPlace] = useState<OfficialFreeSpotDataPlace | null>(null);
   const [placeCapturesPreviewOpen, setPlaceCapturesPreviewOpen] = useState(false);
   const [placeCapturesPreviewPlaceId, setPlaceCapturesPreviewPlaceId] = useState<number | null>(null);
@@ -1807,6 +1809,32 @@ export default function Map() {
     });
   }
 
+  function openAdvancedDataFromOfficialSpot(selectedDayId: string) {
+    if (!officialFreeSpotDataPlace) {
+      return;
+    }
+
+    setSelectedForecastDayId(selectedDayId);
+    setPremiumPreviewPlace(officialFreeSpotDataPlace);
+    setPremiumPreviewOpen(true);
+    setOfficialFreeSpotDataPlace(null);
+  }
+
+  function closeAdvancedDataPreview() {
+    setPremiumPreviewOpen(false);
+    setPremiumPreviewPlace(null);
+  }
+
+  function backFromAdvancedDataPreview() {
+    setPremiumPreviewOpen(false);
+
+    if (premiumPreviewPlace) {
+      setOfficialFreeSpotDataPlace(premiumPreviewPlace);
+    }
+
+    setPremiumPreviewPlace(null);
+  }
+
   const placeCapturesPreviewData = getPlaceCapturesPreviewData(placeCapturesPreviewPlaceId);
   const placeCapturesPreviewPlace = placeCapturesPreviewPlaceId
     ? personalPlaces.find((place) => place.id === placeCapturesPreviewPlaceId)
@@ -1821,10 +1849,23 @@ export default function Map() {
 
   return (
     <div className="relative w-full h-full">
-      {premiumPreviewOpen && <PremiumPanelPreview onClose={() => setPremiumPreviewOpen(false)} />}
+      {premiumPreviewOpen && (
+        <PremiumPanelPreview
+          onClose={closeAdvancedDataPreview}
+          onBack={premiumPreviewPlace ? backFromAdvancedDataPreview : closeAdvancedDataPreview}
+          placeName={premiumPreviewPlace?.name}
+          lat={premiumPreviewPlace?.lat}
+          lng={premiumPreviewPlace?.lng}
+          coordinatesText={premiumPreviewPlace?.coordinatesText}
+          selectedForecastDayId={selectedForecastDayId}
+        />
+      )}
       <OfficialFreePanelPreview
         isOpen={Boolean(officialFreeSpotDataPlace)}
         onClose={() => setOfficialFreeSpotDataPlace(null)}
+        onOpenAdvancedData={openAdvancedDataFromOfficialSpot}
+        selectedForecastDayId={selectedForecastDayId}
+        onSelectForecastDay={setSelectedForecastDayId}
         placeName={officialFreeSpotDataPlace?.name}
         lat={officialFreeSpotDataPlace?.lat}
         lng={officialFreeSpotDataPlace?.lng}
@@ -1889,6 +1930,7 @@ export default function Map() {
         type="button"
         onClick={(event) => {
           event.stopPropagation();
+          setPremiumPreviewPlace(null);
           setPremiumPreviewOpen(true);
         }}
         onPointerDown={(event) => event.stopPropagation()}

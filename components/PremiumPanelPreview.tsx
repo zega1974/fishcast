@@ -26,6 +26,7 @@ type PremiumPanelPreviewProps = {
   lat?: number;
   lng?: number;
   coordinatesText?: string;
+  selectedForecastDayId?: string;
 };
 
 type IconProps = {
@@ -710,7 +711,14 @@ function SelectedPointCard({ placeName }: { placeName: string }) {
   );
 }
 
-function IntroCard() {
+function getForecastDayBadgeLabel(selectedForecastDayId?: string) {
+  const fallbackDay = '25';
+  const dayValue = selectedForecastDayId?.replace('day-', '').trim();
+
+  return `DIA ${dayValue || fallbackDay}`;
+}
+
+function IntroCard({ selectedForecastDayId }: { selectedForecastDayId?: string }) {
   return (
     <CardShell className="vpAdvancedIntroBlock">
       <div className="vpAdvancedIntroIcon">
@@ -721,6 +729,10 @@ function IntroCard() {
         <span>DADOS AVANÇADOS</span>
         <strong>Selecione um dado</strong>
         <small>Toque em um card para abrir o gráfico detalhado.</small>
+      </div>
+
+      <div className="vpAdvancedIntroDayBadge" aria-label={getForecastDayBadgeLabel(selectedForecastDayId)}>
+        {getForecastDayBadgeLabel(selectedForecastDayId)}
       </div>
     </CardShell>
   );
@@ -2943,6 +2955,7 @@ export default function PremiumPanelPreview({
   onClose,
   onBack,
   placeName,
+  selectedForecastDayId,
 }: PremiumPanelPreviewProps) {
   const [activeMetric, setActiveMetric] = useState<AdvancedMetricId | null>(null);
   const selectedPlaceName = placeName?.trim() || 'Ponto selecionado';
@@ -3014,7 +3027,11 @@ export default function PremiumPanelPreview({
   };
 
   return (
-    <section className="vpAdvancedPreview" aria-label="Preview Dados Avançados">
+    <section
+      className="vpAdvancedPreview"
+      aria-label="Preview Dados Avançados"
+      data-selected-forecast-day={selectedForecastDayId || undefined}
+    >
       {onClose ? (
         <button
           className="vpAdvancedCloseButton"
@@ -3079,7 +3096,7 @@ export default function PremiumPanelPreview({
 
           <SelectedPointCard placeName={selectedPlaceName} />
 
-          <IntroCard />
+          <IntroCard selectedForecastDayId={selectedForecastDayId} />
 
           <section className="vpAdvancedDataGrid" aria-label="Dados avançados">
             {metrics.map((item) => (
@@ -3295,7 +3312,7 @@ export default function PremiumPanelPreview({
           border-radius: 18px;
           min-height: 82px;
           display: grid;
-          grid-template-columns: auto minmax(0, 1fr);
+          grid-template-columns: auto minmax(0, 1fr) auto;
           align-items: center;
           gap: 12px;
           padding: 11px 13px;
@@ -3347,6 +3364,27 @@ export default function PremiumPanelPreview({
           font-size: clamp(11px, 3vw, 13px);
           line-height: 1.2;
           font-weight: 450;
+        }
+
+        .vpAdvancedIntroDayBadge {
+          justify-self: end;
+          align-self: center;
+          border: 1px solid rgba(125, 211, 252, 0.34);
+          border-radius: 999px;
+          padding: 7px 10px;
+          color: #7dd3fc;
+          background:
+            radial-gradient(circle at 50% 0%, rgba(34, 211, 238, 0.18), transparent 62%),
+            rgba(14, 165, 233, 0.08);
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.08),
+            0 0 18px rgba(34, 211, 238, 0.1);
+          font-size: 10px;
+          line-height: 1;
+          font-weight: 820;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          white-space: nowrap;
         }
 
         .vpAdvancedDataGrid {
@@ -4278,8 +4316,9 @@ export default function PremiumPanelPreview({
 
           .vpAdvancedIntroBlock {
             min-height: 76px;
-            gap: 9px;
+            gap: 8px;
             padding: 9px;
+            grid-template-columns: auto minmax(0, 1fr) auto;
           }
 
           .vpAdvancedIntroIcon {
@@ -4299,6 +4338,12 @@ export default function PremiumPanelPreview({
 
           .vpAdvancedIntroText small {
             font-size: 11px;
+          }
+
+          .vpAdvancedIntroDayBadge {
+            padding: 6px 8px;
+            font-size: 8.5px;
+            letter-spacing: 0.1em;
           }
 
           .vpAdvancedHeaderScore strong {
@@ -4859,6 +4904,7 @@ export default function PremiumPanelPreview({
             grid-column: 1 / -1;
             min-height: 96px;
             padding: 16px 18px;
+            grid-template-columns: auto minmax(0, 1fr) auto;
           }
 
           .vpAdvancedIntroIcon {
@@ -4882,6 +4928,12 @@ export default function PremiumPanelPreview({
 
           .vpAdvancedIntroText small {
             font-size: 14px;
+          }
+
+          .vpAdvancedIntroDayBadge {
+            padding: 9px 14px;
+            font-size: 12px;
+            letter-spacing: 0.14em;
           }
 
           .vpAdvancedHeaderScore strong {
