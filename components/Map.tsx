@@ -39,6 +39,7 @@ import {
 } from "@/components/captures/storage";
 import type { Capture, CaptureFormData, CaptureShareMode } from "@/components/captures/types";
 import { fishingSpots } from "@/data/fishingSpots";
+import { getMockSpotForecastDays } from "@/data/spotForecast";
 
 type MapMode = "map" | "satellite" | "nautical" | "night";
 type PlaceVisibility = "private";
@@ -1846,6 +1847,22 @@ export default function Map() {
     ? getCapturePlaceLabel(selectedCaptureView)
     : "";
   const weightParts = deriveWeightParts(formData.weight);
+  const officialFreeForecastDays = officialFreeSpotDataPlace
+    ? getMockSpotForecastDays({
+        id: officialFreeSpotDataPlace.id,
+        name: officialFreeSpotDataPlace.name,
+        lat: officialFreeSpotDataPlace.lat,
+        lng: officialFreeSpotDataPlace.lng,
+      })
+    : undefined;
+  const premiumForecastDays = premiumPreviewPlace
+    ? getMockSpotForecastDays({
+        id: premiumPreviewPlace.id,
+        name: premiumPreviewPlace.name,
+        lat: premiumPreviewPlace.lat,
+        lng: premiumPreviewPlace.lng,
+      })
+    : undefined;
 
   return (
     <div className="relative w-full h-full">
@@ -1858,6 +1875,7 @@ export default function Map() {
           lng={premiumPreviewPlace?.lng}
           coordinatesText={premiumPreviewPlace?.coordinatesText}
           selectedForecastDayId={selectedForecastDayId}
+          forecastDays={premiumForecastDays}
         />
       )}
       <OfficialFreePanelPreview
@@ -1870,6 +1888,7 @@ export default function Map() {
         lat={officialFreeSpotDataPlace?.lat}
         lng={officialFreeSpotDataPlace?.lng}
         coordinatesText={officialFreeSpotDataPlace?.coordinatesText}
+        forecastDays={officialFreeForecastDays}
       />
       {placeCapturesPreviewOpen && (
         <PlaceCapturesPanelPreview

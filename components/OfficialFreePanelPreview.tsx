@@ -2,6 +2,12 @@
 
 import type React from "react";
 import { useState } from "react";
+import {
+  forecastDaysBase,
+  getMockSpotForecastDays,
+  getSelectedForecastDay,
+  type SpotForecastDay,
+} from "@/data/spotForecast";
 
 type OfficialFreePanelPreviewProps = {
   isOpen: boolean;
@@ -13,6 +19,7 @@ type OfficialFreePanelPreviewProps = {
   lat?: number;
   lng?: number;
   coordinatesText?: string;
+  forecastDays?: SpotForecastDay[];
 };
 
 type IconProps = {
@@ -25,22 +32,6 @@ type DataItem = {
   value: string;
   detail?: string;
 };
-
-type ForecastDayItem = {
-  id: string;
-  day: string;
-  isToday?: boolean;
-};
-
-const forecastDays: ForecastDayItem[] = [
-  { id: "day-25", day: "25", isToday: true },
-  { id: "day-26", day: "26" },
-  { id: "day-27", day: "27" },
-  { id: "day-28", day: "28" },
-  { id: "day-29", day: "29" },
-  { id: "day-30", day: "30" },
-  { id: "day-01", day: "01" },
-];
 
 function SvgBase({
   children,
@@ -267,10 +258,14 @@ function formatCoordinates(lat?: number, lng?: number) {
   return "-25.823456, -48.536789";
 }
 
-function ScoreBar() {
+function formatTemperature(value: number) {
+  return `${value.toFixed(1).replace(".", ",")}`;
+}
+
+function ScoreBar({ score }: { score: number }) {
   return (
     <div className="vpOfficialScoreBar" aria-hidden="true">
-      <span style={{ width: "82%" }} />
+      <span style={{ width: `${Math.max(0, Math.min(score, 100))}%` }} />
     </div>
   );
 }
@@ -321,9 +316,11 @@ function SelectedPointCard({
 function ForecastDaySelector({
   selectedDayId,
   onSelectDay,
+  forecastDays,
 }: {
   selectedDayId: string;
   onSelectDay: (dayId: string) => void;
+  forecastDays: SpotForecastDay[];
 }) {
   return (
     <CardShell className="vpOfficialDaySelector" aria-label="Selecionar dia da previsão">
@@ -349,14 +346,14 @@ function ForecastDaySelector({
   );
 }
 
-function DailySummaryCard() {
+function DailySummaryCard({ forecast }: { forecast: SpotForecastDay }) {
   return (
     <CardShell className="vpOfficialDailySummary">
       <div className="vpOfficialSummaryScoreRow">
         <span className="vpOfficialSummaryLabel">Score do dia</span>
-        <strong>82</strong>
-        <ScoreBar />
-        <em>Excelente</em>
+        <strong>{forecast.score}</strong>
+        <ScoreBar score={forecast.score} />
+        <em>{forecast.scoreLabel}</em>
       </div>
 
       <div className="vpOfficialSummaryDivider" />
@@ -366,12 +363,12 @@ function DailySummaryCard() {
 
         <div className="vpOfficialSummaryTime">
           <SunriseIcon className="vpOfficialSummaryTimeIcon" />
-          <strong>14h às 16h</strong>
+          <strong>{forecast.bestTimes[0]}</strong>
         </div>
 
         <div className="vpOfficialSummaryTime">
           <SunriseIcon className="vpOfficialSummaryTimeIcon" />
-          <strong>19h às 21h</strong>
+          <strong>{forecast.bestTimes[1]}</strong>
         </div>
       </div>
     </CardShell>
@@ -402,11 +399,17 @@ export default function OfficialFreePanelPreview({
   lat,
   lng,
   coordinatesText,
+  forecastDays,
 }: OfficialFreePanelPreviewProps) {
   const coordinates = coordinatesText || formatCoordinates(lat, lng);
   const selectedPlaceName = placeName?.trim() || "Pontal de Matinhos";
-  const [internalSelectedForecastDayId, setInternalSelectedForecastDayId] = useState(forecastDays[0].id);
+  const [internalSelectedForecastDayId, setInternalSelectedForecastDayId] = useState(forecastDaysBase[0].id);
   const activeForecastDayId = selectedForecastDayId || internalSelectedForecastDayId;
+  const safeForecastDays =
+    forecastDays && forecastDays.length > 0
+      ? forecastDays
+      : getMockSpotForecastDays({ name: selectedPlaceName, lat, lng });
+  const activeForecastDay = getSelectedForecastDay(safeForecastDays, activeForecastDayId);
 
   const selectForecastDay = (dayId: string) => {
     setInternalSelectedForecastDayId(dayId);
@@ -414,14 +417,14 @@ export default function OfficialFreePanelPreview({
   };
 
   const data: DataItem[] = [
-    { icon: <ThermometerIcon />, label: "Temperatura do Ar", value: "26,0 °C" },
-    { icon: <WaterThermometerIcon />, label: "Temperatura da Água", value: "22,4 °C" },
-    { icon: <TideIcon />, label: "Maré", value: "Enchendo" },
-    { icon: <WindIcon />, label: "Vento", value: "NE • 8 km/h" },
-    { icon: <MoonIcon />, label: "Lua", value: "Crescente", detail: "35% iluminada" },
-    { icon: <SunIcon />, label: "Clima", value: "Ensolarado" },
-    { icon: <DepthIcon />, label: "Profundidade", value: "4,2 m" },
-    { icon: <BottomIcon />, label: "Tipo de Fundo", value: "Areia e Pedra" },
+    { icon: <ThermometerIcon />, label: "Temperatura do Ar", value: `${formatTemperature(activeForecastDay.airTemp.current)} °C` },
+    { icon: <WaterThermometerIcon />, label: "Temperatura da Água", value: `${formatTemperature(activeForecastDay.waterTemp.current)} °C` },
+    { icon: <TideIcon />, label: "Maré", value: activeForecastDay.tide.label },
+    { icon: <WindIcon />, label: "Vento", value: `${activeForecastDay.wind.direction} • ${activeForecastDay.wind.speed} km/h` },
+    { icon: <MoonIcon />, label: "Lua", value: activeForecastDay.moon.label, detail: `${activeForecastDay.moon.illumination}% iluminada` },
+    { icon: <SunIcon />, label: "Clima", value: activeForecastDay.weather.label },
+    { icon: <DepthIcon />, label: "Profundidade", value: activeForecastDay.depth.value },
+    { icon: <BottomIcon />, label: "Tipo de Fundo", value: activeForecastDay.bottom.label },
   ];
 
   if (!isOpen) {
@@ -440,9 +443,10 @@ export default function OfficialFreePanelPreview({
         <ForecastDaySelector
           selectedDayId={activeForecastDayId}
           onSelectDay={selectForecastDay}
+          forecastDays={safeForecastDays}
         />
 
-        <DailySummaryCard />
+        <DailySummaryCard forecast={activeForecastDay} />
 
         <section className="vpOfficialDataGrid" aria-label="Dados gratuitos">
           {data.map((item) => (

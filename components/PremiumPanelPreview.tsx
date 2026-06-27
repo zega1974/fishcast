@@ -2,6 +2,16 @@
 
 import type React from 'react';
 import { useState } from 'react';
+import {
+  getMockSpotForecastDays,
+  getSelectedForecastDay,
+  type CardinalDirection,
+  type MoonPhase,
+  type SpotForecastDay,
+  type TideDirection,
+  type TrendState,
+  type WeatherCondition,
+} from '@/data/spotForecast';
 
 export type PreviewIconName =
   | 'weather'
@@ -27,6 +37,7 @@ type PremiumPanelPreviewProps = {
   lng?: number;
   coordinatesText?: string;
   selectedForecastDayId?: string;
+  forecastDays?: SpotForecastDay[];
 };
 
 type IconProps = {
@@ -42,50 +53,6 @@ type AdvancedMetricId =
   | 'wind'
   | 'pressure'
   | 'sunMoon';
-
-type WeatherCondition =
-  | 'clear'
-  | 'partlyCloudy'
-  | 'cloudy'
-  | 'rain'
-  | 'storm'
-  | 'fog';
-
-type TideDirection = 'rising' | 'falling' | 'slack';
-
-type TrendState = 'rising' | 'falling' | 'stable';
-
-type MoonPhase =
-  | 'new'
-  | 'waxingCrescent'
-  | 'firstQuarter'
-  | 'waxingGibbous'
-  | 'full'
-  | 'waningGibbous'
-  | 'lastQuarter'
-  | 'waningCrescent';
-
-type CardinalDirection =
-  | 'N'
-  | 'NE'
-  | 'E'
-  | 'SE'
-  | 'S'
-  | 'SW'
-  | 'W'
-  | 'NW';
-
-const mockAdvancedEnvironment = {
-  weatherCondition: 'partlyCloudy' as WeatherCondition,
-  tideDirection: 'rising' as TideDirection,
-  windDirection: 'NE' as CardinalDirection,
-  windTrend: 'rising' as TrendState,
-  swellDirection: 'SE' as CardinalDirection,
-  pressureTrend: 'falling' as TrendState,
-  airTempTrend: 'rising' as TrendState,
-  waterTempTrend: 'stable' as TrendState,
-  moonPhase: 'waxingCrescent' as MoonPhase,
-};
 
 type AdvancedMetric = {
   id: AdvancedMetricId;
@@ -691,6 +658,10 @@ function CardShell({
   return <div className={`vpAdvancedCard ${className}`}>{children}</div>;
 }
 
+function formatTemperature(value: number) {
+  return `${value.toFixed(1).replace('.', ',')}`;
+}
+
 function SelectedPointCard({ placeName }: { placeName: string }) {
   return (
     <CardShell className="vpAdvancedPlaceBlock">
@@ -716,6 +687,14 @@ function getForecastDayBadgeLabel(selectedForecastDayId?: string) {
   const dayValue = selectedForecastDayId?.replace('day-', '').trim();
 
   return `DIA ${dayValue || fallbackDay}`;
+}
+
+function DetailDayBadge({ selectedForecastDayId }: { selectedForecastDayId?: string }) {
+  return (
+    <div className="vpTideTitleDayBadge" aria-label={getForecastDayBadgeLabel(selectedForecastDayId)}>
+      {getForecastDayBadgeLabel(selectedForecastDayId)}
+    </div>
+  );
 }
 
 function IntroCard({ selectedForecastDayId }: { selectedForecastDayId?: string }) {
@@ -799,7 +778,7 @@ function createSmoothPath(points: ChartPoint[]) {
   return commands.join(' ');
 }
 
-function TideTitleCard() {
+function TideTitleCard({ selectedForecastDayId }: { selectedForecastDayId?: string }) {
   return (
     <CardShell className="vpTideTitleCard">
       <div className="vpTideTitleIcon">
@@ -811,11 +790,12 @@ function TideTitleCard() {
         <strong>MARÉ</strong>
         <small>Gráfico detalhado e variação nas próximas horas.</small>
       </div>
+      <DetailDayBadge selectedForecastDayId={selectedForecastDayId} />
     </CardShell>
   );
 }
 
-function TideChart() {
+function TideChart({ forecast }: { forecast: SpotForecastDay }) {
   const chartLeft = 90;
   const chartRight = 890;
   const chartTop = 30;
@@ -939,9 +919,9 @@ function TideChart() {
   return (
     <CardShell className="vpTideChartCard">
       <div className="vpTideSituation">
-        <DynamicTideIcon direction={mockAdvancedEnvironment.tideDirection} />
+        <DynamicTideIcon direction={forecast.tide.direction} />
         <span>
-          SITUAÇÃO ATUAL: <strong>ENCHENDO</strong>
+          SITUAÇÃO ATUAL: <strong>{forecast.tide.label.toUpperCase()}</strong>
         </span>
       </div>
 
@@ -951,7 +931,7 @@ function TideChart() {
           viewBox="0 0 920 270"
           preserveAspectRatio="none"
           role="img"
-          aria-label="GrÃ¡fico de altura da marÃ© ao longo de 24 horas"
+          aria-label="Gráfico de altura da maré ao longo de 24 horas"
         >
           <defs>
             <linearGradient id="vpTideFill" x1="0" y1="0" x2="0" y2="1">
@@ -1065,32 +1045,36 @@ function TideSummaryCard({ item }: { item: TideSummaryItem }) {
 
 function TideDetailView({
   placeName,
+  forecast,
+  selectedForecastDayId,
   onBack,
 }: {
   placeName: string;
+  forecast: SpotForecastDay;
+  selectedForecastDayId?: string;
   onBack: () => void;
 }) {
   const summaries: TideSummaryItem[] = [
     {
-      icon: <DynamicTideIcon direction={mockAdvancedEnvironment.tideDirection} />,
+      icon: <DynamicTideIcon direction={forecast.tide.direction} />,
       label: 'MARÉ ATUAL',
-      value: 'Enchendo',
+      value: forecast.tide.label,
       emphasis: true,
     },
     {
       icon: <TideRiseIcon />,
       label: 'PRÓXIMA CHEIA',
-      value: '16h42 • 1,4 m',
+      value: forecast.tide.nextHigh,
     },
     {
       icon: <TideFallIcon />,
       label: 'PRÓXIMA VAZANTE',
-      value: '22h18 • 0,3 m',
+      value: forecast.tide.nextLow,
     },
     {
       icon: <TideAmplitudeIcon />,
       label: 'AMPLITUDE',
-      value: '1,1 m',
+      value: forecast.tide.amplitude,
     },
   ];
 
@@ -1111,9 +1095,9 @@ function TideDetailView({
 
       <SelectedPointCard placeName={placeName} />
 
-      <TideTitleCard />
+      <TideTitleCard selectedForecastDayId={selectedForecastDayId} />
 
-      <TideChart />
+      <TideChart forecast={forecast} />
 
       <section className="vpTideSummaryGrid" aria-label="Resumo da maré">
         {summaries.map((item) => (
@@ -1135,7 +1119,7 @@ function TideDetailView({
   );
 }
 
-function WindTitleCard() {
+function WindTitleCard({ selectedForecastDayId }: { selectedForecastDayId?: string }) {
   return (
     <CardShell className="vpTideTitleCard vpWindTitleCard">
       <div className="vpTideTitleIcon vpWindTitleIcon">
@@ -1147,6 +1131,7 @@ function WindTitleCard() {
         <strong>VENTO</strong>
         <small>Direção, intensidade e rajadas nas próximas horas.</small>
       </div>
+      <DetailDayBadge selectedForecastDayId={selectedForecastDayId} />
     </CardShell>
   );
 }
@@ -1233,7 +1218,7 @@ function WindChart() {
           viewBox="0 0 920 270"
           preserveAspectRatio="none"
           role="img"
-          aria-label="GrÃ¡fico de vento ao longo de 24 horas"
+          aria-label="Gráfico de vento ao longo de 24 horas"
         >
           <defs>
             <linearGradient id="vpWindFill" x1="0" y1="0" x2="0" y2="1">
@@ -1339,32 +1324,36 @@ function WindSummaryCard({ item }: { item: WindSummaryItem }) {
 
 function WindDetailView({
   placeName,
+  forecast,
+  selectedForecastDayId,
   onBack,
 }: {
   placeName: string;
+  forecast: SpotForecastDay;
+  selectedForecastDayId?: string;
   onBack: () => void;
 }) {
   const summaries: WindSummaryItem[] = [
     {
       icon: <WindIcon />,
       label: 'VENTO ATUAL',
-      value: 'NE • 8 km/h',
+      value: `${forecast.wind.direction} • ${forecast.wind.speed} km/h`,
       emphasis: true,
     },
     {
       icon: <ActivityIcon />,
       label: 'RAJADAS',
-      value: 'até 17 km/h',
+      value: `até ${forecast.wind.gust} km/h`,
     },
     {
-      icon: <DynamicDirectionIcon direction={mockAdvancedEnvironment.windDirection} />,
+      icon: <DynamicDirectionIcon direction={forecast.wind.direction} />,
       label: 'DIREÇÃO',
-      value: 'Nordeste',
+      value: forecast.wind.directionLabel,
     },
     {
-      icon: <DynamicTrendIcon trend={mockAdvancedEnvironment.windTrend} />,
+      icon: <DynamicTrendIcon trend={forecast.wind.trend} />,
       label: 'TENDÊNCIA',
-      value: 'Aumenta à tarde',
+      value: forecast.wind.trendLabel,
     },
   ];
 
@@ -1385,7 +1374,7 @@ function WindDetailView({
 
       <SelectedPointCard placeName={placeName} />
 
-      <WindTitleCard />
+      <WindTitleCard selectedForecastDayId={selectedForecastDayId} />
 
       <WindChart />
 
@@ -1409,11 +1398,17 @@ function WindDetailView({
   );
 }
 
-function WeatherTitleCard() {
+function WeatherTitleCard({
+  forecast,
+  selectedForecastDayId,
+}: {
+  forecast: SpotForecastDay;
+  selectedForecastDayId?: string;
+}) {
   return (
     <CardShell className="vpTideTitleCard vpWeatherTitleCard">
       <div className="vpTideTitleIcon vpWeatherTitleIcon">
-        <DynamicWeatherIcon condition={mockAdvancedEnvironment.weatherCondition} />
+        <DynamicWeatherIcon condition={forecast.weather.condition} />
       </div>
 
       <div className="vpTideTitleText">
@@ -1421,11 +1416,12 @@ function WeatherTitleCard() {
         <strong>CLIMA</strong>
         <small>Chuva, nebulosidade e estabilidade nas próximas horas.</small>
       </div>
+      <DetailDayBadge selectedForecastDayId={selectedForecastDayId} />
     </CardShell>
   );
 }
 
-function WeatherChart() {
+function WeatherChart({ forecast }: { forecast: SpotForecastDay }) {
   const chartLeft = 90;
   const chartRight = 890;
   const chartTop = 30;
@@ -1462,9 +1458,9 @@ function WeatherChart() {
   return (
     <CardShell className="vpTideChartCard vpWeatherChartCard">
       <div className="vpTideSituation vpWeatherSituation">
-        <DynamicWeatherIcon condition={mockAdvancedEnvironment.weatherCondition} />
+        <DynamicWeatherIcon condition={forecast.weather.condition} />
         <span>
-          SITUAÇÃO ATUAL: <strong>PARCIALMENTE NUBLADO</strong>
+          SITUAÇÃO ATUAL: <strong>{forecast.weather.label.toUpperCase()}</strong>
         </span>
       </div>
 
@@ -1474,7 +1470,7 @@ function WeatherChart() {
           viewBox="0 0 920 270"
           preserveAspectRatio="none"
           role="img"
-          aria-label="GrÃ¡fico de chance de chuva ao longo de 24 horas"
+          aria-label="Gráfico de chance de chuva ao longo de 24 horas"
         >
           <defs>
             <linearGradient id="vpWeatherFill" x1="0" y1="0" x2="0" y2="1">
@@ -1580,32 +1576,36 @@ function WeatherSummaryCard({ item }: { item: WeatherSummaryItem }) {
 
 function WeatherDetailView({
   placeName,
+  forecast,
+  selectedForecastDayId,
   onBack,
 }: {
   placeName: string;
+  forecast: SpotForecastDay;
+  selectedForecastDayId?: string;
   onBack: () => void;
 }) {
   const summaries: WeatherSummaryItem[] = [
     {
-      icon: <DynamicWeatherIcon condition={mockAdvancedEnvironment.weatherCondition} />,
+      icon: <DynamicWeatherIcon condition={forecast.weather.condition} />,
       label: 'CLIMA ATUAL',
-      value: 'Parcialmente nublado',
+      value: forecast.weather.label,
       emphasis: true,
     },
     {
       icon: <RainIcon />,
       label: 'CHUVA',
-      value: '18%',
+      value: `${forecast.weather.rainChance}%`,
     },
     {
       icon: <SunMoonIcon />,
       label: 'NEBULOSIDADE',
-      value: '62%',
+      value: `${forecast.weather.cloudCover}%`,
     },
     {
       icon: <VisibilityIcon />,
       label: 'VISIBILIDADE',
-      value: 'Boa',
+      value: forecast.weather.visibility,
     },
   ];
 
@@ -1626,9 +1626,9 @@ function WeatherDetailView({
 
       <SelectedPointCard placeName={placeName} />
 
-      <WeatherTitleCard />
+      <WeatherTitleCard forecast={forecast} selectedForecastDayId={selectedForecastDayId} />
 
-      <WeatherChart />
+      <WeatherChart forecast={forecast} />
 
       <section className="vpTideSummaryGrid vpWeatherSummaryGrid" aria-label="Resumo do clima">
         {summaries.map((item) => (
@@ -1650,7 +1650,7 @@ function WeatherDetailView({
   );
 }
 
-function SwellTitleCard() {
+function SwellTitleCard({ selectedForecastDayId }: { selectedForecastDayId?: string }) {
   return (
     <CardShell className="vpTideTitleCard vpSwellTitleCard">
       <div className="vpTideTitleIcon vpSwellTitleIcon">
@@ -1662,6 +1662,7 @@ function SwellTitleCard() {
         <strong>SWELL</strong>
         <small>Altura, período e direção da ondulação nas próximas horas.</small>
       </div>
+      <DetailDayBadge selectedForecastDayId={selectedForecastDayId} />
     </CardShell>
   );
 }
@@ -1851,32 +1852,36 @@ function SwellSummaryCard({ item }: { item: SwellSummaryItem }) {
 
 function SwellDetailView({
   placeName,
+  forecast,
+  selectedForecastDayId,
   onBack,
 }: {
   placeName: string;
+  forecast: SpotForecastDay;
+  selectedForecastDayId?: string;
   onBack: () => void;
 }) {
   const summaries: SwellSummaryItem[] = [
     {
       icon: <WaveIcon />,
       label: 'SWELL ATUAL',
-      value: '0,7 m • 8 s',
+      value: `${forecast.swell.height} • ${forecast.swell.period}`,
       emphasis: true,
     },
     {
       icon: <SwellPeakIcon />,
       label: 'PICO DO DIA',
-      value: '1,0 m às 18h',
+      value: forecast.swell.peak,
     },
     {
-      icon: <DynamicDirectionIcon direction={mockAdvancedEnvironment.swellDirection} />,
+      icon: <DynamicDirectionIcon direction={forecast.swell.direction} />,
       label: 'DIREÇÃO',
-      value: 'Sudeste',
+      value: forecast.swell.directionLabel,
     },
     {
       icon: <ClockIcon />,
       label: 'PERÍODO',
-      value: '8–9 s',
+      value: forecast.swell.period,
     },
   ];
 
@@ -1897,7 +1902,7 @@ function SwellDetailView({
 
       <SelectedPointCard placeName={placeName} />
 
-      <SwellTitleCard />
+      <SwellTitleCard selectedForecastDayId={selectedForecastDayId} />
 
       <SwellChart />
 
@@ -1921,7 +1926,7 @@ function SwellDetailView({
   );
 }
 
-function AirTempTitleCard() {
+function AirTempTitleCard({ selectedForecastDayId }: { selectedForecastDayId?: string }) {
   return (
     <CardShell className="vpTideTitleCard vpAirTempTitleCard">
       <div className="vpTideTitleIcon vpAirTempTitleIcon">
@@ -1933,6 +1938,7 @@ function AirTempTitleCard() {
         <strong>TEMPERATURA DO AR</strong>
         <small>Variação da temperatura nas próximas horas.</small>
       </div>
+      <DetailDayBadge selectedForecastDayId={selectedForecastDayId} />
     </CardShell>
   );
 }
@@ -2110,32 +2116,36 @@ function AirTempSummaryCard({ item }: { item: AirTempSummaryItem }) {
 
 function AirTempDetailView({
   placeName,
+  forecast,
+  selectedForecastDayId,
   onBack,
 }: {
   placeName: string;
+  forecast: SpotForecastDay;
+  selectedForecastDayId?: string;
   onBack: () => void;
 }) {
   const summaries: AirTempSummaryItem[] = [
     {
       icon: <ThermometerIcon />,
-      label: 'TEMP. ATUAL',
-      value: '26,0 °C',
+      label: 'TEMPERATURA ATUAL',
+      value: `${formatTemperature(forecast.airTemp.current)} °C`,
       emphasis: true,
     },
     {
       icon: <TrendUpIcon />,
       label: 'MÁXIMA',
-      value: '27,5 °C às 15h',
+      value: `${formatTemperature(forecast.airTemp.max)} °C às 15h`,
     },
     {
       icon: <TrendDownIcon />,
       label: 'MÍNIMA',
-      value: '21,0 °C às 06h',
+      value: `${formatTemperature(forecast.airTemp.min)} °C às 06h`,
     },
     {
-      icon: <DynamicTrendIcon trend={mockAdvancedEnvironment.airTempTrend} />,
+      icon: <DynamicTrendIcon trend={forecast.airTemp.trend} />,
       label: 'TENDÊNCIA',
-      value: 'Aquece à tarde',
+      value: forecast.airTemp.trendLabel,
     },
   ];
 
@@ -2156,7 +2166,7 @@ function AirTempDetailView({
 
       <SelectedPointCard placeName={placeName} />
 
-      <AirTempTitleCard />
+      <AirTempTitleCard selectedForecastDayId={selectedForecastDayId} />
 
       <AirTempChart />
 
@@ -2180,7 +2190,7 @@ function AirTempDetailView({
   );
 }
 
-function WaterTempTitleCard() {
+function WaterTempTitleCard({ selectedForecastDayId }: { selectedForecastDayId?: string }) {
   return (
     <CardShell className="vpTideTitleCard vpWaterTempTitleCard">
       <div className="vpTideTitleIcon vpWaterTempTitleIcon">
@@ -2192,6 +2202,7 @@ function WaterTempTitleCard() {
         <strong>TEMPERATURA DA ÁGUA</strong>
         <small>Variação da água nas próximas horas.</small>
       </div>
+      <DetailDayBadge selectedForecastDayId={selectedForecastDayId} />
     </CardShell>
   );
 }
@@ -2369,32 +2380,36 @@ function WaterTempSummaryCard({ item }: { item: WaterTempSummaryItem }) {
 
 function WaterTempDetailView({
   placeName,
+  forecast,
+  selectedForecastDayId,
   onBack,
 }: {
   placeName: string;
+  forecast: SpotForecastDay;
+  selectedForecastDayId?: string;
   onBack: () => void;
 }) {
   const summaries: WaterTempSummaryItem[] = [
     {
       icon: <WaterThermometerIcon />,
-      label: 'TEMP. ATUAL',
-      value: '22,4 °C',
+      label: 'TEMPERATURA ATUAL',
+      value: `${formatTemperature(forecast.waterTemp.current)} °C`,
       emphasis: true,
     },
     {
       icon: <TrendUpIcon />,
       label: 'MAIS QUENTE',
-      value: '22,8 °C às 15h',
+      value: `${formatTemperature(forecast.waterTemp.max)} °C às 15h`,
     },
     {
       icon: <TrendDownIcon />,
       label: 'MAIS FRIA',
-      value: '22,1 °C às 06h',
+      value: `${formatTemperature(forecast.waterTemp.min)} °C às 06h`,
     },
     {
-      icon: <DynamicTrendIcon trend={mockAdvancedEnvironment.waterTempTrend} />,
+      icon: <DynamicTrendIcon trend={forecast.waterTemp.trend} />,
       label: 'TENDÊNCIA',
-      value: 'Estável',
+      value: forecast.waterTemp.trendLabel,
     },
   ];
 
@@ -2415,7 +2430,7 @@ function WaterTempDetailView({
 
       <SelectedPointCard placeName={placeName} />
 
-      <WaterTempTitleCard />
+      <WaterTempTitleCard selectedForecastDayId={selectedForecastDayId} />
 
       <WaterTempChart />
 
@@ -2439,7 +2454,7 @@ function WaterTempDetailView({
   );
 }
 
-function PressureTitleCard() {
+function PressureTitleCard({ selectedForecastDayId }: { selectedForecastDayId?: string }) {
   return (
     <CardShell className="vpTideTitleCard vpPressureTitleCard">
       <div className="vpTideTitleIcon vpPressureTitleIcon">
@@ -2451,6 +2466,7 @@ function PressureTitleCard() {
         <strong>PRESSÃO</strong>
         <small>Variação da pressão atmosférica nas próximas horas.</small>
       </div>
+      <DetailDayBadge selectedForecastDayId={selectedForecastDayId} />
     </CardShell>
   );
 }
@@ -2627,32 +2643,36 @@ function PressureSummaryCard({ item }: { item: PressureSummaryItem }) {
 
 function PressureDetailView({
   placeName,
+  forecast,
+  selectedForecastDayId,
   onBack,
 }: {
   placeName: string;
+  forecast: SpotForecastDay;
+  selectedForecastDayId?: string;
   onBack: () => void;
 }) {
   const summaries: PressureSummaryItem[] = [
     {
       icon: <PressureIcon />,
       label: 'PRESSÃO ATUAL',
-      value: '1016 hPa',
+      value: `${forecast.pressure.current} hPa`,
       emphasis: true,
     },
     {
       icon: <TrendUpIcon />,
       label: 'MÁXIMA',
-      value: '1018 hPa às 00h',
+      value: `${forecast.pressure.max} hPa às 00h`,
     },
     {
       icon: <TrendDownIcon />,
       label: 'MÍNIMA',
-      value: '1014 hPa às 18h',
+      value: `${forecast.pressure.min} hPa às 18h`,
     },
     {
-      icon: <DynamicTrendIcon trend={mockAdvancedEnvironment.pressureTrend} />,
+      icon: <DynamicTrendIcon trend={forecast.pressure.trend} />,
       label: 'TENDÊNCIA',
-      value: 'Leve queda',
+      value: forecast.pressure.trendLabel,
     },
   ];
 
@@ -2673,7 +2693,7 @@ function PressureDetailView({
 
       <SelectedPointCard placeName={placeName} />
 
-      <PressureTitleCard />
+      <PressureTitleCard selectedForecastDayId={selectedForecastDayId} />
 
       <PressureChart />
 
@@ -2697,7 +2717,7 @@ function PressureDetailView({
   );
 }
 
-function SunMoonTitleCard() {
+function SunMoonTitleCard({ selectedForecastDayId }: { selectedForecastDayId?: string }) {
   return (
     <CardShell className="vpTideTitleCard vpSunMoonTitleCard">
       <div className="vpTideTitleIcon vpSunMoonTitleIcon">
@@ -2709,17 +2729,18 @@ function SunMoonTitleCard() {
         <strong>SOL E LUA</strong>
         <small>Horários solares, fase e iluminação lunar.</small>
       </div>
+      <DetailDayBadge selectedForecastDayId={selectedForecastDayId} />
     </CardShell>
   );
 }
 
-function SunMoonCycleChart() {
+function SunMoonCycleChart({ forecast }: { forecast: SpotForecastDay }) {
   return (
     <CardShell className="vpTideChartCard vpSunMoonChartCard">
       <div className="vpTideSituation vpSunMoonSituation">
         <SunMoonIcon />
         <span>
-          SITUAÇÃO ATUAL: <strong>LUA CRESCENTE • 35% ILUMINADA</strong>
+          SITUAÇÃO ATUAL: <strong>{`LUA ${forecast.moon.label.toUpperCase()} • ${forecast.moon.illumination}% ILUMINADA`}</strong>
         </span>
       </div>
 
@@ -2730,17 +2751,17 @@ function SunMoonCycleChart() {
 
         <div className="vpSunMoonPhaseText">
           <span>LUA</span>
-          <strong>Crescente</strong>
+          <strong>{forecast.moon.label}</strong>
         </div>
 
         <div className="vpSunMoonPhaseStats">
           <div>
             <span>ILUMINAÇÃO</span>
-            <strong>35%</strong>
+            <strong>{forecast.moon.illumination}%</strong>
           </div>
           <div>
             <span>IDADE</span>
-            <strong>9,3 dias</strong>
+            <strong>{forecast.moon.age}</strong>
           </div>
         </div>
       </div>
@@ -2814,7 +2835,7 @@ function SunMoonCycleChart() {
                 Nascer da lua
               </text>
               <text className="vpSunMoonEventValue" x="430" y="67" textAnchor="middle">
-                10h12
+                {forecast.moon.rise}
               </text>
             </g>
 
@@ -2825,7 +2846,7 @@ function SunMoonCycleChart() {
                 Pôr da lua
               </text>
               <text className="vpSunMoonEventValue" x="835" y="163" textAnchor="middle">
-                22h36
+                {forecast.moon.set}
               </text>
             </g>
 
@@ -2836,7 +2857,7 @@ function SunMoonCycleChart() {
                 Nascer do sol
               </text>
               <text className="vpSunMoonEventValue" x="305" y="174" textAnchor="middle">
-                06h48
+                {forecast.sun.sunrise}
               </text>
             </g>
 
@@ -2847,14 +2868,14 @@ function SunMoonCycleChart() {
                 Pôr do sol
               </text>
               <text className="vpSunMoonEventValue" x="670" y="162" textAnchor="middle">
-                17h42
+                {forecast.sun.sunset}
               </text>
             </g>
 
             <g className="vpSunMoonDayPeriod" aria-hidden="true">
               <line x1="305" y1="214" x2="670" y2="214" />
               <text x="488" y="208" textAnchor="middle">
-                PERÍODO CLARO · 06h48 ÀS 17h42
+                {`PERÍODO CLARO · ${forecast.sun.sunrise} ÀS ${forecast.sun.sunset}`}
               </text>
             </g>
           </g>
@@ -2881,32 +2902,36 @@ function SunMoonSummaryCard({ item }: { item: SunMoonSummaryItem }) {
 
 function SunMoonDetailView({
   placeName,
+  forecast,
+  selectedForecastDayId,
   onBack,
 }: {
   placeName: string;
+  forecast: SpotForecastDay;
+  selectedForecastDayId?: string;
   onBack: () => void;
 }) {
   const summaries: SunMoonSummaryItem[] = [
     {
-      icon: <MoonPhaseIcon phase={mockAdvancedEnvironment.moonPhase} />,
+      icon: <MoonPhaseIcon phase={forecast.moon.phase} />,
       label: 'LUA ATUAL',
-      value: 'Crescente',
+      value: forecast.moon.label,
       emphasis: true,
     },
     {
       icon: <MoonLightIcon />,
       label: 'ILUMINAÇÃO',
-      value: '35%',
+      value: `${forecast.moon.illumination}%`,
     },
     {
       icon: <SunIcon />,
       label: 'NASCER DO SOL',
-      value: '06h48',
+      value: forecast.sun.sunrise,
     },
     {
       icon: <SunsetIcon />,
       label: 'PÔR DO SOL',
-      value: '17h42',
+      value: forecast.sun.sunset,
     },
   ];
 
@@ -2927,9 +2952,9 @@ function SunMoonDetailView({
 
       <SelectedPointCard placeName={placeName} />
 
-      <SunMoonTitleCard />
+      <SunMoonTitleCard selectedForecastDayId={selectedForecastDayId} />
 
-      <SunMoonCycleChart />
+      <SunMoonCycleChart forecast={forecast} />
 
       <section className="vpTideSummaryGrid vpSunMoonSummaryGrid" aria-label="Resumo de sol e lua">
         {summaries.map((item) => (
@@ -2944,7 +2969,7 @@ function SunMoonDetailView({
 
         <div className="vpTideVariationText">
           <span>PERÍODO CLARO</span>
-          <strong>06h48 às 17h42.</strong>
+          <strong>{`${forecast.sun.sunrise} às ${forecast.sun.sunset}.`}</strong>
         </div>
       </CardShell>
     </main>
@@ -2955,57 +2980,76 @@ export default function PremiumPanelPreview({
   onClose,
   onBack,
   placeName,
+  lat,
+  lng,
   selectedForecastDayId,
+  forecastDays,
 }: PremiumPanelPreviewProps) {
   const [activeMetric, setActiveMetric] = useState<AdvancedMetricId | null>(null);
   const selectedPlaceName = placeName?.trim() || 'Ponto selecionado';
+  const safeForecastDays =
+    forecastDays && forecastDays.length > 0
+      ? forecastDays
+      : getMockSpotForecastDays({ name: selectedPlaceName, lat, lng });
+  const activeForecastDay = getSelectedForecastDay(safeForecastDays, selectedForecastDayId);
+  const advancedEnvironment = {
+    weatherCondition: activeForecastDay.weather.condition,
+    tideDirection: activeForecastDay.tide.direction,
+    windDirection: activeForecastDay.wind.direction,
+    windTrend: activeForecastDay.wind.trend,
+    swellDirection: activeForecastDay.swell.direction,
+    pressureTrend: activeForecastDay.pressure.trend,
+    airTempTrend: activeForecastDay.airTemp.trend,
+    waterTempTrend: activeForecastDay.waterTemp.trend,
+    moonPhase: activeForecastDay.moon.phase,
+  };
 
   const metrics: AdvancedMetric[] = [
     {
       id: 'weather',
-      icon: <DynamicWeatherIcon condition={mockAdvancedEnvironment.weatherCondition} />,
+      icon: <DynamicWeatherIcon condition={advancedEnvironment.weatherCondition} />,
       label: 'Clima',
-      value: 'Parcialmente nublado',
+      value: activeForecastDay.weather.label,
     },
     {
       id: 'airTemp',
       icon: <ThermometerIcon />,
       label: 'Temperatura do Ar',
-      value: '26,0 °C',
+      value: `${formatTemperature(activeForecastDay.airTemp.current)} °C`,
     },
     {
       id: 'waterTemp',
       icon: <WaterThermometerIcon />,
       label: 'Temperatura da Água',
-      value: '22,4 °C',
+      value: `${formatTemperature(activeForecastDay.waterTemp.current)} °C`,
     },
     {
       id: 'tide',
-      icon: <DynamicTideIcon direction={mockAdvancedEnvironment.tideDirection} />,
+      icon: <DynamicTideIcon direction={advancedEnvironment.tideDirection} />,
       label: 'Maré',
-      value: 'Enchendo',
+      value: activeForecastDay.tide.label,
     },
     {
       id: 'swell',
       icon: <WaveIcon />,
       label: 'Swell',
-      value: '0,7 m • 8 s',
+      value: `${activeForecastDay.swell.height} • ${activeForecastDay.swell.period}`,
     },
     {
       id: 'wind',
-      icon: <DynamicDirectionIcon direction={mockAdvancedEnvironment.windDirection} />,
+      icon: <DynamicDirectionIcon direction={advancedEnvironment.windDirection} />,
       label: 'Vento',
-      value: 'NE • 8 km/h',
+      value: `${activeForecastDay.wind.direction} • ${activeForecastDay.wind.speed} km/h`,
     },
     {
       id: 'pressure',
       icon: <PressureIcon />,
       label: 'Pressão',
-      value: '1016 hPa',
+      value: `${activeForecastDay.pressure.current} hPa`,
     },
     {
       id: 'sunMoon',
-      icon: <MoonPhaseIcon phase={mockAdvancedEnvironment.moonPhase} />,
+      icon: <MoonPhaseIcon phase={advancedEnvironment.moonPhase} />,
       label: '',
       value: 'SOL E LUA',
     },
@@ -3046,41 +3090,57 @@ export default function PremiumPanelPreview({
       {activeMetric === 'tide' ? (
         <TideDetailView
           placeName={selectedPlaceName}
+          forecast={activeForecastDay}
+          selectedForecastDayId={selectedForecastDayId}
           onBack={() => setActiveMetric(null)}
         />
       ) : activeMetric === 'wind' ? (
         <WindDetailView
           placeName={selectedPlaceName}
+          forecast={activeForecastDay}
+          selectedForecastDayId={selectedForecastDayId}
           onBack={() => setActiveMetric(null)}
         />
       ) : activeMetric === 'weather' ? (
         <WeatherDetailView
           placeName={selectedPlaceName}
+          forecast={activeForecastDay}
+          selectedForecastDayId={selectedForecastDayId}
           onBack={() => setActiveMetric(null)}
         />
       ) : activeMetric === 'swell' ? (
         <SwellDetailView
           placeName={selectedPlaceName}
+          forecast={activeForecastDay}
+          selectedForecastDayId={selectedForecastDayId}
           onBack={() => setActiveMetric(null)}
         />
       ) : activeMetric === 'airTemp' ? (
         <AirTempDetailView
           placeName={selectedPlaceName}
+          forecast={activeForecastDay}
+          selectedForecastDayId={selectedForecastDayId}
           onBack={() => setActiveMetric(null)}
         />
       ) : activeMetric === 'waterTemp' ? (
         <WaterTempDetailView
           placeName={selectedPlaceName}
+          forecast={activeForecastDay}
+          selectedForecastDayId={selectedForecastDayId}
           onBack={() => setActiveMetric(null)}
         />
       ) : activeMetric === 'pressure' ? (
         <PressureDetailView
           placeName={selectedPlaceName}
+          forecast={activeForecastDay}
+          selectedForecastDayId={selectedForecastDayId}
           onBack={() => setActiveMetric(null)}
         />
       ) : activeMetric === 'sunMoon' ? (
         <SunMoonDetailView
           placeName={selectedPlaceName}
+          forecast={activeForecastDay}
+          selectedForecastDayId={selectedForecastDayId}
           onBack={() => setActiveMetric(null)}
         />
       ) : (
@@ -3540,7 +3600,7 @@ export default function PremiumPanelPreview({
           min-height: 96px;
           border-radius: 16px;
           display: grid;
-          grid-template-columns: auto minmax(0, 1fr);
+          grid-template-columns: auto minmax(0, 1fr) auto;
           align-items: center;
           gap: 13px;
           padding: 13px;
@@ -3569,6 +3629,25 @@ export default function PremiumPanelPreview({
           display: flex;
           flex-direction: column;
           gap: 3px;
+        }
+
+        .vpTideTitleDayBadge {
+          justify-self: end;
+          align-self: start;
+          border: 1px solid rgba(56, 189, 248, 0.38);
+          border-radius: 999px;
+          background: rgba(14, 165, 233, 0.08);
+          color: #7dd3fc;
+          box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.06),
+            0 0 18px rgba(14, 165, 233, 0.12);
+          padding: 7px 12px;
+          font-size: 11px;
+          font-weight: 900;
+          line-height: 1;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          white-space: nowrap;
         }
 
         .vpTideTitleText span,
@@ -4387,6 +4466,12 @@ export default function PremiumPanelPreview({
             padding: 10px;
           }
 
+          .vpTideTitleDayBadge {
+            padding: 6px 9px;
+            font-size: 10px;
+            letter-spacing: 0.1em;
+          }
+
           .vpTideTitleIcon {
             width: 48px;
             height: 48px;
@@ -4545,6 +4630,12 @@ export default function PremiumPanelPreview({
             grid-row: 2;
             min-height: 0;
             padding: 7px 9px;
+          }
+
+          .vpTideTitleDayBadge {
+            padding: 5px 8px;
+            font-size: 9px;
+            letter-spacing: 0.09em;
           }
 
           .vpTideTitleIcon {
