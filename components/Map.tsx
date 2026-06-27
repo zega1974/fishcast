@@ -68,6 +68,11 @@ type FocusTarget = {
   lng: number;
 };
 
+type HomeViewControlRef = React.MutableRefObject<{
+  userInteracted: boolean;
+  cancelScheduledView: (() => void) | null;
+}>;
+
 type MeasurementPoint = {
   id: number;
   lat: number;
@@ -79,12 +84,9 @@ type PersonalPlaceFormData = {
   note: string;
 };
 
-const MAP_MIN_ZOOM = 6;
+const MAP_MIN_ZOOM_DESKTOP = 2;
+const MAP_MIN_ZOOM_MOBILE = 1;
 const MAP_INITIAL_ZOOM = 7;
-const MAP_MAX_BOUNDS: L.LatLngBoundsExpression = [
-  [-35.5, -75],
-  [7, -30],
-];
 const OSM_MAX_NATIVE_ZOOM = 18;
 const SATELLITE_MAX_NATIVE_ZOOM = 18;
 const NIGHT_MAX_NATIVE_ZOOM = 18;
@@ -100,6 +102,7 @@ const NAUTICAL_DEPTH_SURFACE_LAYER = "opendem:gebco_2021";
 const NAUTICAL_DEPTH_CONTOURS_LAYER = "opendem:gebco_2021_contours";
 const NAUTICAL_MAX_ZOOM = 18;
 const NAUTICAL_SEAMARK_MAX_NATIVE_ZOOM = 18;
+const NAUTICAL_DETAIL_MIN_ZOOM = 5;
 
 
 const mapModes: { id: MapMode; label: string; iconName: PreviewIconName }[] = [
@@ -309,6 +312,7 @@ function MapEvents({
   mapDismissBlocked,
   onOtherPopupClose,
   ignoreNextMapClickRef,
+  homeViewControlRef,
 }: {
   captureMode: boolean;
   placeMode: boolean;
@@ -321,8 +325,15 @@ function MapEvents({
   mapDismissBlocked: boolean;
   onOtherPopupClose: () => void;
   ignoreNextMapClickRef: React.MutableRefObject<boolean>;
+  homeViewControlRef: HomeViewControlRef;
 }) {
   const isDraggingRef = useRef(false);
+
+  function markUserMapInteraction() {
+    homeViewControlRef.current.userInteracted = true;
+    homeViewControlRef.current.cancelScheduledView?.();
+    homeViewControlRef.current.cancelScheduledView = null;
+  }
 
   function isControlClick(event: MouseEvent) {
     const path = event.composedPath();
@@ -336,6 +347,7 @@ function MapEvents({
 
   const map = useMapEvents({
     dragstart() {
+      markUserMapInteraction();
       isDraggingRef.current = true;
     },
     dragend() {
@@ -377,6 +389,9 @@ function MapEvents({
 
       onLocationClick(e.latlng.lat, e.latlng.lng);
     },
+    zoomstart() {
+      markUserMapInteraction();
+    },
     zoomend() {
       onZoomChange(map.getZoom());
     },
@@ -399,6 +414,20 @@ function MapMaxZoomController({ maxZoom }: { maxZoom: number }) {
       map.setZoom(maxZoom);
     }
   }, [map, maxZoom]);
+
+  return null;
+}
+
+function MapMinZoomController({ minZoom }: { minZoom: number }) {
+  const map = useMap();
+
+  useEffect(() => {
+    map.setMinZoom(minZoom);
+
+    if (map.getZoom() < minZoom) {
+      map.setZoom(minZoom);
+    }
+  }, [map, minZoom]);
 
   return null;
 }
@@ -869,18 +898,32 @@ function isPersonalPlace(value: unknown): value is PersonalPlace {
   );
 }
 
-function HomeMapViewController({ personalPlaces }: { personalPlaces: PersonalPlace[] }) {
+function HomeMapViewController({
+  personalPlaces,
+  homeViewControlRef,
+}: {
+  personalPlaces: PersonalPlace[];
+  homeViewControlRef: HomeViewControlRef;
+}) {
   const map = useMap();
   const initialFitDoneRef = useRef(false);
 
   useEffect(() => {
-    if (initialFitDoneRef.current) {
+    if (initialFitDoneRef.current || homeViewControlRef.current.userInteracted) {
       return;
     }
 
     initialFitDoneRef.current = true;
-    return scheduleHomeMapView(map, personalPlaces, false);
-  }, [map, personalPlaces]);
+    const cancelScheduledView = scheduleHomeMapView(map, personalPlaces, false);
+    homeViewControlRef.current.cancelScheduledView = cancelScheduledView;
+
+    return () => {
+      cancelScheduledView();
+      if (homeViewControlRef.current.cancelScheduledView === cancelScheduledView) {
+        homeViewControlRef.current.cancelScheduledView = null;
+      }
+    };
+  }, [homeViewControlRef, map, personalPlaces]);
 
   return null;
 }
@@ -904,6 +947,10 @@ function readStoredPersonalPlaces() {
 
 export default function Map() {
   const mapRef = useRef<L.Map | null>(null);
+  const homeViewControlRef = useRef({
+    userInteracted: false,
+    cancelScheduledView: null as (() => void) | null,
+  });
   const [premiumPreviewOpen, setPremiumPreviewOpen] = useState(false);
   const [premiumPreviewPlace, setPremiumPreviewPlace] = useState<OfficialFreeSpotDataPlace | null>(null);
   const [selectedForecastDayId, setSelectedForecastDayId] = useState("day-25");
@@ -918,6 +965,7 @@ export default function Map() {
   const [capturesPanelOpen, setCapturesPanelOpen] = useState(false);
   const [mapMode, setMapMode] = useState<MapMode>("map");
   const [zoom, setZoom] = useState(MAP_INITIAL_ZOOM);
+  const [mapMinZoom, setMapMinZoom] = useState(MAP_MIN_ZOOM_DESKTOP);
   const [pendingCapture, setPendingCapture] = useState<{
     lat: number;
     lng: number;
@@ -957,6 +1005,22 @@ export default function Map() {
     capturesPanelOpen ||
     Boolean(selectedCapture) ||
     Boolean(selectedCaptureSpot);
+  const showNauticalDetails = mapMode === "nautical" && zoom >= NAUTICAL_DETAIL_MIN_ZOOM;
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 767px)");
+
+    function updateMapMinZoom() {
+      setMapMinZoom(mediaQuery.matches ? MAP_MIN_ZOOM_MOBILE : MAP_MIN_ZOOM_DESKTOP);
+    }
+
+    updateMapMinZoom();
+    mediaQuery.addEventListener("change", updateMapMinZoom);
+
+    return () => {
+      mediaQuery.removeEventListener("change", updateMapMinZoom);
+    };
+  }, []);
 
   useEffect(() => {
     function getEventElement(target: EventTarget | null) {
@@ -2176,10 +2240,8 @@ export default function Map() {
           ref={mapRef}
           center={paranaCenter}
           zoom={zoom}
-          minZoom={MAP_MIN_ZOOM}
+          minZoom={mapMinZoom}
           maxZoom={MAP_MAX_ZOOM}
-          maxBounds={MAP_MAX_BOUNDS}
-          maxBoundsViscosity={0.85}
           zoomControl={false}
           scrollWheelZoom={true}
           doubleClickZoom={false}
@@ -2213,53 +2275,58 @@ export default function Map() {
                 zIndex={100}
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
-              <WMSTileLayer
-                attribution={NAUTICAL_BATHYMETRY_ATTRIBUTION}
-                detectRetina={false}
-                errorTileUrl={TRANSPARENT_TILE}
-                format="image/png"
-                keepBuffer={1}
-                layers={NAUTICAL_DEPTH_SURFACE_LAYER}
-                maxZoom={NAUTICAL_MAX_ZOOM}
-                opacity={0.62}
-                tileSize={256}
-                transparent={true}
-                updateWhenIdle={true}
-                updateWhenZooming={false}
-                url={NAUTICAL_BATHYMETRY_WMS_URL}
-                version="1.1.1"
-                zIndex={220}
-              />
-              <WMSTileLayer
-                attribution={NAUTICAL_BATHYMETRY_ATTRIBUTION}
-                detectRetina={false}
-                errorTileUrl={TRANSPARENT_TILE}
-                format="image/png"
-                keepBuffer={1}
-                layers={NAUTICAL_DEPTH_CONTOURS_LAYER}
-                maxZoom={NAUTICAL_MAX_ZOOM}
-                opacity={0.92}
-                tileSize={256}
-                transparent={true}
-                updateWhenIdle={true}
-                updateWhenZooming={false}
-                url={NAUTICAL_BATHYMETRY_WMS_URL}
-                version="1.1.1"
-                zIndex={230}
-              />
-              <TileLayer
-                attribution="&copy; OpenSeaMap contributors"
-                detectRetina={false}
-                errorTileUrl={TRANSPARENT_TILE}
-                keepBuffer={1}
-                maxNativeZoom={NAUTICAL_SEAMARK_MAX_NATIVE_ZOOM}
-                maxZoom={NAUTICAL_MAX_ZOOM}
-                tileSize={256}
-                updateWhenIdle={true}
-                updateWhenZooming={false}
-                url="https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png"
-                zIndex={240}
-              />
+
+              {showNauticalDetails && (
+                <>
+                  <WMSTileLayer
+                    attribution={NAUTICAL_BATHYMETRY_ATTRIBUTION}
+                    detectRetina={false}
+                    errorTileUrl={TRANSPARENT_TILE}
+                    format="image/png"
+                    keepBuffer={1}
+                    layers={NAUTICAL_DEPTH_SURFACE_LAYER}
+                    maxZoom={NAUTICAL_MAX_ZOOM}
+                    opacity={0.62}
+                    tileSize={256}
+                    transparent={true}
+                    updateWhenIdle={true}
+                    updateWhenZooming={false}
+                    url={NAUTICAL_BATHYMETRY_WMS_URL}
+                    version="1.1.1"
+                    zIndex={220}
+                  />
+                  <WMSTileLayer
+                    attribution={NAUTICAL_BATHYMETRY_ATTRIBUTION}
+                    detectRetina={false}
+                    errorTileUrl={TRANSPARENT_TILE}
+                    format="image/png"
+                    keepBuffer={1}
+                    layers={NAUTICAL_DEPTH_CONTOURS_LAYER}
+                    maxZoom={NAUTICAL_MAX_ZOOM}
+                    opacity={0.92}
+                    tileSize={256}
+                    transparent={true}
+                    updateWhenIdle={true}
+                    updateWhenZooming={false}
+                    url={NAUTICAL_BATHYMETRY_WMS_URL}
+                    version="1.1.1"
+                    zIndex={230}
+                  />
+                  <TileLayer
+                    attribution="&copy; OpenSeaMap contributors"
+                    detectRetina={false}
+                    errorTileUrl={TRANSPARENT_TILE}
+                    keepBuffer={1}
+                    maxNativeZoom={NAUTICAL_SEAMARK_MAX_NATIVE_ZOOM}
+                    maxZoom={NAUTICAL_MAX_ZOOM}
+                    tileSize={256}
+                    updateWhenIdle={true}
+                    updateWhenZooming={false}
+                    url="https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png"
+                    zIndex={240}
+                  />
+                </>
+              )}
             </>
           )}
 
@@ -2285,8 +2352,12 @@ export default function Map() {
           />
 
           <MeasurementLayer points={measurementPoints} />
-          <HomeMapViewController personalPlaces={personalPlaces} />
+          <HomeMapViewController
+            personalPlaces={personalPlaces}
+            homeViewControlRef={homeViewControlRef}
+          />
           <MapFocusController target={focusTarget} />
+          <MapMinZoomController minZoom={mapMinZoom} />
           <MapMaxZoomController maxZoom={MAP_MAX_ZOOM} />
 
           <MapEvents
@@ -2306,6 +2377,7 @@ export default function Map() {
               setShareOptionsCaptureId(null);
             }}
             ignoreNextMapClickRef={ignoreNextMapClickRef}
+            homeViewControlRef={homeViewControlRef}
           />
 
           <Pane
